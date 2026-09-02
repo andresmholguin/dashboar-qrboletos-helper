@@ -46,13 +46,13 @@ export default function EventCard({
       {/* Cabecera de la Tarjeta */}
       <div>
         {/* Banner/Flyer del Evento desde la API */}
-        <div className="w-full h-40 relative rounded-xl overflow-hidden mb-4 border border-slate-800 bg-slate-950 flex items-center justify-center shrink-0 shadow-inner group-hover:border-emerald-500/30 transition-all">
+        <div className="w-full aspect-[4/3] relative rounded-xl overflow-hidden mb-4 border border-slate-800 bg-slate-950 flex items-center justify-center shrink-0 shadow-inner group-hover:border-emerald-500/40 transition-all">
           {imageSrc && !imgError ? (
             <img
               src={imageSrc}
               alt={evento.nombre}
               onError={() => setImgError(true)}
-              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+              className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-500"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col items-center justify-center text-slate-600 font-mono text-[10px] tracking-wider select-none uppercase font-bold gap-1">

@@ -1,5 +1,6 @@
 export interface Evento {
-  id?: string; // Fila en Google Sheets o ID generado para local storage
+  id?: string; // ID único del evento en QRBoletos/Firestore (ej: 2991) o ID de fila
+  rowId?: string; // Fila en Google Sheets
   nombre: string;
   fecha: string;
   promoterId: string;
@@ -9,6 +10,7 @@ export interface Evento {
   fechaCreacion: string;
   favorito: boolean;
   imageUrl?: string;
+  enlace?: string; // URL pública del evento en qrboletos.com
   localidades?: Localidad[];
 }
 

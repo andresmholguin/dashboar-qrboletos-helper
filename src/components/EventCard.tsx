@@ -1,22 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Evento } from '@/types';
-import { buildModuleUrl } from '@/services/urlParser';
 import { formatDateString } from '@/utils/dateFormatter';
 import {
-  TrendingUp,
-  BarChart2,
   Layers,
-  Calendar,
-  MapPin,
-  Settings,
-  FileText,
   Trash2,
   Star,
   ExternalLink,
   Eye,
-  Activity
+  Globe
 } from 'lucide-react';
 
 interface EventCardProps {
@@ -26,44 +19,13 @@ interface EventCardProps {
   onOpenLocalities: (evento: Evento) => void;
 }
 
-// Configuración de los módulos rápidos
-const MODULES = [
-  {
-    name: 'Etapas',
-    path: 'phases/list.aspx',
-    icon: Calendar,
-    color: 'hover:bg-teal-500/10 hover:text-teal-400 hover:border-teal-500/30',
-  },
-  {
-    name: 'Configuración Evento',
-    path: 'settings.aspx',
-    icon: Settings,
-    color: 'hover:bg-pink-500/10 hover:text-pink-400 hover:border-pink-500/30',
-  },
-  {
-    name: 'Resumen Ventas',
-    path: 'reports/sales/summary.aspx',
-    icon: TrendingUp,
-    color: 'hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/30',
-  },
-];
-
 export default function EventCard({
   evento,
   onToggleFavorite,
   onDeleteEvent,
   onOpenLocalities,
 }: EventCardProps) {
-  // Extraer el dominio de la URL base
-  let domain = 'https://dashboard.qrboletos.com';
-  try {
-    if (evento.urlBase) {
-      const url = new URL(evento.urlBase);
-      domain = url.origin;
-    }
-  } catch (e) {
-    console.error('Error parseando urlBase:', e);
-  }
+  const [imgError, setImgError] = useState(false);
 
   const handleFavoriteClick = () => {
     if (evento.id) {
@@ -77,39 +39,58 @@ export default function EventCard({
     }
   };
 
-  const handleOpenLocalities = () => {
-    if (!evento.localidades || evento.localidades.length === 0) {
-      const url = buildModuleUrl(domain, evento.promoterId, evento.eventId, evento.showId, 'sections/list.aspx');
-      window.open(url, '_blank');
-    }
-    onOpenLocalities(evento);
-  };
+  const imageSrc = evento.imageUrl || (evento as any).imagen;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg hover:shadow-xl hover:border-slate-700/80 transition-all group flex flex-col justify-between">
       {/* Cabecera de la Tarjeta */}
       <div>
-        {/* Banner/Flyer del Evento */}
-        <div className="w-full h-32 relative rounded-xl overflow-hidden mb-4 border border-slate-800 bg-slate-950 flex items-center justify-center shrink-0 shadow-inner">
-          {evento.imageUrl ? (
+        {/* Banner/Flyer del Evento desde la API */}
+        <div className="w-full h-40 relative rounded-xl overflow-hidden mb-4 border border-slate-800 bg-slate-950 flex items-center justify-center shrink-0 shadow-inner group-hover:border-emerald-500/30 transition-all">
+          {imageSrc && !imgError ? (
             <img
-              src={evento.imageUrl}
+              src={imageSrc}
               alt={evento.nombre}
+              onError={() => setImgError(true)}
               className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex items-center justify-center text-slate-700 font-mono text-[10px] tracking-wider select-none uppercase font-bold">
-              QRBoletos Helper
+            <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col items-center justify-center text-slate-600 font-mono text-[10px] tracking-wider select-none uppercase font-bold gap-1">
+              <Layers className="w-6 h-6 text-slate-700" />
+              <span>QRBoletos</span>
             </div>
+          )}
+
+          {/* Badge del ID oficial de QRBoletos */}
+          {evento.id && (
+            <div className="absolute top-2.5 left-2.5 bg-slate-950/85 backdrop-blur-md text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-bold shadow-md">
+              ID: #{evento.id}
+            </div>
+          )}
+
+          {/* Enlace público al evento en qrboletos.com (sin login requerido) */}
+          {evento.enlace && (
+            <a
+              href={evento.enlace}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute top-2.5 right-2.5 bg-slate-950/80 hover:bg-emerald-600 text-slate-300 hover:text-white p-1.5 rounded-lg border border-slate-800 transition-all shadow-md cursor-pointer"
+              title="Abrir página oficial del evento en QRBoletos"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           )}
         </div>
 
+        {/* Título, Fecha y Acciones */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
-              {formatDateString(evento.fecha)}
-            </span>
-            <h3 className="text-base font-bold text-slate-100 mt-1.5 group-hover:text-emerald-400 transition-colors line-clamp-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                {formatDateString(evento.fecha)}
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-slate-100 mt-1.5 group-hover:text-emerald-400 transition-colors line-clamp-2" title={evento.nombre}>
               {evento.nombre}
             </h3>
           </div>
@@ -117,7 +98,7 @@ export default function EventCard({
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={handleFavoriteClick}
-              className={`p-1.5 rounded-lg border transition-all ${
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                 evento.favorito
                   ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                   : 'text-slate-500 border-slate-800 hover:text-amber-500 hover:bg-amber-500/5 hover:border-amber-500/20'
@@ -128,74 +109,52 @@ export default function EventCard({
             </button>
             <button
               onClick={handleDeleteClick}
-              className="p-1.5 rounded-lg border border-slate-800 text-slate-500 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 transition-all"
+              className="p-1.5 rounded-lg border border-slate-800 text-slate-500 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 transition-all cursor-pointer"
               title="Eliminar evento"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
-
-        {/* Removido el detalle de identificadores por solicitud de imagen de portada */}
-
-        {/* Módulo de Localidades (Destacado y requerido con comportamiento especial de scraping) */}
-        <div className="mb-4">
-          <div className="flex gap-2">
-            {/* Abrir Localidades dentro del panel (Nuestra app) */}
-            <button
-              onClick={handleOpenLocalities}
-              className={`flex-1 rounded-xl py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer ${
-                evento.localidades && evento.localidades.length > 0
-                  ? 'bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/20 hover:border-emerald-500'
-                  : 'bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-slate-950 border border-amber-500/20 hover:border-amber-500'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              Ver Localidades (Panel)
-            </button>
-
-            {/* Abrir Localidades directamente en QRBoletos */}
-            <a
-              href={buildModuleUrl(domain, evento.promoterId, evento.eventId, evento.showId, 'sections/list.aspx')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 rounded-xl p-2.5 flex items-center justify-center transition-all cursor-pointer"
-              title="Abrir configuración de localidades externa"
-            >
-              <ExternalLink className="w-4.5 h-4.5" />
-            </a>
-          </div>
-        </div>
       </div>
 
-      {/* Grid de Accesos Rápidos */}
-      <div>
-        <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Enlaces de QRBoletos
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {MODULES.map((mod, idx) => {
-            const url = buildModuleUrl(domain, evento.promoterId, evento.eventId, evento.showId, mod.path);
-            const Icon = mod.icon;
+      {/* Controles del Evento */}
+      <div className="mt-4 space-y-2">
+        {/* Abrir Localidades dentro de nuestro panel */}
+        <button
+          onClick={() => onOpenLocalities(evento)}
+          className={`w-full rounded-xl py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer ${
+            evento.localidades && evento.localidades.length > 0
+              ? 'bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/20 hover:border-emerald-500'
+              : 'bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700'
+          }`}
+        >
+          <Eye className="w-4 h-4" />
+          <span>Ver Localidades (Panel)</span>
+          {evento.localidades && evento.localidades.length > 0 && (
+            <span className="ml-1 bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full">
+              {evento.localidades.length}
+            </span>
+          )}
+        </button>
 
-            return (
-              <a
-                key={mod.name}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`flex items-center gap-2 bg-slate-950 border border-slate-950/60 rounded-xl p-2.5 text-xs font-medium text-slate-300 transition-all ${mod.color} cursor-pointer ${idx === 2 ? 'col-span-2 justify-center' : ''}`}
-              >
-                <Icon className="w-4.5 h-4.5 shrink-0 text-slate-500 group-hover:text-inherit" />
-                <span className="truncate">{mod.name}</span>
-              </a>
-            );
-          })}
-        </div>
+        {/* Enlace público al evento en qrboletos.com (sin login) */}
+        {evento.enlace && (
+          <a
+            href={evento.enlace}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full rounded-xl py-2 px-3 text-xs font-medium flex items-center justify-center gap-1.5 bg-slate-950/60 hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-800/60 transition-all cursor-pointer"
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Ver evento en qrboletos.com</span>
+            <ExternalLink className="w-3 h-3 opacity-50" />
+          </a>
+        )}
 
-        {/* Fecha de Creación en la esquina inferior */}
-        <div className="text-[9px] text-slate-600 text-right mt-3 font-mono">
-          Añadido el {evento.fechaCreacion}
+        {/* Fecha de Creación o ID */}
+        <div className="text-[9px] text-slate-600 text-right pt-1 font-mono">
+          {evento.fechaCreacion ? `Añadido el ${evento.fechaCreacion}` : `ID: ${evento.id}`}
         </div>
       </div>
     </div>

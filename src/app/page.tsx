@@ -23,7 +23,9 @@ import {
   Moon,
   Archive,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  RefreshCw,
+  Check
 } from 'lucide-react';
 
 export default function Home() {
@@ -32,6 +34,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncToast, setSyncToast] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -80,8 +84,8 @@ export default function Home() {
         setIsSheetsMode(data.isSheets);
         
         if (data.isSheets) {
-          // Filtrar elementos vacíos (en caso de filas borradas/limpias)
-          const validEvents = data.events.filter((e: Evento) => e.promoterId && e.eventId);
+          // Aceptar todos los eventos con nombre válido
+          const validEvents = data.events.filter((e: Evento) => e.nombre && e.nombre.trim() !== '');
           setEventos(validEvents);
         } else {
           // Fallback a Local Storage
@@ -121,6 +125,27 @@ export default function Home() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Sincronizar eventos desde la API de Firestore
+  const handleSyncFromApi = async () => {
+    setIsSyncing(true);
+    setSyncToast('Consultando y sincronizando con la API de QRBoletos...');
+    try {
+      const res = await fetch('/api/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSyncToast(`¡Sincronización exitosa! ${data.result.totalSynced} eventos cargados desde la API.`);
+        await fetchEventos();
+      } else {
+        setSyncToast(`Error: ${data.error || 'No se pudo sincronizar'}`);
+      }
+    } catch (e: any) {
+      setSyncToast(`Error de conexión: ${e.message}`);
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncToast(null), 4000);
     }
   };
 
@@ -234,11 +259,12 @@ export default function Home() {
     }
   };
 
-  // Filtros de búsqueda
+  // Filtros de búsqueda (por nombre, ID de evento, promoterId o eventId)
   const filteredEvents = eventos.filter((e) =>
-    e.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.promoterId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.eventId.toLowerCase().includes(searchQuery.toLowerCase())
+    (e.nombre && e.nombre.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (e.id && e.id.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (e.promoterId && e.promoterId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (e.eventId && e.eventId.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Obtener timestamp de hoy a las 00:00:00 local para comparar fechas enteras
@@ -335,6 +361,19 @@ export default function Home() {
               />
             </div>
 
+            {/* Botón Sincronizar API */}
+            <button
+              onClick={handleSyncFromApi}
+              disabled={isSyncing}
+              className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-[11px] font-semibold px-3 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm text-slate-300 active:scale-95 ${
+                isSyncing ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
+              title="Consultar y sincronizar eventos desde la API de QRBoletos"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar API'}</span>
+            </button>
+
             {/* Botón Google Sheet */}
             {isSheetsMode && (
               <a
@@ -403,6 +442,19 @@ export default function Home() {
 
             {/* Botones en menú móvil */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Botón Sincronizar API Móvil */}
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleSyncFromApi();
+                }}
+                disabled={isSyncing}
+                className="cursor-pointer bg-slate-900 border border-slate-850 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
+              >
+                <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar API'}</span>
+              </button>
+
               {/* Botón Google Sheet */}
               {isSheetsMode && (
                 <a
@@ -424,7 +476,7 @@ export default function Home() {
                   setIsMobileMenuOpen(false);
                   setIsAddModalOpen(true);
                 }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-1.5 cursor-pointer w-full"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-1.5 cursor-pointer w-full sm:col-span-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nuevo Evento</span>
@@ -433,6 +485,14 @@ export default function Home() {
           </div>
         )}
       </nav>
+
+      {/* Notificación flotante de sincronización */}
+      {syncToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900/95 backdrop-blur-md border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-medium">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{syncToast}</span>
+        </div>
+      )}
 
       {/* Contenido Principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

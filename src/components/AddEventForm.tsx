@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { parseEventUrl, ParsedEventUrl } from '@/services/urlParser';
-import { PlusCircle, Link, Calendar, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { PlusCircle, Link, Calendar, FileText, AlertCircle, CheckCircle, Sparkles } from 'lucide-react';
 import { Evento } from '@/types';
 
 interface AddEventFormProps {
@@ -18,6 +18,29 @@ export default function AddEventForm({ onAddEvent }: AddEventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState('');
+
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  // Autocompletar datos del show que esté abierto en Google Chrome
+  const handleAutoFillFromChrome = async () => {
+    setIsDetecting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/chrome/detect-show');
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo detectar el show en Chrome');
+      }
+      if (data.tabUrl) setUrl(data.tabUrl);
+      if (data.evento?.nombre) setNombre(data.evento.nombre);
+      if (data.metadata?.fechaInicio) setFecha(data.metadata.fechaInicio);
+    } catch (e: any) {
+      setError(`No se pudo autocompletar desde Chrome: ${e.message}`);
+    } finally {
+      setIsDetecting(false);
+    }
+  };
+
 
   // Analizar la URL en tiempo real
   useEffect(() => {
@@ -87,41 +110,54 @@ export default function AddEventForm({ onAddEvent }: AddEventFormProps) {
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-      <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
         <PlusCircle className="text-emerald-500 w-5 h-5" />
         Agregar Nuevo Evento
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Campo URL */}
+        {/* Campo URL con Autocompletar desde Chrome */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
-            <Link className="w-4 h-4 text-slate-400" />
-            URL de QRBoletos
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Link className="w-4 h-4 text-slate-400" />
+              URL de QRBoletos
+            </label>
+            <button
+              type="button"
+              onClick={handleAutoFillFromChrome}
+              disabled={isDetecting}
+              className="text-xs text-amber-900 dark:text-amber-400 hover:text-amber-950 dark:hover:text-amber-300 flex items-center gap-1.5 bg-amber-100 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 px-2.5 py-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50 font-semibold"
+              title="Detectar show abierto en Chrome y llenar los campos automáticamente"
+            >
+              <Sparkles className={`w-3.5 h-3.5 text-amber-700 dark:text-amber-400 ${isDetecting ? 'animate-spin' : ''}`} />
+              <span>{isDetecting ? 'Leyendo Chrome...' : 'Autocompletar desde Chrome'}</span>
+            </button>
+          </div>
           <input
             type="text"
-            className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-slate-600"
-            placeholder="Pega la URL de cualquier reporte del evento..."
+            className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-slate-400"
+            placeholder="Pega la URL de cualquier reporte del evento o pulsa Autocompletar..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
         </div>
 
+
         {/* Feedback del Parser */}
         {parsed && (
-          <div className="grid grid-cols-3 gap-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-400">
+          <div className="grid grid-cols-3 gap-3 bg-emerald-100 dark:bg-emerald-500/5 border border-emerald-300 dark:border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-900 dark:text-emerald-400">
             <div>
-              <span className="block text-slate-500 font-medium">Promoter ID</span>
-              <span className="font-mono text-slate-200 font-bold">{parsed.promoterId}</span>
+              <span className="block text-slate-600 dark:text-slate-500 font-medium">Promoter ID</span>
+              <span className="font-mono text-slate-900 dark:text-slate-200 font-bold">{parsed.promoterId}</span>
             </div>
             <div>
-              <span className="block text-slate-500 font-medium">Event ID</span>
-              <span className="font-mono text-slate-200 font-bold">{parsed.eventId}</span>
+              <span className="block text-slate-600 dark:text-slate-500 font-medium">Event ID</span>
+              <span className="font-mono text-slate-900 dark:text-slate-200 font-bold">{parsed.eventId}</span>
             </div>
             <div>
-              <span className="block text-slate-500 font-medium">Show ID</span>
-              <span className="font-mono text-slate-200 font-bold">{parsed.showId}</span>
+              <span className="block text-slate-600 dark:text-slate-500 font-medium">Show ID</span>
+              <span className="font-mono text-slate-900 dark:text-slate-200 font-bold">{parsed.showId}</span>
             </div>
           </div>
         )}

@@ -2,6 +2,7 @@ export interface ParsedEventUrl {
   promoterId: string;
   eventId: string;
   showId: string;
+  sectionId?: string;
   domain: string;
 }
 
@@ -30,12 +31,15 @@ export function parseEventUrl(urlStr: string): ParsedEventUrl | null {
     const promoterMatch = path.match(/\/promoters\/([^\/]+)/i);
     const eventMatch = path.match(/\/events\/([^\/]+)/i);
     const showMatch = path.match(/\/shows\/([^\/]+)/i);
+    const sectionMatch = path.match(/\/sections\/([^\/]+)/i);
+    const sectionId = sectionMatch && !sectionMatch[1].endsWith('.aspx') ? sectionMatch[1] : undefined;
 
     if (promoterMatch && eventMatch && showMatch) {
       return {
         promoterId: promoterMatch[1],
         eventId: eventMatch[1],
         showId: showMatch[1],
+        sectionId,
         domain: urlObj.origin, // Conserva http/https y el host (ej. https://dashboard.qrboletos.com)
       };
     }
@@ -45,6 +49,7 @@ export function parseEventUrl(urlStr: string): ParsedEventUrl | null {
   
   return null;
 }
+
 
 /**
  * Reconstruye una URL completa para un módulo específico

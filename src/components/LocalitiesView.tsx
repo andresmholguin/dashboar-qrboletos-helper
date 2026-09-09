@@ -16,16 +16,23 @@ import {
   Armchair,
   Database,
   HelpCircle,
-  X
+  X,
+  Sparkles,
+  Zap,
+  Palette
 } from 'lucide-react';
+import TarifarioUploaderModal from './TarifarioUploaderModal';
+
 
 interface LocalitiesViewProps {
   evento: Evento;
   onBack: () => void;
   onSaveLocalities: (rowId: string, localidades: Localidad[]) => Promise<void>;
+  onOpenArtworks?: () => void;
+  onConfigureSettings?: () => void;
 }
 
-export default function LocalitiesView({ evento, onBack, onSaveLocalities }: LocalitiesViewProps) {
+export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpenArtworks, onConfigureSettings }: LocalitiesViewProps) {
   const [htmlContent, setHtmlContent] = useState('');
   const [localidades, setLocalidades] = useState<Localidad[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +41,8 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
   const [showPastePanel, setShowPastePanel] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showTarifarioModal, setShowTarifarioModal] = useState(false);
+  const [isExtractingFromChrome, setIsExtractingFromChrome] = useState(false);
 
   // Obtener el dominio del evento
   let domain = 'https://dashboard.qrboletos.com';
@@ -125,6 +134,47 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
     }
   };
 
+  // Extraer localidades directamente desde Google Chrome usando el bot
+  const handleExtractFromChrome = async () => {
+    setIsExtractingFromChrome(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('/api/chrome/extract-sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUrl: evento.urlBase ? `${evento.urlBase}/sections.aspx` : undefined,
+          eventId: evento.id,
+          rowId: evento.rowId,
+          eventName: evento.nombre,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'No se pudieron extraer las localidades desde Chrome.');
+      }
+
+      if (data.urlBase) {
+        evento.urlBase = data.urlBase;
+      }
+      if (data.promoterId) evento.promoterId = data.promoterId;
+      if (data.eventId) evento.eventId = data.eventId;
+      if (data.showId) evento.showId = data.showId;
+
+      setLocalidades(data.localidades);
+      setShowPastePanel(false);
+      setSuccess(`¡${data.total} localidades extraídas de sections.aspx e importadas exitosamente!`);
+
+      // Guardar automáticamente en Sheets / Local Storage
+      await saveExtractedLocalities(data.localidades);
+    } catch (err: any) {
+      setError(`Error importando localidades desde Chrome: ${err.message}`);
+    } finally {
+      setIsExtractingFromChrome(false);
+    }
+  };
+
   // Activa el panel de pegado y abre el enlace de secciones en otra pestaña
   const handleActivateUpdate = () => {
     window.open(localitiesUrl, '_blank');
@@ -183,7 +233,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
     });
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
       {/* Cabecera del panel */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
         <div className="flex items-center gap-3">
@@ -197,7 +247,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
             <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2 flex-wrap">
               {evento.nombre}
               {localidades.length > 0 && !showPastePanel && (
-                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="text-[10px] text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1.5 shadow-sm">
                   <Database className="w-3 h-3" />
                   Persistido ({localidades.length})
                 </span>
@@ -207,19 +257,66 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
         </div>
 
         <div className="flex items-center gap-2">
+
+          {/* Botón para Importar Localidades directamente desde Chrome con el Bot */}
+          <button
+            onClick={handleExtractFromChrome}
+            disabled={isExtractingFromChrome}
+            className="bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-600 text-emerald-800 dark:text-emerald-400 hover:text-white border border-emerald-300 dark:border-emerald-500/30 hover:border-emerald-500 rounded-xl px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Importar todas las localidades directamente desde la pestaña activa de Chrome con el bot"
+          >
+            <Zap className={`w-3.5 h-3.5 fill-current ${isExtractingFromChrome ? 'animate-bounce' : ''}`} />
+            <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome'}</span>
+          </button>
+
+          {/* Botón para Cargar Tarifario con IA */}
+          <button
+            onClick={() => setShowTarifarioModal(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+            title="Extraer precios de foto del comité y cargar en Chrome"
+          >
+            <Sparkles className="w-3.5 h-3.5 fill-current" />
+            Cargar Tarifario con IA
+          </button>
+
+          {/* Botón para Reemplazar / Actualizar Artes */}
+          {onOpenArtworks && (
+            <button
+              onClick={onOpenArtworks}
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              title="Actualizar o reemplazar el QRBoleto digital y el diseño físico (Boca y Godex) en las localidades"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span>🎨 Actualizar Artes</span>
+            </button>
+          )}
+
+          {/* Botón para Configurar Evento (HTMLs, Restricciones, Switches, Imágenes) */}
+          {onConfigureSettings && (
+            <button
+              onClick={onConfigureSettings}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              title="Configurar descripción, términos, edad mínima, switches e imágenes del evento"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>⚙️ Configurar Evento</span>
+            </button>
+          )}
+
           {/* Botón para actualizar localidades si ya existen en la base de datos */}
           {localidades.length > 0 && !showPastePanel && (
             <button
               onClick={handleActivateUpdate}
-              className="bg-amber-600/10 hover:bg-amber-600 text-amber-400 hover:text-slate-950 border border-amber-500/20 hover:border-amber-500 rounded-xl px-4 py-2 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="bg-amber-50 dark:bg-amber-600/10 hover:bg-amber-600 text-amber-900 dark:text-amber-400 hover:text-white border border-amber-300 dark:border-amber-500/20 hover:border-amber-600 rounded-xl px-3 py-2 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              title="Actualizar manualmente pegando código HTML"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Actualizar Localidades
+              Pegar HTML
             </button>
           )}
 
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-950 px-3 py-2 rounded-full border border-slate-800 flex items-center gap-1.5">
-            <Globe className="w-3.5 h-3.5 text-emerald-500" />
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-3 py-2 rounded-full border border-slate-300 dark:border-slate-800 flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />
             {domain.replace('https://', '')}
           </span>
         </div>
@@ -228,13 +325,38 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
       {/* Vista A: Panel de pegado manual (Si no hay localidades o se seleccionó Actualizar) */}
       {showPastePanel && (
         <div className="space-y-4">
+          {/* Banner de acceso rápido para importar con el bot */}
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Zap className="w-4 h-4 fill-current" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                  ¿Tienes el show abierto en Google Chrome?
+                </p>
+                <p className="text-[11px] text-emerald-800 dark:text-emerald-400/80">
+                  Puedes importar automáticamente todas las localidades en 2 segundos sin copiar y pegar HTML.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleExtractFromChrome}
+              disabled={isExtractingFromChrome}
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome ahora'}</span>
+            </button>
+          </div>
+
           <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-5">
             <div className="flex items-start gap-3 mb-4">
               <Clipboard className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Código HTML de la Página de Localidades</h3>
+                <h3 className="text-sm font-bold text-slate-200">O Pega el Código HTML de la Página de Localidades</h3>
                 <p className="text-xs text-slate-400">
-                  Pega el código fuente HTML de la página de secciones de QRBoletos.
+                  Pega el código fuente HTML de la página de secciones de QRBoletos si prefieres extracción manual.
                 </p>
               </div>
             </div>
@@ -358,7 +480,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
                   {/* Nombre de la Localidad */}
                   <div className="flex items-center gap-2 border-b border-slate-900 pb-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:scale-110 transition-transform shrink-0"></div>
-                    <span className="font-extrabold text-xs text-slate-100 group-hover:text-emerald-400 transition-colors uppercase tracking-wide truncate" title={loc.nombre}>
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-wide truncate" title={loc.nombre}>
                       {loc.nombre}
                     </span>
                   </div>
@@ -370,7 +492,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
                       href={makeAbsoluteUrl(configLink)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-slate-900 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-pink-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                      className="bg-slate-900 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                       title="Configuración"
                     >
                       <Settings className="w-3.5 h-3.5 shrink-0" />
@@ -383,10 +505,10 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
                         href={makeAbsoluteUrl(pricesLink)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                        className="bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                         title="Precios"
                       >
-                        <DollarSign className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500 shrink-0" />
                         <span className="truncate w-full text-center">Precios</span>
                       </a>
                     ) : (
@@ -402,10 +524,10 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
                         href={makeAbsoluteUrl(seatsLink)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-slate-900 border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-blue-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                        className="bg-slate-900 border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                         title="Acomodación"
                       >
-                        <Armchair className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <Armchair className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                         <span className="truncate w-full text-center">Asientos</span>
                       </a>
                     ) : (
@@ -421,6 +543,17 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities }: Loc
           </div>
         </div>
       )}
+
+      {/* Modal para Cargar Tarifario con IA y Sincronizar en Chrome */}
+      <TarifarioUploaderModal
+        evento={{ ...evento, localidades }}
+        isOpen={showTarifarioModal}
+        onClose={() => setShowTarifarioModal(false)}
+        onSyncComplete={() => {
+          // Si el usuario actualiza localidades
+        }}
+      />
     </div>
   );
 }
+

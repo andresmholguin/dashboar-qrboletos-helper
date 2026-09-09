@@ -53,32 +53,32 @@ export function formatDateString(dateStr: string): string {
 }
 
 /**
- * Convierte fechas en texto español (ej. "26 de Septiembre de 2026") a formato estándar YYYY-MM-DD.
+ * Convierte fechas en texto español (ej. "26 de Septiembre de 2026", "Sábado 31 de Octubre de 2026 a las 5:00 PM", "31 OCTUBRE 2026") a formato estándar YYYY-MM-DD.
  */
 export function parseSpanishDateToISO(dateStr: string): string {
   if (!dateStr) return '';
   const trimmed = dateStr.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
 
-  const clean = trimmed.toUpperCase().replace(/\s+DE\s+/g, ' ').trim();
   const monthsMap: Record<string, string> = {
     'ENERO': '01', 'FEBRERO': '02', 'MARZO': '03', 'ABRIL': '04',
     'MAYO': '05', 'JUNIO': '06', 'JULIO': '07', 'AGOSTO': '08',
     'SEPTIEMBRE': '09', 'OCTUBRE': '10', 'NOVIEMBRE': '11', 'DICIEMBRE': '12'
   };
 
-  const parts = clean.split(' ');
-  if (parts.length === 3) {
-    const day = parts[0].padStart(2, '0');
-    const month = monthsMap[parts[1]];
-    const year = parts[2];
-    if (month && year && /^\d{4}$/.test(year)) {
-      return `${year}-${month}-${day}`;
-    }
+  const upper = trimmed.toUpperCase();
+
+  // Buscar patrón DD [DE] MES [DE] YYYY dentro de cualquier cadena
+  const match = upper.match(/(\d{1,2})\s+(?:DE\s+)?(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\s+(?:DE\s+)?(\d{4})/);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const month = monthsMap[match[2]];
+    const year = match[3];
+    return `${year}-${month}-${day}`;
   }
 
   // Caso DD/MM/YYYY
-  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const slashMatch = trimmed.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (slashMatch) {
     const day = slashMatch[1].padStart(2, '0');
     const month = slashMatch[2].padStart(2, '0');

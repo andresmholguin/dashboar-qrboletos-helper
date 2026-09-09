@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { nombre, fecha, promoterId, eventId, showId, urlBase, favorito, imageUrl } = body;
+    const { id, nombre, fecha, promoterId, eventId, showId, urlBase, favorito, imageUrl, localidades, enVenta, espectaculo, sitio, pulep } = body;
 
     if (!nombre || !promoterId || !eventId || !showId) {
       return NextResponse.json(
@@ -56,7 +56,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const nuevoEvento: Omit<Evento, 'id'> = {
+    const nuevoEvento: Omit<Evento, 'rowId'> = {
+      id: id || `${eventId}-${showId}`,
       nombre,
       fecha: fecha || '',
       promoterId,
@@ -66,6 +67,11 @@ export async function POST(request: Request) {
       fechaCreacion: new Date().toISOString().split('T')[0], // YYYY-MM-DD
       favorito: !!favorito,
       imageUrl: imageUrl || '',
+      localidades: Array.isArray(localidades) ? localidades : undefined,
+      enVenta: enVenta !== undefined ? Boolean(enVenta) : false,
+      espectaculo: espectaculo || '',
+      sitio: sitio || '',
+      pulep: pulep || '',
     };
 
     const creado = await addEventoToSheets(nuevoEvento);

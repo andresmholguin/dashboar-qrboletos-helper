@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #030712;
   --foreground: #f1f5f9;
@@ -48,4 +50,36 @@ body {
   transition-property: background-color, border-color, text-color, fill, stroke;
   transition-duration: 250ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Correcciones de alto contraste para Modo Claro */
+html.light .text-slate-900,
+html.light .text-slate-800,
+html.light .text-slate-950 {
+  color: #0f172a !important;
+}
+
+html.light .hover\:text-slate-900:hover,
+html.light .hover\:text-slate-800:hover {
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .bg-slate-200 {
+  background-color: #e2e8f0 !important;
+}
+
+html.light .hover\:bg-slate-100:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .hover\:bg-slate-200:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html.light .border-slate-800 {
+  border-color: #e2e8f0 !important;
 }

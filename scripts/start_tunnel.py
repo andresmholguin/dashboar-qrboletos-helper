@@ -12,6 +12,8 @@ def start_tunnel(port=3001):
     cmd = [
         "ssh",
         "-o", "StrictHostKeyChecking=no",
+        "-o", "UserKnownHostsFile=NUL",
+        "-o", "LogLevel=ERROR",
         "-o", "ServerAliveInterval=30",
         "-o", "ServerAliveCountMax=3",
         "-R", f"80:localhost:{port}",
@@ -44,24 +46,16 @@ def start_tunnel(port=3001):
             print(f" URL Pública HTTPS: {tunnel_url}")
             print(f" Auto-registrando en Google Sheets para Vercel...")
             
-            # Registrar automáticamente en Google Sheets a través de la API local
+            # Registrar automáticamente en Google Sheets de forma directa
             try:
-                import urllib.request
-                import json
-                req_data = json.dumps({"url": tunnel_url}).encode("utf-8")
-                req = urllib.request.Request(
-                    f"http://localhost:{port}/api/tunnel",
-                    data=req_data,
-                    headers={"Content-Type": "application/json"}
-                )
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    res_json = json.loads(resp.read().decode("utf-8"))
-                    if res_json.get("success"):
-                        print(f" >> [OK] ¡URL guardada en Google Sheets! Vercel la consumirá automáticamente.")
-                    else:
-                        print(f" >> [AVISO] Respuesta de Sheets: {res_json}")
+                reg_script = os.path.join(os.path.dirname(__file__), "register_tunnel.js")
+                res = subprocess.run(["node", reg_script, tunnel_url], capture_output=True, text=True, timeout=15)
+                if res.returncode == 0:
+                    print(f" >> [OK] ¡URL guardada en Google Sheets! Vercel la consumirá automáticamente.")
+                else:
+                    print(f" >> [AVISO] Registro en Sheets: {res.stderr or res.stdout}")
             except Exception as e:
-                print(f" >> [AVISO] No se pudo auto-registrar en Sheets (asegúrate de que el servidor Next.js esté activo en puerto {port}): {e}")
+                print(f" >> [AVISO] Error ejecutando registro: {e}")
 
             print("#" * 65 + "\n")
             

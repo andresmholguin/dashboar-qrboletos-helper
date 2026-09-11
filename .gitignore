@@ -42,3 +42,8 @@ next-env.d.ts
 
 # scratch
 scratch/
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class

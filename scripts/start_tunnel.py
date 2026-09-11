@@ -42,8 +42,27 @@ def start_tunnel(port=3001):
             print("\n" + "#" * 65)
             print(f" >> ¡TÚNEL ACTIVO Y LISTO! <<")
             print(f" URL Pública HTTPS: {tunnel_url}")
-            print(f" Configura en Vercel como variable de entorno:")
-            print(f" LOCAL_BACKEND_URL={tunnel_url}")
+            print(f" Auto-registrando en Google Sheets para Vercel...")
+            
+            # Registrar automáticamente en Google Sheets a través de la API local
+            try:
+                import urllib.request
+                import json
+                req_data = json.dumps({"url": tunnel_url}).encode("utf-8")
+                req = urllib.request.Request(
+                    f"http://localhost:{port}/api/tunnel",
+                    data=req_data,
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    res_json = json.loads(resp.read().decode("utf-8"))
+                    if res_json.get("success"):
+                        print(f" >> [OK] ¡URL guardada en Google Sheets! Vercel la consumirá automáticamente.")
+                    else:
+                        print(f" >> [AVISO] Respuesta de Sheets: {res_json}")
+            except Exception as e:
+                print(f" >> [AVISO] No se pudo auto-registrar en Sheets (asegúrate de que el servidor Next.js esté activo en puerto {port}): {e}")
+
             print("#" * 65 + "\n")
             
     process.stdout.close()

@@ -767,3 +767,131 @@ export async function syncEventsFromFirestore(): Promise<{
     events: freshEvents,
   };
 }
+
+// ============================================================================
+// GESTIÓN DINÁMICA DEL TÚNEL LOCAL EN GOOGLE SHEETS (OPCIÓN A)
+// ============================================================================
+
+export interface TunnelConfig {
+  url: string;
+  updatedAt: string;
+}
+
+let cachedTunnelConfig: { data: TunnelConfig; expiry: number } | null = null;
+
+/**
+ * Consulta la URL activa del túnel guardada en la hoja "Config".
+ */
+export async function getTunnelConfigFromSheets(forceRefresh = false): Promise<TunnelConfig> {
+  const now = Date.now();
+  if (!forceRefresh && cachedTunnelConfig && cachedTunnelConfig.expiry > now) {
+    return cachedTunnelConfig.data;
+  }
+
+  if (!isSheetsConfigured()) {
+    return { url: process.env.LOCAL_BACKEND_URL || '', updatedAt: '' };
+  }
+
+  const sheets = getSheetsInstance();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID!;
+
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'Config!A2:C2',
+    });
+
+    const row = res.data.values?.[0] || [];
+    const url = (row[1] || '').trim();
+    const updatedAt = row[2] || '';
+
+    const config = { url, updatedAt };
+    cachedTunnelConfig = { data: config, expiry: now + 15000 }; // 15 segundos de caché
+    return config;
+  } catch (err: any) {
+    // Si la hoja Config aún no existe, intentamos crearla
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: { title: 'Config' },
+              },
+            },
+          ],
+        },
+      });
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: 'Config!A1:C1',
+        valueInputOption: 'RAW',
+        requestBody: {
+          values: [['Clave', 'Valor', 'ActualizadoEl']],
+        },
+      });
+    } catch {
+      // Ignorar si ya existía
+    }
+
+    return { url: process.env.LOCAL_BACKEND_URL || '', updatedAt: '' };
+  }
+}
+
+/**
+ * Guarda la nueva URL del túnel y la fecha actual en la hoja "Config".
+ */
+export async function saveTunnelConfigToSheets(tunnelUrl: string): Promise<TunnelConfig> {
+  if (!isSheetsConfigured()) {
+    throw new Error('Google Sheets no está configurado en las variables de entorno.');
+  }
+
+  const sheets = getSheetsInstance();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID!;
+  const updatedAt = new Date().toISOString();
+
+  // Asegurar que la pestaña Config existe
+  try {
+    await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'Config!A1:C1',
+    });
+  } catch {
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: { title: 'Config' },
+              },
+            },
+          ],
+        },
+      });
+    } catch {
+      // Puede que ya existiera
+    }
+  }
+
+  // Escribir fila 1 (encabezados) y fila 2 (TUNNEL_URL)
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: 'Config!A1:C2',
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [
+        ['Clave', 'Valor', 'ActualizadoEl'],
+        ['TUNNEL_URL', tunnelUrl.trim(), updatedAt],
+      ],
+    },
+  });
+
+  const config = { url: tunnelUrl.trim(), updatedAt };
+  cachedTunnelConfig = { data: config, expiry: Date.now() + 15000 };
+  return config;
+}
+

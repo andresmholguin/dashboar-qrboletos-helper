@@ -30,7 +30,13 @@ function saveBase64Image(dataUrl: string, prefix: string): string | null {
   }
 }
 
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
+
 export async function POST(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/artworks/sync-chrome');
+  }
+
   try {
     const body = await request.json();
     const {

@@ -73,7 +73,13 @@ export async function POST(request: Request) {
   return handleDetect(request, body.tabId, body.url);
 }
 
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
+
 async function handleDetect(request: Request, selectedTabId?: string | null, manualUrl?: string | null) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/chrome/detect-show');
+  }
+
   const cdpUrl = 'http://localhost:9222';
 
   // 1. Verificar si Chrome CDP está abierto y activo

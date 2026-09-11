@@ -4,7 +4,13 @@ import path from 'path';
 import { updateEventoMetadataInSheets } from '@/services/googleSheets';
 import { Localidad } from '@/types';
 
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
+
 export async function POST(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/chrome/extract-sections');
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
     const { targetUrl, eventId, rowId, eventName } = body;

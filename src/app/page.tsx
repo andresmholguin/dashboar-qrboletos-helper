@@ -132,7 +132,8 @@ export default function Home() {
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMsg('No se pudo establecer conexión con el backend de base de datos. Se usará Local Storage temporalmente.');
+      const detail = err?.message ? `: ${err.message}` : '';
+      setErrorMsg(`No se pudo establecer conexión con Google Sheets${detail}. Se usará Local Storage temporalmente.`);
       setIsSheetsMode(false);
       // Cargar local storage
       const localData = localStorage.getItem('qrboletos_local_events');

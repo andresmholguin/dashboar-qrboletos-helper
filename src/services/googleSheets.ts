@@ -26,13 +26,29 @@ export const SHEET_HEADERS = [
 ];
 
 /**
+ * Limpia y normaliza la clave privada de Google Service Account,
+ * removiendo comillas envolventes y transformando \n literales en saltos de línea reales.
+ */
+export function getCleanPrivateKey(rawKey?: string): string | undefined {
+  if (!rawKey) return undefined;
+  let key = rawKey.trim();
+  // Quitar comillas dobles o simples iniciales y finales
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  // Normalizar saltos de línea tanto escapados (\n) como reales (\r\n)
+  key = key.replace(/\r\n/g, '\n').replace(/\\n/g, '\n');
+  return key.trim();
+}
+
+/**
  * Retorna true si las credenciales de Google Sheets están configuradas.
  */
 export function isSheetsConfigured(): boolean {
   return !!(
-    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-    process.env.GOOGLE_PRIVATE_KEY &&
-    process.env.GOOGLE_SHEET_ID
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() &&
+    getCleanPrivateKey(process.env.GOOGLE_PRIVATE_KEY) &&
+    process.env.GOOGLE_SHEET_ID?.trim()
   );
 }
 
@@ -40,8 +56,8 @@ export function isSheetsConfigured(): boolean {
  * Obtiene la instancia autenticada de Google Sheets.
  */
 function getSheetsInstance() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^"(.*)"$/, '$1');
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
+  const privateKey = getCleanPrivateKey(process.env.GOOGLE_PRIVATE_KEY);
 
   if (!email || !privateKey) {
     throw new Error('Google Sheets API credentials are not properly set up in environment variables.');

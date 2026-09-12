@@ -5,6 +5,90 @@ import fs from 'fs';
 import { fetchEventosFromSheets } from '@/services/googleSheets';
 import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/reports/download-pdf');
+  }
+
+  try {
+    const body = await request.json();
+    const {
+      salesData,
+      mode = 'general',
+      type: reportType = 'general',
+      layout = 'standard_portrait',
+      targetUrl,
+    } = body;
+
+    const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
+    let salesJsonPath = cachePath;
+
+    if (salesData && Array.isArray(salesData) && salesData.length > 0) {
+      const tempJson = path.join(process.cwd(), 'scratch', `temp_client_sales_${Date.now()}.json`);
+      fs.writeFileSync(tempJson, JSON.stringify({ salesData }, null, 2), 'utf-8');
+      salesJsonPath = tempJson;
+    }
+
+    const pdfScript = path.join(process.cwd(), 'scripts', 'generate_sales_report_pdf.py');
+    const tempPdfPath = path.join(process.cwd(), 'scratch', `Informe_${mode}_${reportType}_${Date.now()}.pdf`);
+
+    const pdfArgs = [
+      pdfScript,
+      '--sales-json', salesJsonPath,
+      '--output-pdf', tempPdfPath,
+      '--mode', mode,
+      '--type', reportType,
+      '--layout', layout,
+    ];
+
+    if (targetUrl) {
+      pdfArgs.push('--target-url', targetUrl);
+    }
+
+    const pythonPdf = spawn('python', pdfArgs, {
+      cwd: process.cwd(),
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+    });
+
+    let pdfStderr = '';
+    pythonPdf.stderr.on('data', (c) => { pdfStderr += c.toString(); });
+
+    const pdfExit = await new Promise<number>((resolve) => {
+      pythonPdf.on('close', resolve);
+    });
+
+    if (pdfExit !== 0 || !fs.existsSync(tempPdfPath)) {
+      console.error('Error generando PDF en POST:', pdfStderr);
+      return new Response(`Error generando archivo PDF: ${pdfStderr}`, { status: 500 });
+    }
+
+    const pdfBuffer = fs.readFileSync(tempPdfPath);
+    try { fs.unlinkSync(tempPdfPath); } catch {}
+    if (salesJsonPath !== cachePath) {
+      try { fs.unlinkSync(salesJsonPath); } catch {}
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const filenamePrefix = mode === 'general' ? 'Informe_Consolidado_Ventas' : `Informe_Ventas_${reportType}`;
+    const layoutLabel = layout === 'compact_landscape' ? 'Compacto' : (layout === 'onepage_portrait' ? 'Ficha' : 'Vertical');
+    const filename = `${filenamePrefix}_${layoutLabel}_${todayStr}.pdf`;
+
+    return new Response(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': pdfBuffer.length.toString(),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error en POST download-pdf:', error);
+    return new Response(`Error interno: ${error.message}`, { status: 500 });
+  }
+}
+
 export async function GET(request: Request) {
   if (isRunningInCloud()) {
     return forwardToLocalTunnel(request, '/api/reports/download-pdf');

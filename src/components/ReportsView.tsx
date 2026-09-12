@@ -124,33 +124,92 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
     }
   };
 
-  const handleDownloadPdf = (mode: 'general' | 'individual', type: 'general' | 'detailed' = 'general', targetUrl?: string) => {
+  const handleDownloadPdf = async (mode: 'general' | 'individual', type: 'general' | 'detailed' = 'general', targetUrl?: string) => {
     setIsDownloadingPdf(true);
     try {
-      let url = `/api/reports/download-pdf?mode=${mode}&type=${type}&layout=${pdfLayout}`;
-      if (targetUrl) {
-        url += `&targetUrl=${encodeURIComponent(targetUrl)}`;
+      let response: Response;
+      // Si ya tenemos salesData cargado en memoria, usar POST para enviar los datos y generar el PDF de inmediato (3s sin re-scrapear)
+      if (salesData && salesData.length > 0) {
+        response = await fetch('/api/reports/download-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            salesData,
+            mode,
+            type,
+            layout: pdfLayout,
+            targetUrl,
+          }),
+        });
+      } else {
+        let url = `/api/reports/download-pdf?mode=${mode}&type=${type}&layout=${pdfLayout}`;
+        if (targetUrl) {
+          url += `&targetUrl=${encodeURIComponent(targetUrl)}`;
+        }
+        response = await fetch(url);
       }
-      window.location.href = url;
+
+      if (!response.ok) {
+        let errText = 'Error desconocido al generar PDF';
+        try {
+          const errJson = await response.json();
+          errText = errJson.message || errJson.error || errText;
+        } catch {
+          errText = await response.text();
+        }
+        throw new Error(errText);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const filenamePrefix = mode === 'general' ? 'Informe_Consolidado_Ventas' : `Informe_Ventas_${type}`;
+      const layoutLabel = pdfLayout === 'compact_landscape' ? 'Compacto' : (pdfLayout === 'onepage_portrait' ? 'Ficha' : 'Vertical');
+      a.download = `${filenamePrefix}_${layoutLabel}_${todayStr}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
     } catch (e: any) {
-      alert(`Error descargando PDF: ${e.message}`);
+      alert(`No se pudo generar el archivo PDF: ${e.message}`);
     } finally {
-      setTimeout(() => setIsDownloadingPdf(false), 2500);
+      setIsDownloadingPdf(false);
     }
   };
 
-  const handleDownloadExcel = (targetUrl?: string) => {
+  const handleDownloadExcel = async (targetUrl?: string) => {
     setIsDownloadingExcel(true);
     try {
       let url = '/api/reports/download-excel';
       if (targetUrl) {
         url += `?targetUrl=${encodeURIComponent(targetUrl)}`;
       }
-      window.location.href = url;
+      const response = await fetch(url);
+      if (!response.ok) {
+        let errText = 'Error descargando Excel';
+        try {
+          const errJson = await response.json();
+          errText = errJson.message || errJson.error || errText;
+        } catch {
+          errText = await response.text();
+        }
+        throw new Error(errText);
+      }
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Informe_Ventas_QRBoletos_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
     } catch (e: any) {
-      alert(`Error descargando Excel: ${e.message}`);
+      alert(`No se pudo generar el archivo Excel: ${e.message}`);
     } finally {
-      setTimeout(() => setIsDownloadingExcel(false), 2000);
+      setIsDownloadingExcel(false);
     }
   };
 

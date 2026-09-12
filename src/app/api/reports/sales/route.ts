@@ -6,6 +6,9 @@ import { fetchEventosFromSheets } from '@/services/googleSheets';
 import { getComparison, getSnapshotConfig, getColombiaWeekKey, saveSnapshot } from '@/services/snapshots';
 import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   if (isRunningInCloud()) {
     return forwardToLocalTunnel(request, '/api/reports/sales');

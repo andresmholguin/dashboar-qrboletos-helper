@@ -2,8 +2,9 @@ import subprocess
 import re
 import sys
 import os
+import time
 
-def start_tunnel(port=3001):
+def run_ssh_tunnel(port=3001):
     print("=" * 65)
     print(f"   INICIANDO TÚNEL SEGURO HTTPS PARA PUERTO {port}")
     print("=" * 65)
@@ -12,8 +13,7 @@ def start_tunnel(port=3001):
     cmd = [
         "ssh",
         "-o", "StrictHostKeyChecking=no",
-        "-o", "UserKnownHostsFile=NUL",
-        "-o", "LogLevel=ERROR",
+        "-o", "UserKnownHostsFile=/dev/null",
         "-o", "ServerAliveInterval=30",
         "-o", "ServerAliveCountMax=3",
         "-R", f"80:localhost:{port}",
@@ -46,10 +46,10 @@ def start_tunnel(port=3001):
             print(f" URL Pública HTTPS: {tunnel_url}")
             print(f" Auto-registrando en Google Sheets para Vercel...")
             
-            # Registrar automáticamente en Google Sheets de forma directa
+            # Registrar automáticamente en Google Sheets de forma directa (dando hasta 60s)
             try:
                 reg_script = os.path.join(os.path.dirname(__file__), "register_tunnel.js")
-                res = subprocess.run(["node", reg_script, tunnel_url], capture_output=True, text=True, timeout=15)
+                res = subprocess.run(["node", reg_script, tunnel_url], capture_output=True, text=True, timeout=60)
                 if res.returncode == 0:
                     print(f" >> [OK] ¡URL guardada en Google Sheets! Vercel la consumirá automáticamente.")
                 else:
@@ -60,8 +60,19 @@ def start_tunnel(port=3001):
             print("#" * 65 + "\n")
             
     process.stdout.close()
-    return_code = process.wait()
-    return return_code
+    return process.wait()
+
+def start_tunnel(port=3001):
+    while True:
+        try:
+            run_ssh_tunnel(port)
+        except KeyboardInterrupt:
+            print("\n[INFO] Túnel detenido por el usuario.")
+            break
+        except Exception as e:
+            print(f"\n[ERROR] Error en el túnel: {e}")
+        print("[REINTENTO] Reconectando túnel en 5 segundos...")
+        time.sleep(5)
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 3001

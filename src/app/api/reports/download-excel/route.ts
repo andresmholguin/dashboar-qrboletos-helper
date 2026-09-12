@@ -3,8 +3,13 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fetchEventosFromSheets } from '@/services/googleSheets';
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
 export async function GET(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/reports/download-excel');
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const targetUrl = searchParams.get('targetUrl');

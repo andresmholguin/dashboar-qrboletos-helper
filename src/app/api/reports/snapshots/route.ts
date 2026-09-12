@@ -8,8 +8,13 @@ import {
   listSnapshots,
   getComparison,
 } from '@/services/snapshots';
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/reports/snapshots');
+  }
+
   try {
     const config = getSnapshotConfig();
     const snapshots = listSnapshots();
@@ -44,6 +49,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/reports/snapshots');
+  }
+
   try {
     const body = await request.json();
     const { action } = body;

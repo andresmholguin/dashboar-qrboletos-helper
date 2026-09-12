@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
 export async function POST(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/events/fetch-settings');
+  }
+
   try {
     const body = await request.json();
     const {

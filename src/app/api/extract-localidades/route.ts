@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Localidad } from '@/types';
 import { parseLocalidadesFromHtml } from '@/services/localitiesParser';
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.clone().json().catch(() => ({}));
     const { url, cookie, htmlContent } = body;
 
     // Caso A: El usuario ya proporcionó el HTML directamente (Pegado Manual)
@@ -15,6 +16,11 @@ export async function POST(request: Request) {
         localidades,
         source: 'manual',
       });
+    }
+
+    // Si está en la nube (Vercel) y requiere extraer desde Chrome local
+    if (isRunningInCloud()) {
+      return forwardToLocalTunnel(request, '/api/extract-localidades');
     }
 
     // Caso B: El usuario quiere que obtengamos las localidades desde la URL

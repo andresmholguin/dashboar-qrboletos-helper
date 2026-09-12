@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
 function saveBase64Image(dataUrl: string, prefix: string): string | null {
   try {
@@ -30,6 +31,10 @@ function saveBase64Image(dataUrl: string, prefix: string): string | null {
 }
 
 export async function POST(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/events/sync-settings');
+  }
+
   try {
     const body = await request.json();
     const {

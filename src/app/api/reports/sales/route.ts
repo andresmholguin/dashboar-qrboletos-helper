@@ -4,8 +4,13 @@ import path from 'path';
 import fs from 'fs';
 import { fetchEventosFromSheets } from '@/services/googleSheets';
 import { getComparison, getSnapshotConfig, getColombiaWeekKey, saveSnapshot } from '@/services/snapshots';
+import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
 export async function GET(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/reports/sales');
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const forceRefresh = searchParams.get('forceRefresh') === 'true';

@@ -36,7 +36,7 @@ def run_ssh_tunnel(port=3001):
         sys.stdout.flush()
         
         match = url_regex.search(line)
-        if match and not tunnel_url:
+        if match and match.group(0) != tunnel_url:
             tunnel_url = match.group(0)
             os.makedirs("scratch", exist_ok=True)
             with open("scratch/current_tunnel_url.txt", "w", encoding="utf-8") as f:

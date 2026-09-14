@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AddEventForm from '@/components/AddEventForm';
 import EventCard from '@/components/EventCard';
 import LocalitiesView from '@/components/LocalitiesView';
@@ -51,12 +51,27 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isArchiveExpanded, setIsArchiveExpanded] = useState(false);
   const [isReportsViewOpen, setIsReportsViewOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'todos' | 'a_la_venta' | 'en_configuracion' | 'archivados'>('todos');
   const [artworksEvento, setArtworksEvento] = useState<Evento | null>(null);
   const [settingsEvento, setSettingsEvento] = useState<Evento | null>(null);
+
+  // Cerrar menú de acciones al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+        setIsActionsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Cargar tema inicial al cargar la página
   useEffect(() => {
@@ -532,76 +547,122 @@ export default function Home() {
               />
             </div>
 
-            {/* Botón Detectar Show en Chrome */}
-            <button
-              onClick={() => handleDetectChromeShow()}
-              disabled={isDetectingChrome}
-              className={`cursor-pointer bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 hover:border-amber-400 text-[11px] font-bold px-3 py-2 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-900 dark:text-amber-300 transition-all flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 ${
-                isDetectingChrome ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
-              title="Detectar y abrir el show en borrador o configuración que tienes en Chrome"
-            >
-              <Sparkles className={`w-3.5 h-3.5 text-amber-700 dark:text-amber-400 ${isDetectingChrome ? 'animate-spin' : ''}`} />
-              <span>{isDetectingChrome ? 'Detectando...' : '🎯 Detectar en Chrome'}</span>
-            </button>
-
-            {/* Botón Sincronizar API */}
-            <button
-              onClick={handleSyncFromApi}
-              disabled={isSyncing}
-              className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-[11px] font-semibold px-3 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm text-slate-300 active:scale-95 ${
-                isSyncing ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
-              title="Consultar y sincronizar eventos desde la API de QRBoletos"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar API'}</span>
-            </button>
-
-            {/* Botón Módulo de Informes */}
-            <button
-              onClick={() => {
-                setIsReportsViewOpen(!isReportsViewOpen);
-                setSelectedEvento(null);
-              }}
-              className={`cursor-pointer border text-[11px] font-semibold px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 ${
-                isReportsViewOpen
-                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/20 font-bold'
-                  : 'bg-slate-900 border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:bg-slate-800'
-              }`}
-              title="Ver informe consolidado de ventas y exportar a Excel"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Informes</span>
-            </button>
-
-            {/* Botón Reordenar Banners */}
-            <button
-              onClick={handleReorderBanners}
-              disabled={isReorderingBanners}
-              className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-[11px] font-semibold px-3 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm text-slate-300 active:scale-95 shrink-0 ${
-                isReorderingBanners ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
-              title="Reordenar cronológicamente los banners en línea según la fecha del evento"
-            >
-              <ArrowDownUp className={`w-3.5 h-3.5 text-cyan-400 ${isReorderingBanners ? 'animate-bounce' : ''}`} />
-              <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners'}</span>
-            </button>
-
-
-            {/* Botón Google Sheet */}
-            {isSheetsMode && (
-              <a
-                href="https://docs.google.com/spreadsheets/d/1saVyrEYq8ITiSESR4Z13vJufjVvuKVmm9vjAsUFq3jg"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-[11px] font-semibold px-3 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm text-slate-300"
+            {/* Menú Desplegable de Acciones / Herramientas */}
+            <div className="relative" ref={actionsMenuRef}>
+              <button
+                onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm text-slate-200 active:scale-95 shrink-0 ${
+                  isActionsMenuOpen ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''
+                }`}
+                title="Menú de herramientas y acciones"
               >
-                <Database className="w-4 h-4 text-emerald-500" />
-                <span>Google Sheet</span>
-                <ExternalLink className="w-3 h-3 opacity-60" />
-              </a>
-            )}
+                <Menu className="w-4 h-4 text-emerald-500" />
+                <span>Menú</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isActionsMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Popover desplegable */}
+              {isActionsMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
+                  {/* 1. Botón Nuevo Evento (Destacado) */}
+                  <button
+                    onClick={() => {
+                      setIsActionsMenuOpen(false);
+                      setIsAddModalOpen(true);
+                    }}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Nuevo Evento</span>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-800" />
+
+                  {/* 2. Botón Módulo de Informes */}
+                  <button
+                    onClick={() => {
+                      setIsActionsMenuOpen(false);
+                      setIsReportsViewOpen(!isReportsViewOpen);
+                      setSelectedEvento(null);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${
+                      isReportsViewOpen
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                    title="Ver informe consolidado de ventas y exportar a Excel / PDF"
+                  >
+                    <BarChart3 className="w-4 h-4 text-emerald-500" />
+                    <span className="flex-1">Informes</span>
+                    {isReportsViewOpen && (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                        Activo
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 3. Botón Sincronizar API */}
+                  <button
+                    onClick={() => {
+                      setIsActionsMenuOpen(false);
+                      handleSyncFromApi();
+                    }}
+                    disabled={isSyncing}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                    title="Consultar y sincronizar eventos desde la API de QRBoletos"
+                  >
+                    <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar API'}</span>
+                  </button>
+
+                  {/* 4. Botón Reordenar Banners */}
+                  <button
+                    onClick={() => {
+                      setIsActionsMenuOpen(false);
+                      handleReorderBanners();
+                    }}
+                    disabled={isReorderingBanners}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                    title="Reordenar cronológicamente los banners en línea según la fecha del evento"
+                  >
+                    <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-bounce' : ''}`} />
+                    <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners'}</span>
+                  </button>
+
+                  {/* 5. Botón Detectar Show en Chrome */}
+                  <button
+                    onClick={() => {
+                      setIsActionsMenuOpen(false);
+                      handleDetectChromeShow();
+                    }}
+                    disabled={isDetectingChrome}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-amber-300 hover:bg-amber-500/10 transition-all cursor-pointer disabled:opacity-50"
+                    title="Detectar y abrir el show en borrador o configuración que tienes en Chrome"
+                  >
+                    <Sparkles className={`w-4 h-4 text-amber-400 ${isDetectingChrome ? 'animate-spin' : ''}`} />
+                    <span>{isDetectingChrome ? 'Detectando...' : 'Detectar en Chrome'}</span>
+                  </button>
+
+                  {/* 6. Botón Google Sheet */}
+                  {isSheetsMode && (
+                    <>
+                      <div className="my-1 border-t border-slate-800" />
+                      <a
+                        href="https://docs.google.com/spreadsheets/d/1saVyrEYq8ITiSESR4Z13vJufjVvuKVmm9vjAsUFq3jg"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsActionsMenuOpen(false)}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+                      >
+                        <Database className="w-4 h-4 text-emerald-500" />
+                        <span className="flex-1">Google Sheet</span>
+                        <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Botón de Cambio de Tema */}
             <button
@@ -610,15 +671,6 @@ export default function Home() {
               title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
-            </button>
-
-            {/* Botón Nuevo Evento */}
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2 px-3.5 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nuevo Evento</span>
             </button>
           </div>
 

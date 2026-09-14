@@ -108,9 +108,26 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
     try {
       const url = force ? '/api/reports/sales?forceRefresh=true' : '/api/reports/sales';
       const res = await fetch(url);
+
+      if (!res.ok) {
+        let errText = 'Error en el servidor al consultar ventas.';
+        try {
+          const errJson = await res.json();
+          errText = errJson.message || errJson.error || errText;
+        } catch {
+          const rawText = await res.text();
+          if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || rawText.includes('504')) {
+            errText = 'La extracción tardó más de lo esperado en la nube. Vuelve a intentar o utiliza los datos en caché.';
+          } else {
+            errText = rawText.slice(0, 150) || errText;
+          }
+        }
+        throw new Error(errText);
+      }
+
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || 'No se pudieron consultar los datos de ventas.');
       }
 

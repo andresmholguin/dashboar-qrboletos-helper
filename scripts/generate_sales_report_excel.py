@@ -3,7 +3,8 @@ import os
 import json
 import argparse
 import datetime
-from playwright.sync_api import sync_playwright
+import asyncio
+from playwright.async_api import async_playwright
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -40,7 +41,7 @@ def clean_int(val_str):
     except:
         return 0
 
-def scrape_show_sales(page, show_url):
+async def scrape_show_sales(page, show_url):
     """Navega a la URL de summary.aspx y extrae los datos de ventas estructurados."""
     if "/reports/sales/summary.aspx" not in show_url:
         if "/shows/" in show_url:
@@ -54,10 +55,10 @@ def scrape_show_sales(page, show_url):
         target_url = show_url
 
     log(f"Extrayendo informe de ventas: {target_url}")
-    page.goto(target_url, wait_until="networkidle")
-    page.wait_for_selector(".table, table, h1, h2", timeout=9000)
+    await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+    await page.wait_for_selector(".table, table, h1, h2", timeout=9000)
 
-    sales_data = page.evaluate('''() => {
+    sales_data = await page.evaluate('''() => {
         // 1. Extraer metadatos del evento / espectáculo
         const meta = {};
         const metaRows = Array.from(document.querySelectorAll("table tr"));
@@ -247,8 +248,8 @@ def scrape_show_sales(page, show_url):
     log(f"Consultando recaudo en ventas: {collected_url}")
     recaudo_info = {"metodos": [], "entregaEmpresario": None}
     try:
-        page.goto(collected_url, wait_until="networkidle", timeout=12000)
-        recaudo_info = page.evaluate('''() => {
+        await page.goto(collected_url, wait_until="domcontentloaded", timeout=15000)
+        recaudo_info = await page.evaluate('''() => {
             const result = {
                 metodos: [],
                 entregaEmpresario: null
@@ -729,28 +730,54 @@ def main():
         log("No se proporcionaron eventos para procesar.")
         sys.exit(1)
 
-    all_sales_data = []
+    asyncio.run(async_main(args, events_to_process))
 
-    with sync_playwright() as p:
-        browser = p.chromium.connect_over_cdp(args.cdp_url)
+async def async_main(args, events_to_process):
+    results = []
+
+    async with async_playwright() as p:
+        browser = await p.chromium.connect_over_cdp(args.cdp_url)
         context = browser.contexts[0]
-        page = context.new_page()
 
-        for ev in events_to_process:
-            url = ev.get("urlBase") or ev.get("url")
-            if not url:
-                continue
+        queue = asyncio.Queue()
+        for idx, ev in enumerate(events_to_process):
+            await queue.put((idx, ev))
+
+        concurrency = min(3, max(1, len(events_to_process)))
+
+        async def worker():
+            page = await context.new_page()
             try:
-                data = scrape_show_sales(page, url)
-                all_sales_data.append(data)
-            except Exception as e:
-                log(f"Error extrayendo {url}: {e}")
+                while True:
+                    try:
+                        idx, ev = queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+                    url = ev.get("urlBase") or ev.get("url")
+                    if not url:
+                        queue.task_done()
+                        continue
+                    try:
+                        data = await scrape_show_sales(page, url)
+                        results.append((idx, data))
+                    except Exception as e:
+                        log(f"Error extrayendo {url}: {e}")
+                    finally:
+                        queue.task_done()
+            finally:
+                await page.close()
 
-        page.close()
+        workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
+        await queue.join()
+        for w in workers:
+            w.cancel()
 
-    if not all_sales_data:
+    if not results:
         log("No se pudo obtener datos de ventas de ningún evento.")
         sys.exit(1)
+
+    results.sort(key=lambda x: x[0])
+    all_sales_data = [r[1] for r in results]
 
     # Generar Excel
     build_excel_report(all_sales_data, args.output_excel)

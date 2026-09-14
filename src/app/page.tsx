@@ -56,7 +56,7 @@ export default function Home() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isArchiveExpanded, setIsArchiveExpanded] = useState(false);
   const [isReportsViewOpen, setIsReportsViewOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'todos' | 'a_la_venta' | 'en_configuracion' | 'archivados'>('todos');
+  const [selectedTab, setSelectedTab] = useState<'todos' | 'a_la_venta' | 'en_configuracion' | 'archivados'>('a_la_venta');
   const [artworksEvento, setArtworksEvento] = useState<Evento | null>(null);
   const [settingsEvento, setSettingsEvento] = useState<Evento | null>(null);
 
@@ -113,7 +113,7 @@ export default function Home() {
 
       if (data.success) {
         setIsSheetsMode(data.isSheets);
-        
+
         if (data.isSheets) {
           // Aceptar todos los eventos con nombre válido
           const validEvents = data.events.filter((e: Evento) => e.nombre && e.nombre.trim() !== '');
@@ -217,7 +217,7 @@ export default function Home() {
             if (data.message) {
               setSyncToast(data.message);
             }
-          } catch {}
+          } catch { }
         }
       }
       setSyncToast('¡Banners reordenados cronológicamente con éxito en QRBoletos!');
@@ -256,9 +256,9 @@ export default function Home() {
       // Buscar si el evento ya existe en nuestra base de datos por showId, eventId, id o urlBase
       const existing = eventos.find(
         (e) => (e.showId && detected.showId && e.showId === detected.showId) ||
-               (e.id && detected.id && e.id === detected.id) ||
-               (e.urlBase && detected.urlBase && e.urlBase.toLowerCase() === detected.urlBase.toLowerCase()) ||
-               (e.nombre && detected.nombre && e.nombre.toLowerCase().trim() === detected.nombre.toLowerCase().trim())
+          (e.id && detected.id && e.id === detected.id) ||
+          (e.urlBase && detected.urlBase && e.urlBase.toLowerCase() === detected.urlBase.toLowerCase()) ||
+          (e.nombre && detected.nombre && e.nombre.toLowerCase().trim() === detected.nombre.toLowerCase().trim())
       );
 
       if (existing) {
@@ -493,13 +493,13 @@ export default function Home() {
             >
               <div className="bg-emerald-500/10 p-1.5 rounded-xl border border-emerald-500/20 shadow-lg shadow-emerald-500/5 flex items-center justify-center">
                 <svg viewBox="0 0 100 100" className="w-7 h-7">
-                  <rect x="10" y="10" width="80" height="80" rx="18" fill="none" stroke="#047857" strokeWidth="6"/>
-                  <rect x="21" y="55" width="11" height="25" rx="3" fill="#10B981"/>
-                  <rect x="37" y="45" width="11" height="35" rx="3" fill="#10B981"/>
-                  <rect x="53" y="35" width="11" height="45" rx="3" fill="#10B981"/>
-                  <rect x="69" y="25" width="11" height="55" rx="3" fill="#10B981"/>
-                  <path d="M 18 45 Q 45 40 64 22" fill="none" stroke="#047857" strokeWidth="6" strokeLinecap="round"/>
-                  <polygon points="56,18 73,13 68,30" fill="#047857" stroke="#047857" strokeWidth="2" strokeLinejoin="round"/>
+                  <rect x="10" y="10" width="80" height="80" rx="18" fill="none" stroke="#047857" strokeWidth="6" />
+                  <rect x="21" y="55" width="11" height="25" rx="3" fill="#10B981" />
+                  <rect x="37" y="45" width="11" height="35" rx="3" fill="#10B981" />
+                  <rect x="53" y="35" width="11" height="45" rx="3" fill="#10B981" />
+                  <rect x="69" y="25" width="11" height="55" rx="3" fill="#10B981" />
+                  <path d="M 18 45 Q 45 40 64 22" fill="none" stroke="#047857" strokeWidth="6" strokeLinecap="round" />
+                  <polygon points="56,18 73,13 68,30" fill="#047857" stroke="#047857" strokeWidth="2" strokeLinejoin="round" />
                 </svg>
               </div>
               <div>
@@ -551,9 +551,8 @@ export default function Home() {
             <div className="relative" ref={actionsMenuRef}>
               <button
                 onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm text-slate-200 active:scale-95 shrink-0 ${
-                  isActionsMenuOpen ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''
-                }`}
+                className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm text-slate-200 active:scale-95 shrink-0 ${isActionsMenuOpen ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''
+                  }`}
                 title="Menú de herramientas y acciones"
               >
                 <Menu className="w-4 h-4 text-emerald-500" />
@@ -585,11 +584,10 @@ export default function Home() {
                       setIsReportsViewOpen(!isReportsViewOpen);
                       setSelectedEvento(null);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${
-                      isReportsViewOpen
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${isReportsViewOpen
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
                         : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
+                      }`}
                     title="Ver informe consolidado de ventas y exportar a Excel / PDF"
                   >
                     <BarChart3 className="w-4 h-4 text-emerald-500" />
@@ -743,11 +741,10 @@ export default function Home() {
                   setIsReportsViewOpen(true);
                   setSelectedEvento(null);
                 }}
-                className={`cursor-pointer border text-xs font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm text-center ${
-                  isReportsViewOpen
+                className={`cursor-pointer border text-xs font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm text-center ${isReportsViewOpen
                     ? 'bg-emerald-600 text-white border-emerald-500'
                     : 'bg-slate-900 border-slate-800 hover:border-emerald-500/30 text-slate-300 hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>📊 Módulo de Informes</span>
@@ -841,22 +838,20 @@ export default function Home() {
                 <div className="flex items-center gap-1.5 p-1 bg-slate-950/80 border border-slate-800 rounded-xl overflow-x-auto">
                   <button
                     onClick={() => setSelectedTab('todos')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                      selectedTab === 'todos'
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${selectedTab === 'todos'
                         ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-bold'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900'
-                    }`}
+                      }`}
                   >
                     Todos ({eventos.length})
                   </button>
 
                   <button
                     onClick={() => setSelectedTab('a_la_venta')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                      selectedTab === 'a_la_venta'
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${selectedTab === 'a_la_venta'
                         ? 'bg-emerald-100 dark:bg-emerald-600/20 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 shadow-sm font-bold'
                         : 'text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-900'
-                    }`}
+                      }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                     <span>A la Venta ({onSaleEvents.length})</span>
@@ -864,11 +859,10 @@ export default function Home() {
 
                   <button
                     onClick={() => setSelectedTab('en_configuracion')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                      selectedTab === 'en_configuracion'
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${selectedTab === 'en_configuracion'
                         ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-sm font-bold'
                         : 'text-slate-500 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-slate-900'
-                    }`}
+                      }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                     <span>En Configuración ({inConfigEvents.length})</span>
@@ -877,11 +871,10 @@ export default function Home() {
                   {passedEvents.length > 0 && (
                     <button
                       onClick={() => setSelectedTab('archivados')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                        selectedTab === 'archivados'
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${selectedTab === 'archivados'
                           ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-bold'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
-                      }`}
+                        }`}
                     >
                       <Archive className="w-3.5 h-3.5" />
                       <span>Archivados ({passedEvents.length})</span>

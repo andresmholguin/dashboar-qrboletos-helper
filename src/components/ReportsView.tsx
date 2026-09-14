@@ -108,27 +108,24 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
     try {
       const url = force ? '/api/reports/sales?forceRefresh=true' : '/api/reports/sales';
       const res = await fetch(url);
+      const rawText = await res.text();
 
-      if (!res.ok) {
-        let errText = 'Error en el servidor al consultar ventas.';
-        try {
-          const errJson = await res.json();
-          errText = errJson.message || errJson.error || errText;
-        } catch {
-          const rawText = await res.text();
-          if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || rawText.includes('504')) {
-            errText = 'La extracción tardó más de lo esperado en la nube. Vuelve a intentar o utiliza los datos en caché.';
-          } else {
-            errText = rawText.slice(0, 150) || errText;
-          }
+      let data: any = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        // La respuesta no es JSON válido (ej. error 502/504 en HTML o texto crudo)
+        if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || rawText.includes('504')) {
+          throw new Error('La extracción tardó más de lo esperado en la nube. Vuelve a intentar o utiliza los datos en caché.');
+        } else if (rawText.includes('TUNNEL_CONNECTION_FAILED') || rawText.includes('502') || rawText.includes('Bad Gateway')) {
+          throw new Error('No se pudo conectar con el PC local. Asegúrate de tener "Iniciar_Tunel_Local.bat" en ejecución.');
+        } else {
+          throw new Error(rawText.slice(0, 180) || `Error del servidor (HTTP ${res.status})`);
         }
-        throw new Error(errText);
       }
 
-      const data = await res.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'No se pudieron consultar los datos de ventas.');
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || data.error || `Error al consultar ventas (HTTP ${res.status})`);
       }
 
       setSalesData(data.salesData || []);
@@ -167,12 +164,17 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       }
 
       if (!response.ok) {
-        let errText = 'Error desconocido al generar PDF';
+        const rawText = await response.text();
+        let errText = rawText;
         try {
-          const errJson = await response.json();
-          errText = errJson.message || errJson.error || errText;
+          const errJson = JSON.parse(rawText);
+          errText = errJson.message || errJson.error || rawText;
         } catch {
-          errText = await response.text();
+          if (rawText.includes('504') || rawText.includes('TIMEOUT')) {
+            errText = 'Tiempo de espera agotado generando el PDF.';
+          } else if (rawText.includes('502') || rawText.includes('Bad Gateway') || rawText.includes('TUNNEL_CONNECTION_FAILED')) {
+            errText = 'No se pudo comunicar con el PC local. Asegúrate de tener el túnel abierto.';
+          }
         }
         throw new Error(errText);
       }
@@ -205,12 +207,17 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       }
       const response = await fetch(url);
       if (!response.ok) {
-        let errText = 'Error descargando Excel';
+        const rawText = await response.text();
+        let errText = rawText;
         try {
-          const errJson = await response.json();
-          errText = errJson.message || errJson.error || errText;
+          const errJson = JSON.parse(rawText);
+          errText = errJson.message || errJson.error || rawText;
         } catch {
-          errText = await response.text();
+          if (rawText.includes('504') || rawText.includes('TIMEOUT')) {
+            errText = 'Tiempo de espera agotado generando el Excel.';
+          } else if (rawText.includes('502') || rawText.includes('Bad Gateway') || rawText.includes('TUNNEL_CONNECTION_FAILED')) {
+            errText = 'No se pudo comunicar con el PC local. Asegúrate de tener el túnel abierto.';
+          }
         }
         throw new Error(errText);
       }

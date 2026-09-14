@@ -41,13 +41,37 @@ export async function forwardToLocalTunnel(request: Request, pathname: string): 
       } catch {}
     }
 
-    const response = await fetch(targetUrl, {
-      method: request.method,
-      headers,
-      body,
-      // @ts-ignore
-      duplex: body ? 'half' : undefined,
-    });
+    let response: Response;
+    try {
+      response = await fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body,
+        // @ts-ignore
+        duplex: body ? 'half' : undefined,
+      });
+    } catch (initialErr: any) {
+      // Si la conexión inicial falló, puede que el túnel haya rotado su URL recientemente.
+      // Forzar consulta fresca a Google Sheets sin caché.
+      try {
+        const freshConfig = await getTunnelConfigFromSheets(true);
+        const freshUrl = freshConfig.url?.trim().replace(/\/+$/, '');
+        if (freshUrl && freshUrl !== tunnelUrl) {
+          const freshTargetUrl = `${freshUrl}${pathname}${search}`;
+          response = await fetch(freshTargetUrl, {
+            method: request.method,
+            headers,
+            body,
+            // @ts-ignore
+            duplex: body ? 'half' : undefined,
+          });
+        } else {
+          throw initialErr;
+        }
+      } catch {
+        throw initialErr;
+      }
+    }
 
     const responseHeaders = new Headers(response.headers);
     responseHeaders.delete('content-encoding');

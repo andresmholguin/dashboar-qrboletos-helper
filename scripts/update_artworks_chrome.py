@@ -387,6 +387,13 @@ def upload_event_settings_image(page: Page, img_type: str, file_path: str, label
         return True
 
     file_input = page.locator(f"input.image-upload[data-image='{img_type}'], #image-{img_type}-select input[type='file']").first
+    if file_input.count() == 0 and img_type == 'banner':
+        for i in range(1, 6):
+            xpath = f"xpath=//*[contains(text(), 'Banner Top') or contains(text(), '1950px x 700px')]/ancestor::*[{i}]//input[@type='file']"
+            file_input = page.locator(xpath).first
+            if file_input.count() > 0:
+                break
+
     if file_input.count() == 0:
         log("ERROR", f"No se encontro el selector de archivo para {label}.")
         return False
@@ -530,7 +537,7 @@ def update_artworks():
                         event_id=args.event_numeric_id or args.event_id,
                         event_name=args.event_name or "Evento",
                         event_url=args.event_url,
-                        banner_image_path=args.image_banner,
+                        banner_image_path=None, # Ya se subio nativamente en Event Settings
                         en_venta=args.en_venta,
                         replace_image=args.replace_images,
                         events_list=events_list if events_list else None,

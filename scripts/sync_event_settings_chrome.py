@@ -65,6 +65,13 @@ def upload_croppie_image(page: Page, img_type: str, file_path: str, context_labe
     log("INFO", f"Subiendo {context_label} ('{file_name}')...")
 
     file_input = page.locator(f"input.image-upload[data-image='{img_type}'], #image-{img_type}-select input[type='file']").first
+    if file_input.count() == 0 and img_type == 'banner':
+        for i in range(1, 5):
+            xpath = f"xpath=//*[contains(text(), 'Banner Top') or contains(text(), '1950px x 700px')]/ancestor::*[{i}]//input[@type='file']"
+            file_input = page.locator(xpath).first
+            if file_input.count() > 0:
+                break
+
     if file_input.count() == 0:
         log("ERROR", f"No se encontro el selector de archivo para {context_label}.")
         return False

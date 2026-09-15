@@ -99,6 +99,15 @@ def main():
                 return
 
             current_url = matched_url or target_page.url
+            if "login.aspx" in current_url.lower() or "user/login" in current_url.lower():
+                log("❌ [SESION EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")
+                print(json.dumps({
+                    "success": False,
+                    "code": "SESSION_EXPIRED",
+                    "error": "Tu sesión en Google Chrome ha expirado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentarlo."
+                }))
+                return
+
             log(f"Pestaña seleccionada: {current_url}")
 
             promoter_id = ""

@@ -41,6 +41,10 @@ def clean_int(val_str):
     except:
         return 0
 
+class SessionExpiredError(Exception):
+    """Excepción lanzada cuando la sesión de QRBoletos en Chrome ha expirado."""
+    pass
+
 async def scrape_show_sales(page, show_url):
     """Navega a la URL de summary.aspx y extrae los datos de ventas estructurados."""
     if "/reports/sales/summary.aspx" not in show_url:
@@ -56,6 +60,22 @@ async def scrape_show_sales(page, show_url):
 
     log(f"Extrayendo informe de ventas: {target_url}")
     await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+
+    # Verificación instantánea de sesión activa en QRBoletos
+    curr_url = page.url.lower()
+    if "login.aspx" in curr_url or "user/login" in curr_url:
+        log("❌ [SESION EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")
+        raise SessionExpiredError("SESSION_EXPIRED: La sesión en QRBoletos ha caducado. Por favor inicia sesión en Google Chrome.")
+
+    is_login_page = await page.evaluate('''() => {
+        const hasUserInput = !!document.querySelector("#txtUsuario, input[type='password']");
+        const hasLoginTitle = document.title && document.title.toLowerCase().includes("iniciar sesión");
+        return hasUserInput || hasLoginTitle;
+    }''')
+    if is_login_page:
+        log("❌ [SESION EXPIRADA] Formulario de inicio de sesión detectado en Google Chrome.")
+        raise SessionExpiredError("SESSION_EXPIRED: La sesión en QRBoletos ha caducado. Por favor inicia sesión en Google Chrome.")
+
     await page.wait_for_selector(".table, table, h1, h2", timeout=9000)
 
     sales_data = await page.evaluate('''() => {
@@ -734,10 +754,38 @@ def main():
 
 async def async_main(args, events_to_process):
     results = []
+    session_expired_flag = False
 
     async with async_playwright() as p:
-        browser = await p.chromium.connect_over_cdp(args.cdp_url)
-        context = browser.contexts[0]
+        try:
+            browser = await p.chromium.connect_over_cdp(args.cdp_url)
+        except Exception as e:
+            log(f"No se pudo conectar a Chrome en {args.cdp_url}: {e}")
+            if args.json_out:
+                print(json.dumps({
+                    "success": False,
+                    "code": "CHROME_OFFLINE",
+                    "error": f"Chrome no responde en {args.cdp_url}. Verifica que esté abierto con --remote-debugging-port=9222."
+                }))
+            sys.exit(1)
+
+        context = browser.contexts[0] if browser.contexts else browser.new_context()
+
+        # Chequeo preventivo: verificar si alguna pestaña abierta de QRBoletos ya está en la pantalla de login
+        for existing_page in context.pages:
+            try:
+                ep_url = existing_page.url.lower()
+                if "qrboletos.com" in ep_url and ("login.aspx" in ep_url or "user/login" in ep_url):
+                    log("❌ [SESION EXPIRADA] Se detectó una pestaña de QRBoletos en la pantalla de inicio de sesión.")
+                    if args.json_out:
+                        print(json.dumps({
+                            "success": False,
+                            "code": "SESSION_EXPIRED",
+                            "error": "Tu sesión en Google Chrome ha expirado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentarlo."
+                        }))
+                    sys.exit(41)
+            except Exception:
+                pass
 
         queue = asyncio.Queue()
         for idx, ev in enumerate(events_to_process):
@@ -746,9 +794,12 @@ async def async_main(args, events_to_process):
         concurrency = min(3, max(1, len(events_to_process)))
 
         async def worker():
+            nonlocal session_expired_flag
             page = await context.new_page()
             try:
                 while True:
+                    if session_expired_flag:
+                        break
                     try:
                         idx, ev = queue.get_nowait()
                     except asyncio.QueueEmpty:
@@ -760,6 +811,17 @@ async def async_main(args, events_to_process):
                     try:
                         data = await scrape_show_sales(page, url)
                         results.append((idx, data))
+                    except SessionExpiredError as se:
+                        session_expired_flag = True
+                        log(f"❌ Sesión expirada durante extracción de {url}: {se}")
+                        # Vaciar la cola para detener a los demás workers
+                        while not queue.empty():
+                            try:
+                                queue.get_nowait()
+                                queue.task_done()
+                            except asyncio.QueueEmpty:
+                                break
+                        break
                     except Exception as e:
                         log(f"Error extrayendo {url}: {e}")
                     finally:
@@ -771,6 +833,16 @@ async def async_main(args, events_to_process):
         await queue.join()
         for w in workers:
             w.cancel()
+
+    if session_expired_flag:
+        log("❌ Operación abortada: La sesión en Google Chrome ha expirado.")
+        if args.json_out:
+            print(json.dumps({
+                "success": False,
+                "code": "SESSION_EXPIRED",
+                "error": "Tu sesión en Google Chrome ha expirado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentarlo."
+            }))
+        sys.exit(41)
 
     if not results:
         log("No se pudo obtener datos de ventas de ningún evento.")

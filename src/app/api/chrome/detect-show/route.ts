@@ -129,6 +129,23 @@ async function handleDetect(request: Request, selectedTabId?: string | null, man
     qrTabs.push(...fallbackTabs);
   }
 
+  // Comprobar si las pestañas de QRBoletos están en la pantalla de inicio de sesión
+  const loginTab = qrTabs.find(
+    (t) => t.url.toLowerCase().includes('login.aspx') || t.title?.toLowerCase().includes('iniciar sesión')
+  );
+  if (loginTab && qrTabs.every((t) => t.url.toLowerCase().includes('login.aspx') || t.title?.toLowerCase().includes('iniciar sesión'))) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: 'SESSION_EXPIRED',
+        error: 'Tu sesión en Google Chrome ha caducado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentar.',
+        sessionExpired: true,
+        tabUrl: loginTab.url,
+      },
+      { status: 401 }
+    );
+  }
+
   // 3. Caso Múltiples Pestañas: Si hay más de 1 pestaña y el usuario NO ha seleccionado una todavía
   if (qrTabs.length > 1 && !selectedTabId && !manualUrl) {
     return NextResponse.json({

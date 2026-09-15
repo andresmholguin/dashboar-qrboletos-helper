@@ -125,6 +125,11 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       }
 
       if (!res.ok || !data.success) {
+        if (res.status === 401 || data.code === 'SESSION_EXPIRED' || data.error?.includes('expirado') || data.error?.includes('login.aspx') || data.message?.includes('expirado')) {
+          throw new Error('⚠️ Tu sesión en Google Chrome ha caducado. Por favor abre tu navegador Chrome en la PC, inicia sesión en dashboard.qrboletos.com y vuelve a pulsar "Consultar Ventas".');
+        } else if (res.status === 503 || data.code === 'CHROME_OFFLINE') {
+          throw new Error('⚠️ Google Chrome no está abierto en modo depuración (puerto 9222). Ejecuta "Iniciar_Chrome_Boleteria.bat" en tu PC.');
+        }
         throw new Error(data.message || data.error || `Error al consultar ventas (HTTP ${res.status})`);
       }
 
@@ -168,7 +173,13 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
         let errText = rawText;
         try {
           const errJson = JSON.parse(rawText);
-          errText = errJson.message || errJson.error || rawText;
+          if (response.status === 401 || errJson.code === 'SESSION_EXPIRED' || errJson.error?.includes('expirado') || errJson.error?.includes('login.aspx')) {
+            errText = '⚠️ Tu sesión en Google Chrome ha caducado. Por favor inicia sesión en dashboard.qrboletos.com en tu PC y vuelve a intentarlo.';
+          } else if (response.status === 503 || errJson.code === 'CHROME_OFFLINE') {
+            errText = '⚠️ Google Chrome no está abierto en modo depuración (puerto 9222). Inicia "Iniciar_Chrome_Boleteria.bat".';
+          } else {
+            errText = errJson.message || errJson.error || rawText;
+          }
         } catch {
           if (rawText.includes('504') || rawText.includes('TIMEOUT')) {
             errText = 'Tiempo de espera agotado generando el PDF.';
@@ -211,7 +222,13 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
         let errText = rawText;
         try {
           const errJson = JSON.parse(rawText);
-          errText = errJson.message || errJson.error || rawText;
+          if (response.status === 401 || errJson.code === 'SESSION_EXPIRED' || errJson.error?.includes('expirado') || errJson.error?.includes('login.aspx')) {
+            errText = '⚠️ Tu sesión en Google Chrome ha caducado. Por favor inicia sesión en dashboard.qrboletos.com en tu PC y vuelve a intentarlo.';
+          } else if (response.status === 503 || errJson.code === 'CHROME_OFFLINE') {
+            errText = '⚠️ Google Chrome no está abierto en modo depuración (puerto 9222). Inicia "Iniciar_Chrome_Boleteria.bat".';
+          } else {
+            errText = errJson.message || errJson.error || rawText;
+          }
         } catch {
           if (rawText.includes('504') || rawText.includes('TIMEOUT')) {
             errText = 'Tiempo de espera agotado generando el Excel.';

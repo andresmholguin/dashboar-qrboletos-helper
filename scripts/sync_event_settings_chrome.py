@@ -154,6 +154,13 @@ def sync_event_settings():
         else:
             log("INFO", "Pestana ya posicionada en la configuracion del evento.")
 
+        # Validar si la sesión de QRBoletos expiró o redirigió al login
+        curr_url = page.url.lower()
+        if "login.aspx" in curr_url or "user/login" in curr_url:
+            log("ERROR", "❌ [SESIÓN EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")
+            log("ERROR", "Tu sesión en QRBoletos ha caducado. Inicia sesión en Chrome y vuelve a intentarlo.")
+            sys.exit(41)
+
         time.sleep(1.5)
 
         # 1. EDAD MINIMA

@@ -76,6 +76,17 @@ def fetch_settings():
             else:
                 log("INFO", "Pestaña ya posicionada en la configuración del evento.")
 
+            # Comprobar si la sesión está expirada o redirigida a login
+            curr_url = page.url.lower()
+            if "login.aspx" in curr_url or "user/login" in curr_url:
+                log("ERROR", "❌ [SESION EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")
+                print("###JSON_OUTPUT###" + json.dumps({
+                    "success": False,
+                    "code": "SESSION_EXPIRED",
+                    "error": "Tu sesión en Google Chrome ha expirado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentarlo."
+                }))
+                sys.exit(41)
+
             time.sleep(1.5)
 
             # Extraer los datos mediante JS en el navegador

@@ -73,7 +73,30 @@ def safe_goto(page: Page, url: str, wait_selector: Optional[str] = None, timeout
                 pass
     time.sleep(0.5)
 
-    # Validar si la sesión de QRBoletos expiró o redirigió al login
+    # Validar si la sesión de QRBoletos expiró o redirigió al login (con intento de auto-login)
+    curr_url = page.url.lower()
+    if "login.aspx" in curr_url or "user/login" in curr_url:
+        try:
+            has_creds = page.evaluate('''() => {
+                const pass = document.querySelector("input[type='password']");
+                return !!(pass && pass.value && pass.value.length > 0);
+            }''')
+            if has_creds:
+                log("INFO", "ℹ️ Credenciales recordadas detectadas en login.aspx. Haciendo clic en 'Iniciar sesión'...")
+                btn = page.query_selector("#login-button, button[type='submit'], input[type='submit'], .btn-primary")
+                if btn:
+                    btn.click()
+                    try:
+                        page.wait_for_load_state("domcontentloaded", timeout=12000)
+                    except Exception:
+                        pass
+                    time.sleep(2)
+                    if "login.aspx" not in page.url.lower():
+                        log("SUCCESS", "✅ Auto-login exitoso. Redirigiendo a la URL objetivo...")
+                        page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+        except Exception:
+            pass
+
     curr_url = page.url.lower()
     if "login.aspx" in curr_url or "user/login" in curr_url:
         log("ERROR", "❌ [SESIÓN EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")

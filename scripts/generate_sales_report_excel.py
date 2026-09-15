@@ -61,7 +61,30 @@ async def scrape_show_sales(page, show_url):
     log(f"Extrayendo informe de ventas: {target_url}")
     await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
 
-    # Verificación instantánea de sesión activa en QRBoletos
+    # Verificación instantánea de sesión activa en QRBoletos (con auto-login si ya tiene credenciales)
+    curr_url = page.url.lower()
+    if "login.aspx" in curr_url or "user/login" in curr_url:
+        try:
+            has_creds = await page.evaluate('''() => {
+                const pass = document.querySelector("input[type='password']");
+                return !!(pass && pass.value && pass.value.length > 0);
+            }''')
+            if has_creds:
+                log("ℹ️ Credenciales recordadas detectadas en login.aspx. Haciendo clic automático en 'Iniciar sesión'...")
+                login_btn = await page.query_selector("#login-button, button[type='submit'], input[type='submit'], .btn-primary")
+                if login_btn:
+                    await login_btn.click()
+                    try:
+                        await page.wait_for_load_state("domcontentloaded", timeout=12000)
+                    except Exception:
+                        pass
+                    await asyncio.sleep(2)
+                    if "login.aspx" not in page.url.lower():
+                        log("✅ Auto-login exitoso. Redirigiendo a informe...")
+                        await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+        except Exception as e_login:
+            log(f"Aviso en intento de auto-login: {e_login}")
+
     curr_url = page.url.lower()
     if "login.aspx" in curr_url or "user/login" in curr_url:
         log("❌ [SESION EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")
@@ -771,19 +794,35 @@ async def async_main(args, events_to_process):
 
         context = browser.contexts[0] if browser.contexts else browser.new_context()
 
-        # Chequeo preventivo: verificar si alguna pestaña abierta de QRBoletos ya está en la pantalla de login
+        # Chequeo preventivo: verificar si alguna pestaña abierta de QRBoletos está en login y si tiene credenciales
         for existing_page in context.pages:
             try:
                 ep_url = existing_page.url.lower()
                 if "qrboletos.com" in ep_url and ("login.aspx" in ep_url or "user/login" in ep_url):
-                    log("❌ [SESION EXPIRADA] Se detectó una pestaña de QRBoletos en la pantalla de inicio de sesión.")
-                    if args.json_out:
-                        print(json.dumps({
-                            "success": False,
-                            "code": "SESSION_EXPIRED",
-                            "error": "Tu sesión en Google Chrome ha expirado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentarlo."
-                        }))
-                    sys.exit(41)
+                    has_creds = await existing_page.evaluate('''() => {
+                        const pass = document.querySelector("input[type='password']");
+                        return !!(pass && pass.value && pass.value.length > 0);
+                    }''')
+                    if has_creds:
+                        log("ℹ️ Credenciales recordadas detectadas en pestaña de login. Haciendo clic automático en 'Iniciar sesión'...")
+                        login_btn = await existing_page.query_selector("#login-button, button[type='submit'], input[type='submit'], .btn-primary")
+                        if login_btn:
+                            await login_btn.click()
+                            try:
+                                await existing_page.wait_for_load_state("domcontentloaded", timeout=12000)
+                            except Exception:
+                                pass
+                            await asyncio.sleep(2)
+
+                    if "login.aspx" in existing_page.url.lower() or "user/login" in existing_page.url.lower():
+                        log("❌ [SESION EXPIRADA] Se detectó una pestaña de QRBoletos en la pantalla de inicio de sesión.")
+                        if args.json_out:
+                            print(json.dumps({
+                                "success": False,
+                                "code": "SESSION_EXPIRED",
+                                "error": "Tu sesión en Google Chrome ha expirado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentarlo."
+                            }))
+                        sys.exit(41)
             except Exception:
                 pass
 

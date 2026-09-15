@@ -453,7 +453,7 @@ export default function TarifarioUploaderModal({
               <button
                 onClick={handleExtract}
                 disabled={!imagePreview || isExtracting}
-                className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:opacity-50 text-amber-950 font-bold py-3 px-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
               >
                 {isExtracting ? (
                   <>
@@ -919,7 +919,7 @@ export default function TarifarioUploaderModal({
                     <button
                       onClick={() => handleStartSync(false)}
                       disabled={isSyncing}
-                      className="bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition-all shadow-lg flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                      className="bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:opacity-50 text-amber-950 font-bold px-5 py-2.5 rounded-xl text-xs transition-all shadow-lg flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {isSyncing ? (
                         <>

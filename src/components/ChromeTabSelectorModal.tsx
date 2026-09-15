@@ -83,8 +83,8 @@ export default function ChromeTabSelectorModal({
                 <p className="text-[11px] text-slate-500 font-mono truncate">{tab.url}</p>
               </div>
 
-              <div className="w-8 h-8 rounded-lg bg-slate-900 group-hover:bg-amber-500 text-slate-400 group-hover:text-slate-950 flex items-center justify-center shrink-0 transition-all">
-                <ArrowRight className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-lg bg-slate-900 group-hover:bg-amber-500 flex items-center justify-center shrink-0 transition-all">
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-black transition-colors" />
               </div>
             </button>
           ))}

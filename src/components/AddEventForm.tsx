@@ -228,7 +228,7 @@ export default function AddEventForm({ onAddEvent }: AddEventFormProps) {
         <button
           type="submit"
           disabled={!parsed || isSubmitting}
-          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Agregando...' : 'Agregar Evento'}
         </button>

@@ -91,7 +91,7 @@ export default function EventCard({
               href={evento.enlace}
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute top-2.5 right-2.5 bg-black/70 hover:bg-emerald-600 text-slate-200 hover:text-white p-1.5 rounded-lg border border-white/10 transition-all shadow-md cursor-pointer"
+              className="absolute top-2.5 right-2.5 bg-black/70 hover:bg-emerald-600 text-white/80 hover:text-white p-1.5 rounded-lg border border-white/10 transition-all shadow-md cursor-pointer"
               title="Abrir página oficial del evento en QRBoletos"
             >
               <ExternalLink className="w-3.5 h-3.5" />

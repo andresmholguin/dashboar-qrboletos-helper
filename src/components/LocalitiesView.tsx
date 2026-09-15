@@ -265,7 +265,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
             className="bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-600 text-emerald-800 dark:text-emerald-400 hover:text-white border border-emerald-300 dark:border-emerald-500/30 hover:border-emerald-500 rounded-xl px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
             title="Importar todas las localidades directamente desde la pestaña activa de Chrome con el bot"
           >
-            <Zap className={`w-3.5 h-3.5 fill-current ${isExtractingFromChrome ? 'animate-bounce' : ''}`} />
+            <Zap className={`w-3.5 h-3.5 fill-current ${isExtractingFromChrome ? 'animate-pulse' : ''}`} />
             <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome'}</span>
           </button>
 
@@ -283,7 +283,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
           {onOpenArtworks && (
             <button
               onClick={onOpenArtworks}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
               title="Actualizar o reemplazar el QRBoleto digital y el diseño físico (Boca y Godex) en las localidades"
             >
               <Palette className="w-3.5 h-3.5" />
@@ -343,7 +343,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
             <button
               onClick={handleExtractFromChrome}
               disabled={isExtractingFromChrome}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
+              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5 fill-current" />
               <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome ahora'}</span>
@@ -373,7 +373,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
                 <button
                   onClick={handleManualExtract}
                   disabled={isLoading || isSaving || !htmlContent.trim()}
-                  className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>

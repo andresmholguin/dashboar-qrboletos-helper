@@ -623,7 +623,7 @@ export default function Home() {
                     className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer disabled:opacity-50"
                     title="Reordenar cronológicamente los banners en línea según la fecha del evento"
                   >
-                    <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-bounce' : ''}`} />
+                    <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-spin' : ''}`} />
                     <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners'}</span>
                   </button>
 
@@ -759,7 +759,7 @@ export default function Home() {
                 disabled={isReorderingBanners}
                 className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-cyan-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
               >
-                <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-bounce' : ''}`} />
+                <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-spin' : ''}`} />
                 <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners Web'}</span>
               </button>
 
@@ -850,7 +850,7 @@ export default function Home() {
                     onClick={() => setSelectedTab('a_la_venta')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${selectedTab === 'a_la_venta'
                         ? 'bg-emerald-100 dark:bg-emerald-600/20 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 shadow-sm font-bold'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-900'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-emerald-900 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-slate-900'
                       }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -861,7 +861,7 @@ export default function Home() {
                     onClick={() => setSelectedTab('en_configuracion')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${selectedTab === 'en_configuracion'
                         ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-sm font-bold'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-slate-900'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-amber-900 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-900'
                       }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>

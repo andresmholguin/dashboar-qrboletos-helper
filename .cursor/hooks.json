@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "[ ! -f \"C:\\\\Users\\\\USUARIO\\\\.cursor\\\\skills\\\\impeccable\\\\scripts\\\\impeccable\" ] || \"C:\\\\Users\\\\USUARIO\\\\.cursor\\\\skills\\\\impeccable\\\\scripts\\\\impeccable\" hook-before-edit",
+        "timeout": 5
+      }
+    ]
+  }
+}

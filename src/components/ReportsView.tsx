@@ -422,7 +422,7 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
           onClick={() => setActiveTab('general')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'general'
-              ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20'
+              ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 shadow-md shadow-emerald-500/20'
               : 'bg-slate-900/60 hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-800'
           }`}
         >

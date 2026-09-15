@@ -551,6 +551,8 @@ export default function Home() {
             <div className="relative" ref={actionsMenuRef}>
               <button
                 onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                aria-label="Abrir menú de herramientas y acciones"
+                aria-expanded={isActionsMenuOpen}
                 className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm text-slate-200 active:scale-95 shrink-0 ${isActionsMenuOpen ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''
                   }`}
                 title="Menú de herramientas y acciones"
@@ -665,6 +667,7 @@ export default function Home() {
             {/* Botón de Cambio de Tema */}
             <button
               onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               className="p-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer shadow-sm active:scale-95"
               title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
@@ -676,6 +679,7 @@ export default function Home() {
           <div className="flex md:hidden items-center gap-2">
             <button
               onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer active:scale-95"
               title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
@@ -683,6 +687,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Cerrar menú de navegación móvil' : 'Abrir menú de navegación móvil'}
               className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

@@ -89,7 +89,7 @@ export default function EventCard({
               src={imageSrc}
               alt={`Afiche del evento ${evento.nombre}`}
               onError={() => setImgError(true)}
-              className="w-full h-full object-cover object-top group-hover:scale-[1.05] transition-transform duration-1000 ease-out"
+              className="w-full h-full object-cover object-top scale-[1.02] group-hover:scale-[1.08] transition-transform duration-1000 ease-out"
               loading="lazy"
             />
           ) : (

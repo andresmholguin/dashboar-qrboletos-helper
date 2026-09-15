@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fetchEventosFromSheets, isSheetsConfigured } from '@/services/googleSheets';
+import { parseSpanishDateToISO } from '@/utils/dateFormatter';
 
 function saveBase64Image(dataUrl: string, prefix: string): string | null {
   try {
@@ -71,11 +72,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Obtener lista completa de eventos para el orden cronológico
     let eventsList: any[] = [];
     try {
       if (isSheetsConfigured()) {
-        eventsList = await fetchEventosFromSheets();
+        const rawEvents = await fetchEventosFromSheets();
+        eventsList = rawEvents.map(ev => ({
+          ...ev,
+          fecha: ev.fecha ? parseSpanishDateToISO(ev.fecha) : ''
+        }));
       }
     } catch (e) {
       console.warn('No se pudieron consultar eventos de Sheets:', e);

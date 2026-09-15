@@ -335,7 +335,6 @@ export default function EventSettingsModal({ evento, onClose }: EventSettingsMod
                 ]);
               } else if (data.type === 'finish') {
                 if (data.success) {
-                  setSyncStatus('success');
                   setLogs((prev) => [
                     ...prev,
                     {
@@ -344,6 +343,43 @@ export default function EventSettingsModal({ evento, onClose }: EventSettingsMod
                       timestamp: now,
                     },
                   ]);
+
+                  if (imageBanner) {
+                    setLogs((prev) => [
+                      ...prev,
+                      {
+                        type: 'info',
+                        message: 'Imagen de banner detectada. Iniciando reordenamiento cronológico automático...',
+                        timestamp: new Date().toLocaleTimeString(),
+                      },
+                    ]);
+                    try {
+                      await fetch('/api/banners/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reorderOnly: true }),
+                      });
+                      setLogs((prev) => [
+                        ...prev,
+                        {
+                          type: 'success',
+                          message: '¡Banners reordenados cronológicamente con éxito en QRBoletos!',
+                          timestamp: new Date().toLocaleTimeString(),
+                        },
+                      ]);
+                    } catch (e: any) {
+                      setLogs((prev) => [
+                        ...prev,
+                        {
+                          type: 'warning',
+                          message: `Fallo al reordenar automáticamente: ${e.message}`,
+                          timestamp: new Date().toLocaleTimeString(),
+                        },
+                      ]);
+                    }
+                  }
+                  
+                  setSyncStatus('success');
                 } else {
                   setSyncStatus('error');
                   setLogs((prev) => [

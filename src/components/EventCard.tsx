@@ -75,22 +75,21 @@ export default function EventCard({
 
   return (
     <article
-      className={`group relative bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between focus-within:ring-2 focus-within:ring-emerald-500/80 ${
-        !isOnSale
-          ? 'border-amber-500/30 hover:border-amber-500/60 bg-gradient-to-b from-slate-900 via-slate-900 to-amber-950/15'
-          : 'border-slate-800 hover:border-slate-700/80 hover:shadow-emerald-950/10'
-      }`}
+      className={`group relative bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between focus-within:ring-2 focus-within:ring-emerald-500/80 ${!isOnSale
+        ? 'border-amber-500/30 hover:border-amber-500/60 bg-gradient-to-b from-slate-900 via-slate-900 to-amber-950/15'
+        : 'border-slate-800 hover:border-slate-700/80 hover:shadow-emerald-950/10'
+        }`}
       aria-labelledby={`event-title-${evento.id}`}
     >
       <div>
         {/* 1. Flyer / Banner del Evento */}
-        <div className="w-full aspect-[16/10] relative rounded-xl overflow-hidden mb-3.5 border border-slate-800/90 bg-slate-950 flex items-center justify-center shrink-0 shadow-inner group-hover:border-emerald-500/40 transition-all">
+        <div className="w-full aspect-[80/60] relative rounded-xl overflow-hidden mb-3.5 border border-slate-800/90 bg-slate-950 flex items-center justify-center group-hover:border-emerald-500/40 transition-all">
           {imageSrc && !imgError ? (
             <img
               src={imageSrc}
               alt={`Afiche del evento ${evento.nombre}`}
               onError={() => setImgError(true)}
-              className="w-full h-full object-cover object-center group-hover:scale-[1.03] transition-transform duration-500"
+              className="w-full h-full object-cover object-top group-hover:scale-[1.05] transition-transform duration-1000 ease-out"
               loading="lazy"
             />
           ) : (
@@ -101,7 +100,7 @@ export default function EventCard({
           )}
 
           {/* Gradiente sutil para legibilidad de badges */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/50 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 via-transparent to-black/60 pointer-events-none" />
 
           {/* Badges Superiores Izquierdos: ID y Estado */}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10">
@@ -111,11 +110,10 @@ export default function EventCard({
               </span>
             )}
             <span
-              className={`backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 ${
-                isOnSale
-                  ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50'
-                  : 'bg-amber-950/90 text-amber-300 border border-amber-500/50'
-              }`}
+              className={`backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 ${isOnSale
+                ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50'
+                : 'bg-amber-950/90 text-amber-300 border border-amber-500/50'
+                }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${isOnSale ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
               <span>{isOnSale ? 'EN VENTA' : 'CONFIGURACIÓN'}</span>
@@ -128,11 +126,10 @@ export default function EventCard({
               type="button"
               onClick={handleFavoriteClick}
               aria-label={evento.favorito ? `Quitar ${evento.nombre} de favoritos` : `Marcar ${evento.nombre} como favorito`}
-              className={`p-2 rounded-xl backdrop-blur-md border transition-all cursor-pointer shadow-md active:scale-90 ${
-                evento.favorito
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30'
-                  : 'bg-black/60 text-slate-300 border-white/10 hover:text-amber-400 hover:bg-black/80'
-              }`}
+              className={`p-2 rounded-xl backdrop-blur-md border transition-all cursor-pointer shadow-md active:scale-90 ${evento.favorito
+                ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30'
+                : 'bg-black/60 text-slate-300 border-white/10 hover:text-amber-400 hover:bg-black/80'
+                }`}
             >
               <Star className="w-3.5 h-3.5" fill={evento.favorito ? 'currentColor' : 'none'} />
             </button>
@@ -258,11 +255,10 @@ export default function EventCard({
           type="button"
           onClick={() => onOpenLocalities(evento)}
           aria-label={`Gestionar aforo y localidades de ${evento.nombre}`}
-          className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-            localitiesCount > 0
-              ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-          }`}
+          className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${localitiesCount > 0
+            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+            }`}
         >
           <Eye className="w-4 h-4 shrink-0" />
           <span>Gestionar Localidades</span>

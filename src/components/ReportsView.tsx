@@ -312,8 +312,6 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
     return name.includes(term) || espectaculo.includes(term) || pulep.includes(term) || sitio.includes(term);
   });
 
-  const selectedEvent = salesData[selectedEventIdx] || salesData[0];
-
   return (
     <div className="space-y-6">
       {/* Cabecera del Módulo */}

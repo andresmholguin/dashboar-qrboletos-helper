@@ -15,7 +15,9 @@ import {
   AlertCircle,
   ChevronRight,
   Sparkles,
-  Award
+  Award,
+  Key,
+  Settings
 } from 'lucide-react';
 import { Customer } from '@/lib/qrboletosApi';
 
@@ -30,12 +32,28 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('todos');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isCredsModalOpen, setIsCredsModalOpen] = useState(false);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+
+  useEffect(() => {
+    const savedId = localStorage.getItem('qrboletos_client_id') || '';
+    const savedSecret = localStorage.getItem('qrboletos_client_secret') || '';
+    setClientId(savedId);
+    setClientSecret(savedSecret);
+  }, []);
 
   const fetchCustomers = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/customers?limit=500');
+      const savedId = localStorage.getItem('qrboletos_client_id') || '';
+      const savedSecret = localStorage.getItem('qrboletos_client_secret') || '';
+      let url = '/api/customers?limit=500';
+      if (savedId && savedSecret) {
+        url += '&clientId=' + encodeURIComponent(savedId) + '&clientSecret=' + encodeURIComponent(savedSecret);
+      }
+      const res = await fetch(url);
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'No se pudieron cargar los clientes de QRBoletos.');
@@ -46,6 +64,14 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('qrboletos_client_id', clientId.trim());
+    localStorage.setItem('qrboletos_client_secret', clientSecret.trim());
+    setIsCredsModalOpen(false);
+    fetchCustomers();
   };
 
   useEffect(() => {
@@ -162,6 +188,15 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
           <button
+            onClick={() => setIsCredsModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border border-slate-700 hover:border-emerald-500/40"
+            title="Configurar credenciales OAuth2 de QRBoletos"
+          >
+            <Key className="w-3.5 h-3.5 text-amber-400" />
+            <span>Credenciales API</span>
+          </button>
+
+          <button
             onClick={fetchCustomers}
             disabled={loading}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
@@ -258,9 +293,15 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
             <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
             <h3 className="text-sm font-bold text-white uppercase">Estado de la API de Clientes</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">{error}</p>
-            <p className="text-[11px] text-slate-500">
-              Asegúrate de haber configurado QRBOLETOS_CLIENT_ID y QRBOLETOS_CLIENT_SECRET.
-            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => setIsCredsModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Key className="w-4 h-4" />
+                <span>Ingresar Credenciales API</span>
+              </button>
+            </div>
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="py-20 text-center space-y-2 text-slate-500 text-xs">
@@ -456,6 +497,83 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuración de Credenciales API */}
+      {isCredsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    Credenciales API QRBoletos
+                  </h3>
+                  <p className="text-[11px] text-slate-400">OAuth2 Client Credentials</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCredsModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCredentials} className="p-6 space-y-4 text-xs">
+              <p className="text-slate-400 leading-relaxed">
+                Ingresa tus credenciales de integrador para autenticar contra <code className="text-amber-300 font-mono">restful.qrboletos.com</code>. Se guardarán de forma segura en tu navegador.
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
+                  Client ID (32 caracteres hex)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: a1b2c3d4e5f67890..."
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
+                  Client Secret (64 caracteres hex)
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Ej: secret_64_caracteres_hex..."
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCredsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-md cursor-pointer active:scale-95"
+                >
+                  Guardar y Conectar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

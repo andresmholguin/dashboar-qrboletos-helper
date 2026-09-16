@@ -25,7 +25,13 @@ export default function AvailabilityModal({ showId, eventName, onClose }: Availa
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/catalog?id=' + encodeURIComponent(showId));
+      const savedId = typeof window !== 'undefined' ? localStorage.getItem('qrboletos_client_id') || '' : '';
+      const savedSecret = typeof window !== 'undefined' ? localStorage.getItem('qrboletos_client_secret') || '' : '';
+      let url = '/api/catalog?id=' + encodeURIComponent(showId);
+      if (savedId && savedSecret) {
+        url += '&clientId=' + encodeURIComponent(savedId) + '&clientSecret=' + encodeURIComponent(savedSecret);
+      }
+      const res = await fetch(url);
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'No se pudo obtener el aforo en vivo.');

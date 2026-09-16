@@ -4,6 +4,11 @@ Todas las novedades, correcciones y mejoras del QRBoletos Dashboard Helper sern 
 
 El formato est basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto adhiere al [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.1.1] - 2026-09-16
+### Añadido
+- Modal interactivo de configuración de credenciales API en la interfaz de Audiencia & CRM con guardado persistente local.
+- Soporte para autenticación dinámica con `client_id` y `client_secret` en tiempo de ejecución tanto en `CustomersView` como en `AvailabilityModal`.
+
 ## [1.1.0] - 2026-09-16
 ### Añadido
 - Integración oficial con APIs de Eventry / QRBoletos (`Customers API v1` y `Catalog API v1`).

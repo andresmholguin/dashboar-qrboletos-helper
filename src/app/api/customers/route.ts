@@ -15,16 +15,17 @@ export async function GET(request: NextRequest) {
     const customClientSecret = searchParams.get('clientSecret') || undefined;
 
     const client = new QrboletosApiClient({
+      scope: 'customers',
       clientId: customClientId,
       clientSecret: customClientSecret,
     });
 
-    if (!client.hasCredentials()) {
+    if (!client.hasCredentials('customers')) {
       return NextResponse.json(
         {
           success: false,
           code: 'MISSING_CREDENTIALS',
-          error: 'Credenciales no configuradas. Proporciona QRBOLETOS_CLIENT_ID y QRBOLETOS_CLIENT_SECRET en .env.local o mediante la interfaz.',
+          error: 'Credenciales de Clientes no configuradas. Proporciona QRBOLETOS_CUSTOMERS_CLIENT_ID y QRBOLETOS_CUSTOMERS_CLIENT_SECRET (o QRBOLETOS_CLIENT_ID / QRBOLETOS_CLIENT_SECRET) en .env.local o mediante la interfaz.',
         },
         { status: 400 }
       );

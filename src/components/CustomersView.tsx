@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Users,
   Search,
@@ -14,12 +14,22 @@ import {
   Tag,
   AlertCircle,
   ChevronRight,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   Sparkles,
   Award,
   Key,
-  Settings
+  Database
 } from 'lucide-react';
 import { Customer } from '@/lib/qrboletosApi';
+import {
+  getCachedCustomersFromDb,
+  saveCustomersBatchToDb,
+  clearCustomersDb,
+  getDbMetadata,
+  setDbMetadata
+} from '@/lib/customersDb';
 
 export interface CustomersViewProps {
   onBack: () => void;
@@ -28,55 +38,162 @@ export interface CustomersViewProps {
 export default function CustomersView({ onBack }: CustomersViewProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{ loaded: number; page: number; totalEstimated?: number } | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('todos');
+  const [selectedEventsCountFilter, setSelectedEventsCountFilter] = useState<string>('todos');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCredsModalOpen, setIsCredsModalOpen] = useState(false);
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
+  const [credsTab, setCredsTab] = useState<'customers' | 'catalog'>('customers');
+  const [customersClientId, setCustomersClientId] = useState('');
+  const [customersClientSecret, setCustomersClientSecret] = useState('');
+  const [catalogClientId, setCatalogClientId] = useState('');
+  const [catalogClientSecret, setCatalogClientSecret] = useState('');
+
+  // Paginación de la tabla visual
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const isAbortingRef = useRef(false);
 
   useEffect(() => {
-    const savedId = localStorage.getItem('qrboletos_client_id') || '';
-    const savedSecret = localStorage.getItem('qrboletos_client_secret') || '';
-    setClientId(savedId);
-    setClientSecret(savedSecret);
+    const cId = localStorage.getItem('qrboletos_customers_client_id') || localStorage.getItem('qrboletos_client_id') || '';
+    const cSec = localStorage.getItem('qrboletos_customers_client_secret') || localStorage.getItem('qrboletos_client_secret') || '';
+    const catId = localStorage.getItem('qrboletos_catalog_client_id') || '';
+    const catSec = localStorage.getItem('qrboletos_catalog_client_secret') || '';
+    setCustomersClientId(cId);
+    setCustomersClientSecret(cSec);
+    setCatalogClientId(catId);
+    setCatalogClientSecret(catSec);
   }, []);
 
-  const fetchCustomers = async () => {
-    setLoading(true);
+  // Reiniciar a la página 1 cuando cambia la búsqueda, filtro de evento, filtro de cantidad o tamaño de página
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedEventFilter, selectedEventsCountFilter, pageSize]);
+
+  // Cargar desde IndexedDB al inicio, o iniciar sincronización si la base local está vacía
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCached() {
+      setLoading(true);
+      try {
+        const cached = await getCachedCustomersFromDb();
+        if (isMounted && cached && cached.length > 0) {
+          setCustomers(cached);
+          const meta = await getDbMetadata('last_sync');
+          if (meta) setLastSyncTime(meta);
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Error inicializando caché IndexedDB:', err);
+      }
+
+      if (isMounted) {
+        syncAllCustomers(false);
+      }
+    }
+
+    loadCached();
+
+    return () => {
+      isMounted = false;
+      isAbortingRef.current = true;
+    };
+  }, []);
+
+  const syncAllCustomers = async (isFullRefresh = false) => {
+    setSyncingAll(true);
     setError(null);
+    isAbortingRef.current = false;
+
     try {
-      const savedId = localStorage.getItem('qrboletos_client_id') || '';
-      const savedSecret = localStorage.getItem('qrboletos_client_secret') || '';
-      let url = '/api/customers?limit=500';
-      if (savedId && savedSecret) {
-        url += '&clientId=' + encodeURIComponent(savedId) + '&clientSecret=' + encodeURIComponent(savedSecret);
+      const savedId = localStorage.getItem('qrboletos_customers_client_id') || localStorage.getItem('qrboletos_client_id') || '';
+      const savedSecret = localStorage.getItem('qrboletos_customers_client_secret') || localStorage.getItem('qrboletos_client_secret') || '';
+
+      let allCustomers: Customer[] = isFullRefresh ? [] : [...customers];
+      if (isFullRefresh) {
+        await clearCustomersDb();
+        setCustomers([]);
       }
-      const res = await fetch(url);
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'No se pudieron cargar los clientes de QRBoletos.');
+
+      const seenIds = new Set(allCustomers.map((c) => c.id_cliente));
+      let cursor: string | undefined = undefined;
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore && !isAbortingRef.current) {
+        page++;
+        let url = '/api/customers?limit=500';
+        if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+        if (savedId && savedSecret) {
+          url += '&clientId=' + encodeURIComponent(savedId) + '&clientSecret=' + encodeURIComponent(savedSecret);
+        }
+
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Error consultando clientes de QRBoletos.');
+        }
+
+        const batch: Customer[] = json.data || [];
+        if (batch.length === 0) break;
+
+        // Guardar lote de 500 en IndexedDB inmediatamente
+        await saveCustomersBatchToDb(batch);
+
+        batch.forEach((c) => {
+          if (!seenIds.has(c.id_cliente)) {
+            seenIds.add(c.id_cliente);
+            allCustomers.push(c);
+          }
+        });
+
+        setCustomers([...allCustomers]);
+        setSyncProgress({
+          loaded: allCustomers.length,
+          page,
+          totalEstimated: 24416,
+        });
+
+        hasMore = Boolean(json.has_more && json.next_cursor);
+        cursor = json.next_cursor;
       }
-      setCustomers(json.data || []);
+
+      const nowIso = new Date().toISOString();
+      await setDbMetadata('last_sync', nowIso);
+      setLastSyncTime(nowIso);
     } catch (err: any) {
       setError(err.message);
     } finally {
+      setSyncingAll(false);
       setLoading(false);
     }
   };
 
   const handleSaveCredentials = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('qrboletos_client_id', clientId.trim());
-    localStorage.setItem('qrboletos_client_secret', clientSecret.trim());
+    if (customersClientId.trim()) {
+      localStorage.setItem('qrboletos_customers_client_id', customersClientId.trim());
+      localStorage.setItem('qrboletos_client_id', customersClientId.trim());
+    }
+    if (customersClientSecret.trim()) {
+      localStorage.setItem('qrboletos_customers_client_secret', customersClientSecret.trim());
+      localStorage.setItem('qrboletos_client_secret', customersClientSecret.trim());
+    }
+    if (catalogClientId.trim()) {
+      localStorage.setItem('qrboletos_catalog_client_id', catalogClientId.trim());
+    }
+    if (catalogClientSecret.trim()) {
+      localStorage.setItem('qrboletos_catalog_client_secret', catalogClientSecret.trim());
+    }
     setIsCredsModalOpen(false);
-    fetchCustomers();
+    syncAllCustomers(true);
   };
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
 
   const uniqueEvents = useMemo(() => {
     const set = new Set<string>();
@@ -102,14 +219,29 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         selectedEventFilter === 'todos' ||
         c.eventos?.some((e) => e.evento === selectedEventFilter);
 
-      return matchesSearch && matchesEvent;
+      // Conteo de eventos únicos/distintos comprados (no cuenta compras repetidas del mismo evento)
+      const distinctEventsCount = new Set(
+        (c.eventos || []).map((e) => (e.evento || '').trim().toLowerCase()).filter(Boolean)
+      ).size;
+
+      let matchesCount = true;
+      if (selectedEventsCountFilter === '0') matchesCount = distinctEventsCount === 0;
+      else if (selectedEventsCountFilter === '1') matchesCount = distinctEventsCount === 1;
+      else if (selectedEventsCountFilter === '2') matchesCount = distinctEventsCount === 2;
+      else if (selectedEventsCountFilter === '3') matchesCount = distinctEventsCount === 3;
+      else if (selectedEventsCountFilter === '4') matchesCount = distinctEventsCount === 4;
+      else if (selectedEventsCountFilter === '5+') matchesCount = distinctEventsCount >= 5;
+      else if (selectedEventsCountFilter === '2+') matchesCount = distinctEventsCount >= 2;
+      else if (selectedEventsCountFilter === '3+') matchesCount = distinctEventsCount >= 3;
+
+      return matchesSearch && matchesEvent && matchesCount;
     });
-  }, [customers, searchQuery, selectedEventFilter]);
+  }, [customers, searchQuery, selectedEventFilter, selectedEventsCountFilter]);
 
   const stats = useMemo(() => {
     let totalLtv = 0;
     let buyersCount = 0;
-    customers.forEach((c) => {
+    filteredCustomers.forEach((c) => {
       const customerLtv = c.ltv?.reduce((acc, curr) => acc + (curr.valor || 0), 0) || 0;
       totalLtv += customerLtv;
       if ((c.eventos?.length || 0) > 0 || customerLtv > 0) {
@@ -118,21 +250,31 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
     });
     const avgTicket = buyersCount > 0 ? Math.round(totalLtv / buyersCount) : 0;
     return {
-      total: customers.length,
+      total: filteredCustomers.length,
       buyersCount,
       totalLtv,
       avgTicket,
     };
-  }, [customers]);
+  }, [filteredCustomers]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredCustomers.length);
+  const paginatedCustomers = useMemo(() => {
+    return filteredCustomers.slice(startIndex, endIndex);
+  }, [filteredCustomers, startIndex, endIndex]);
 
   const handleExportCsv = () => {
     if (filteredCustomers.length === 0) return;
 
-    const headers = ['ID Cliente', 'Tipo Doc', 'Documento', 'Nombre', 'Email', 'Telefono', 'Genero', 'Fecha Registro', 'LTV', 'Eventos'];
+    const headers = ['ID Cliente', 'Tipo Doc', 'Documento', 'Nombre', 'Email', 'Telefono', 'Genero', 'Fecha Registro', 'LTV', 'Cant. Eventos', 'Eventos'];
     const rows = filteredCustomers.map((c) => {
       const docTipo = c.identificacion?.tipo || '';
       const docNum = c.identificacion?.numero || '';
       const totalLtv = c.ltv?.reduce((acc, curr) => acc + (curr.valor || 0), 0) || 0;
+      const distinctCount = new Set(
+        (c.eventos || []).map((e) => (e.evento || '').trim().toLowerCase()).filter(Boolean)
+      ).size;
       const eventosStr = (c.eventos || []).map((e) => e.evento).join(' | ');
 
       return [
@@ -145,19 +287,23 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         c.genero || '',
         c.fecha_registro,
         totalLtv,
+        distinctCount,
         '"' + eventosStr.replace(/"/g, '""') + '"',
       ];
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     const today = new Date().toISOString().split('T')[0];
-    link.setAttribute('download', 'Clientes_QRBoletos_' + today + '.csv');
+    const filterSuffix = selectedEventFilter !== 'todos' ? '_' + selectedEventFilter.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_') : '';
+    link.setAttribute('download', 'Clientes_QRBoletos_' + today + filterSuffix + '.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -186,7 +332,7 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+        <div className="flex items-center gap-2.5 self-end sm:self-auto flex-wrap">
           <button
             onClick={() => setIsCredsModalOpen(true)}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border border-slate-700 hover:border-emerald-500/40"
@@ -197,25 +343,74 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
           </button>
 
           <button
-            onClick={fetchCustomers}
-            disabled={loading}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            onClick={() => syncAllCustomers(true)}
+            disabled={syncingAll}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border border-slate-700 disabled:opacity-50"
+            title="Descargar y sincronizar la base completa de QRBoletos"
           >
-            <RefreshCw className={'w-3.5 h-3.5 ' + (loading ? 'animate-spin text-emerald-400' : '')} />
-            <span>Sincronizar</span>
+            <RefreshCw className={'w-3.5 h-3.5 ' + (syncingAll ? 'animate-spin text-emerald-400' : '')} />
+            <span>{syncingAll ? 'Sincronizando...' : 'Sincronizar Todo'}</span>
           </button>
 
           <button
             onClick={handleExportCsv}
             disabled={filteredCustomers.length === 0}
             className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-emerald-950/40 cursor-pointer disabled:opacity-50 active:scale-95"
-            title="Exportar listado visible a formato CSV"
+            title="Exportar todos los clientes filtrados a formato CSV"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Exportar CSV ({filteredCustomers.length})</span>
+            <span>Exportar CSV ({filteredCustomers.length.toLocaleString()})</span>
           </button>
         </div>
       </div>
+
+      {/* Banner de Sincronización Progresiva */}
+      {syncingAll && syncProgress && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30 shadow-lg space-y-2 animate-in fade-in">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-emerald-400 animate-spin" />
+              <span className="font-bold text-white">
+                Sincronizando audiencia completa de QRBoletos...
+              </span>
+              <span className="font-mono text-emerald-400 font-bold">
+                {syncProgress.loaded.toLocaleString()} clientes cargados
+              </span>
+              <span className="text-slate-400 font-mono hidden sm:inline">
+                (Página {syncProgress.page})
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[11px] text-slate-300 font-bold">
+                {Math.min(100, Math.round((syncProgress.loaded / (syncProgress.totalEstimated || 24416)) * 100))}%
+              </span>
+              <button
+                onClick={() => {
+                  isAbortingRef.current = true;
+                }}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-200 text-[11px] font-semibold transition-all cursor-pointer"
+                title="Detener sincronización y mantener lo cargado hasta ahora"
+              >
+                Pausar
+              </button>
+            </div>
+          </div>
+          <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 rounded-full"
+              style={{
+                width: `${Math.min(100, Math.round((syncProgress.loaded / (syncProgress.totalEstimated || 24416)) * 100))}%`,
+              }}
+            />
+          </div>
+          <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <Database className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span>
+              Puedes buscar y filtrar clientes mientras continúa la sincronización en segundo plano. La información queda guardada localmente en tu navegador.
+            </span>
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-1">
@@ -253,8 +448,8 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         </div>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between shadow-sm">
-        <div className="relative w-full md:w-96">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col lg:flex-row gap-3 items-center justify-between shadow-sm">
+        <div className="relative w-full lg:w-80 xl:w-96">
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -265,20 +460,47 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <label className="text-[11px] text-slate-400 font-semibold shrink-0 uppercase font-mono">Filtrar por Evento:</label>
-          <select
-            value={selectedEventFilter}
-            onChange={(e) => setSelectedEventFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer w-full md:max-w-xs"
-          >
-            <option value="todos">Todos los Eventos</option>
-            {uniqueEvents.map((evName, idx) => (
-              <option key={idx} value={evName}>
-                {evName}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+          {/* Filtro por Cantidad de Eventos Comprados (Eventos distintos) */}
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-slate-400 font-semibold shrink-0 uppercase font-mono">
+              Cant. Eventos:
+            </label>
+            <select
+              value={selectedEventsCountFilter}
+              onChange={(e) => setSelectedEventsCountFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="todos">Cualquier cantidad</option>
+              <option value="0">0 eventos (Sin compras)</option>
+              <option value="1">1 evento</option>
+              <option value="2">2 eventos</option>
+              <option value="3">3 eventos</option>
+              <option value="4">4 eventos</option>
+              <option value="5+">5 o más eventos</option>
+              <option value="2+">≥ 2 eventos (Recurrentes)</option>
+              <option value="3+">≥ 3 eventos (Super Fans / VIP)</option>
+            </select>
+          </div>
+
+          {/* Filtro por Evento específico */}
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-slate-400 font-semibold shrink-0 uppercase font-mono">
+              Filtrar por Evento:
+            </label>
+            <select
+              value={selectedEventFilter}
+              onChange={(e) => setSelectedEventFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer w-full sm:w-auto max-w-xs truncate"
+            >
+              <option value="todos">Todos los Eventos ({uniqueEvents.length})</option>
+              {uniqueEvents.map((evName, idx) => (
+                <option key={idx} value={evName}>
+                  {evName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -322,7 +544,7 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-sans">
-                {filteredCustomers.map((cust) => {
+                {paginatedCustomers.map((cust) => {
                   const customerLtv = cust.ltv?.reduce((acc, curr) => acc + (curr.valor || 0), 0) || 0;
                   const isTopBuyer = customerLtv > 500000;
 
@@ -362,9 +584,31 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
                       </td>
 
                       <td className="px-5 py-3.5 text-center font-mono">
-                        <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold text-xs">
-                          {cust.eventos?.length || 0}
-                        </span>
+                        {(() => {
+                          const distinctCount = new Set(
+                            (cust.eventos || []).map((e) => (e.evento || '').trim().toLowerCase()).filter(Boolean)
+                          ).size;
+                          const totalCompras = cust.eventos?.length || 0;
+
+                          return (
+                            <div className="flex flex-col items-center">
+                              <span
+                                className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 font-bold text-xs"
+                                title={`${distinctCount} evento(s) distinto(s)`}
+                              >
+                                {distinctCount} {distinctCount === 1 ? 'evento' : 'eventos'}
+                              </span>
+                              {totalCompras > distinctCount && (
+                                <span
+                                  className="text-[10px] text-slate-500 font-mono mt-0.5"
+                                  title={`${totalCompras} compras totales registradas`}
+                                >
+                                  ({totalCompras} compras)
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       <td className="px-5 py-3.5 text-right font-mono font-bold text-emerald-400 text-sm">
@@ -392,6 +636,82 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
                 })}
               </tbody>
             </table>
+
+            {/* Barra de Paginación */}
+            {filteredCustomers.length > 0 && (
+              <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <span>Mostrando</span>
+                  <span className="font-mono text-white font-bold">
+                    {(startIndex + 1).toLocaleString()} - {endIndex.toLocaleString()}
+                  </span>
+                  <span>de</span>
+                  <span className="font-mono text-emerald-400 font-bold">
+                    {filteredCustomers.length.toLocaleString()}
+                  </span>
+                  <span>clientes</span>
+                  {filteredCustomers.length !== customers.length && (
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      (filtrados de {customers.length.toLocaleString()} totales)
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 mr-2">
+                    <span className="text-slate-400 text-[11px]">Por pág:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                      <option value={250}>250</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    title="Primera página"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    title="Página anterior"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <span className="px-3 py-1 font-mono text-xs text-white bg-slate-900 border border-slate-800 rounded-lg">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    title="Página siguiente"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    title="Última página"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -525,38 +845,97 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
               </button>
             </div>
 
+            <div className="flex border-b border-slate-800 bg-slate-950/40">
+              <button
+                type="button"
+                onClick={() => setCredsTab('customers')}
+                className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                  credsTab === 'customers'
+                    ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                👥 Clientes (Customers API)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCredsTab('catalog')}
+                className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                  credsTab === 'catalog'
+                    ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🎟️ Catálogo & Aforo
+              </button>
+            </div>
+
             <form onSubmit={handleSaveCredentials} className="p-6 space-y-4 text-xs">
-              <p className="text-slate-400 leading-relaxed">
-                Ingresa tus credenciales de integrador para autenticar contra <code className="text-amber-300 font-mono">restful.qrboletos.com</code>. Se guardarán de forma segura en tu navegador.
-              </p>
+              {credsTab === 'customers' ? (
+                <>
+                  <p className="text-slate-400 leading-relaxed">
+                    Credenciales específicas para <strong className="text-white">Customers API v1</strong> (listado de compradores, cédulas, teléfonos, LTV).
+                  </p>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
-                  Client ID (32 caracteres hex)
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: a1b2c3d4e5f67890..."
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
+                      Client ID (Clientes)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: 3409008efcf0ab6b6fc7..."
+                      value={customersClientId}
+                      onChange={(e) => setCustomersClientId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
-                  Client Secret (64 caracteres hex)
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Ej: secret_64_caracteres_hex..."
-                  value={clientSecret}
-                  onChange={(e) => setClientSecret(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
+                      Client Secret (Clientes)
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Ej: 05c1abd5ff673d7e29ff..."
+                      value={customersClientSecret}
+                      onChange={(e) => setCustomersClientSecret(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-slate-400 leading-relaxed">
+                    Credenciales específicas para <strong className="text-white">Catalog API v1</strong> (aforos en vivo, cupos disponibles por localidad y etapas de precio).
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
+                      Client ID (Catálogo / Eventos)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: credencial_cliente_catalogo..."
+                      value={catalogClientId}
+                      onChange={(e) => setCatalogClientId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
+                      Client Secret (Catálogo / Eventos)
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Ej: credencial_secreto_catalogo..."
+                      value={catalogClientSecret}
+                      onChange={(e) => setCatalogClientSecret(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
@@ -570,7 +949,7 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-md cursor-pointer active:scale-95"
                 >
-                  Guardar y Conectar
+                  Guardar y Aplicar
                 </button>
               </div>
             </form>

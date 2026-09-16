@@ -116,35 +116,66 @@ export interface CatalogDetailResponse {
   time: string;
 }
 
-// Token cache en memoria del servidor
-let cachedToken: { token: string; expiresAt: number; scope: string } | null = null;
+// Token cache en memoria del servidor por scope y clientId
+const tokenCache: Record<string, { token: string; expiresAt: number }> = {};
+
+export interface QrboletosClientConfig {
+  baseUrl?: string;
+  scope?: 'customers' | 'catalog';
+  clientId?: string;
+  clientSecret?: string;
+}
 
 export class QrboletosApiClient {
   private baseUrl: string;
-  private clientId: string;
-  private clientSecret: string;
+  private defaultScope: 'customers' | 'catalog';
+  private explicitClientId?: string;
+  private explicitClientSecret?: string;
 
-  constructor(credentials?: { baseUrl?: string; clientId?: string; clientSecret?: string }) {
+  constructor(credentials?: QrboletosClientConfig) {
     this.baseUrl = (credentials?.baseUrl || process.env.QRBOLETOS_API_BASE_URL || 'https://restful.qrboletos.com').replace(/\/$/, '');
-    this.clientId = credentials?.clientId || process.env.QRBOLETOS_CLIENT_ID || '';
-    this.clientSecret = credentials?.clientSecret || process.env.QRBOLETOS_CLIENT_SECRET || '';
+    this.defaultScope = credentials?.scope || 'customers';
+    this.explicitClientId = credentials?.clientId;
+    this.explicitClientSecret = credentials?.clientSecret;
   }
 
-  public hasCredentials(): boolean {
-    return Boolean(this.clientId && this.clientSecret);
+  private getCredentialsForScope(scope: 'customers' | 'catalog'): { clientId: string; clientSecret: string } {
+    if (this.explicitClientId && this.explicitClientSecret) {
+      return { clientId: this.explicitClientId, clientSecret: this.explicitClientSecret };
+    }
+
+    if (scope === 'catalog') {
+      const clientId = this.explicitClientId || process.env.QRBOLETOS_CATALOG_CLIENT_ID || process.env.QRBOLETOS_EVENTS_CLIENT_ID || process.env.QRBOLETOS_CLIENT_ID || '';
+      const clientSecret = this.explicitClientSecret || process.env.QRBOLETOS_CATALOG_CLIENT_SECRET || process.env.QRBOLETOS_EVENTS_CLIENT_SECRET || process.env.QRBOLETOS_CLIENT_SECRET || '';
+      return { clientId, clientSecret };
+    }
+
+    // Default scope 'customers'
+    const clientId = this.explicitClientId || process.env.QRBOLETOS_CUSTOMERS_CLIENT_ID || process.env.QRBOLETOS_CLIENT_ID || '';
+    const clientSecret = this.explicitClientSecret || process.env.QRBOLETOS_CUSTOMERS_CLIENT_SECRET || process.env.QRBOLETOS_CLIENT_SECRET || '';
+    return { clientId, clientSecret };
+  }
+
+  public hasCredentials(scope: 'customers' | 'catalog' = this.defaultScope): boolean {
+    const creds = this.getCredentialsForScope(scope);
+    return Boolean(creds.clientId && creds.clientSecret);
   }
 
   /**
-   * Obtiene o reutiliza el Access Token OAuth2
+   * Obtiene o reutiliza el Access Token OAuth2 especifico para cada API
    */
-  public async getAccessToken(scope: 'customers' | 'catalog' = 'customers'): Promise<string> {
-    const now = Date.now();
-    if (cachedToken && cachedToken.scope === scope && cachedToken.expiresAt > now + 120 * 1000) {
-      return cachedToken.token;
+  public async getAccessToken(scope: 'customers' | 'catalog' = this.defaultScope): Promise<string> {
+    const creds = this.getCredentialsForScope(scope);
+    if (!creds.clientId || !creds.clientSecret) {
+      const envPrefix = scope === 'catalog' ? 'QRBOLETOS_CATALOG_' : 'QRBOLETOS_CUSTOMERS_';
+      throw new Error(`Faltan credenciales para la API ${scope} (${envPrefix}CLIENT_ID / ${envPrefix}CLIENT_SECRET).`);
     }
 
-    if (!this.hasCredentials()) {
-      throw new Error('Faltan credenciales de QRBoletos API (QRBOLETOS_CLIENT_ID / QRBOLETOS_CLIENT_SECRET).');
+    const cacheKey = `${scope}:${creds.clientId}`;
+    const now = Date.now();
+    const cached = tokenCache[cacheKey];
+    if (cached && cached.expiresAt > now + 120 * 1000) {
+      return cached.token;
     }
 
     const tokenUrl = `${this.baseUrl}/${scope}/v1/auth/token`;
@@ -155,29 +186,28 @@ export class QrboletosApiClient {
       },
       body: JSON.stringify({
         grant_type: 'client_credentials',
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
+        client_id: creds.clientId,
+        client_secret: creds.clientSecret,
       }),
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Error de autenticación API (${res.status}): ${errText}`);
+      throw new Error(`Error de autenticación API ${scope} (${res.status}): ${errText}`);
     }
 
     const data: TokenResponse = await res.json();
     if (!data.ok || !data.data?.access_token) {
-      throw new Error('Respuesta inválida del endpoint de autenticación.');
+      throw new Error(`Respuesta inválida del endpoint de autenticación (${scope}).`);
     }
 
     const expiresInMs = (data.data.expires_in || 3600) * 1000;
-    cachedToken = {
+    tokenCache[cacheKey] = {
       token: data.data.access_token,
       expiresAt: now + expiresInMs,
-      scope,
     };
 
-    return cachedToken.token;
+    return tokenCache[cacheKey].token;
   }
 
   /**

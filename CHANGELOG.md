@@ -4,6 +4,10 @@ Todas las novedades, correcciones y mejoras del QRBoletos Dashboard Helper sern 
 
 El formato est basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto adhiere al [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.1.2] - 2026-09-16
+### Cambiado
+- Despliegue de producción sincronizado para activar las variables de entorno de Vercel (`QRBOLETOS_CLIENT_ID` y `QRBOLETOS_CLIENT_SECRET`).
+
 ## [1.1.1] - 2026-09-16
 ### Añadido
 - Modal interactivo de configuración de credenciales API en la interfaz de Audiencia & CRM con guardado persistente local.

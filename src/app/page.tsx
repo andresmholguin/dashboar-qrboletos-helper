@@ -7,7 +7,9 @@ import LocalitiesView from '@/components/LocalitiesView';
 import ReportsView from '@/components/ReportsView';
 import ArtworksManagerModal from '@/components/ArtworksManagerModal';
 import EventSettingsModal from '@/components/EventSettingsModal';
+import TarifarioUploaderModal from '@/components/TarifarioUploaderModal';
 import ChromeTabSelectorModal, { DetectedTab } from '@/components/ChromeTabSelectorModal';
+import packageJson from '../../package.json';
 import { Evento, Localidad } from '@/types';
 
 import { getEventTimestamp } from '@/utils/dateFormatter';
@@ -507,7 +509,7 @@ export default function Home() {
                   QRBoletos
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium tracking-wider -mt-1 block">
-                  Dashboard Helper
+                  Dashboard Helper <span className="ml-1 px-1 py-0.5 rounded text-[8px] bg-slate-800 text-slate-300 font-mono">v{packageJson.version}</span>
                 </span>
               </div>
             </button>

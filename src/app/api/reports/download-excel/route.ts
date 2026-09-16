@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    return new Response(Error interno: , { status: 500 });
+    return new Response(`Error interno: ${error.message}`, { status: 500 });
   }
 }
 

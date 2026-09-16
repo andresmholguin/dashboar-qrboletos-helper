@@ -4,6 +4,14 @@ Todas las novedades, correcciones y mejoras del QRBoletos Dashboard Helper sern 
 
 El formato est basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto adhiere al [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.1.0] - 2026-09-16
+### Añadido
+- Integración oficial con APIs de Eventry / QRBoletos (`Customers API v1` y `Catalog API v1`).
+- Nuevo módulo de **Audiencia & CRM**: Directorio completo de compradores con búsqueda universal, desglose de boletas por evento y exportación de audiencias a formato CSV para marketing.
+- Widget de **Aforo y Disponibilidad en Vivo**: Consulta en tiempo real de cupos disponibles vs aforo total, estados de venta y desglose de tarifas por localidad sin necesidad de scraping.
+- Cliente TypeScript `QrboletosApiClient` con autenticación OAuth2 Client Credentials y caché en memoria.
+- Endpoints internos `/api/customers` y `/api/catalog`.
+
 ## [1.0.0] - 2026-09-16
 ### Aadido
 - Control de versiones y semver. Ahora la interfaz muestra la versin de la app.

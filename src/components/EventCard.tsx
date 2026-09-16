@@ -25,6 +25,7 @@ interface EventCardProps {
   onOpenLocalities: (evento: Evento) => void;
   onOpenArtworks?: (evento: Evento) => void;
   onConfigureSettings?: (evento: Evento) => void;
+  onCheckAvailability?: (evento: Evento) => void;
 }
 
 export default function EventCard({
@@ -34,6 +35,7 @@ export default function EventCard({
   onOpenLocalities,
   onOpenArtworks,
   onConfigureSettings,
+  onCheckAvailability,
 }: EventCardProps) {
   const [imgError, setImgError] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -188,6 +190,19 @@ export default function EventCard({
                     >
                       <Settings className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                       <span>⚙️ Configurar Evento</span>
+                    </button>
+                  )}
+                  {onCheckAvailability && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        onCheckAvailability(evento);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <span className="text-emerald-400 text-xs">🎟️</span>
+                      <span>Aforo y Cupos en Vivo</span>
                     </button>
                   )}
                   <div className="my-1 border-t border-slate-800" />

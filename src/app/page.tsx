@@ -5,6 +5,8 @@ import AddEventForm from '@/components/AddEventForm';
 import EventCard from '@/components/EventCard';
 import LocalitiesView from '@/components/LocalitiesView';
 import ReportsView from '@/components/ReportsView';
+import CustomersView from '@/components/CustomersView';
+import AvailabilityModal from '@/components/AvailabilityModal';
 import ArtworksManagerModal from '@/components/ArtworksManagerModal';
 import EventSettingsModal from '@/components/EventSettingsModal';
 import TarifarioUploaderModal from '@/components/TarifarioUploaderModal';
@@ -35,7 +37,9 @@ import {
   Check,
   Sparkles,
   BarChart3,
-  ArrowDownUp
+  ArrowDownUp,
+  Users,
+  Ticket
 } from 'lucide-react';
 
 export default function Home() {
@@ -58,6 +62,8 @@ export default function Home() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isArchiveExpanded, setIsArchiveExpanded] = useState(false);
   const [isReportsViewOpen, setIsReportsViewOpen] = useState(false);
+  const [isCustomersViewOpen, setIsCustomersViewOpen] = useState(false);
+  const [availabilityShow, setAvailabilityShow] = useState<{ id: number | string; name: string } | null>(null);
   const [selectedTab, setSelectedTab] = useState<'todos' | 'a_la_venta' | 'en_configuracion' | 'archivados'>('a_la_venta');
   const [artworksEvento, setArtworksEvento] = useState<Evento | null>(null);
   const [settingsEvento, setSettingsEvento] = useState<Evento | null>(null);
@@ -586,6 +592,7 @@ export default function Home() {
                     onClick={() => {
                       setIsActionsMenuOpen(false);
                       setIsReportsViewOpen(!isReportsViewOpen);
+                      setIsCustomersViewOpen(false);
                       setSelectedEvento(null);
                     }}
                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${isReportsViewOpen
@@ -597,6 +604,29 @@ export default function Home() {
                     <BarChart3 className="w-4 h-4 text-emerald-500" />
                     <span className="flex-1">Informes</span>
                     {isReportsViewOpen && (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                        Activo
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 2.1 Botón Módulo de Audiencia (CRM) */}
+                  <button
+                    onClick={() => {
+                      setIsActionsMenuOpen(false);
+                      setIsCustomersViewOpen(!isCustomersViewOpen);
+                      setIsReportsViewOpen(false);
+                      setSelectedEvento(null);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${isCustomersViewOpen
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    title="Directorio de compradores, historial de boletas y exportación para pauta"
+                  >
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    <span className="flex-1">Audiencia & CRM</span>
+                    {isCustomersViewOpen && (
                       <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">
                         Activo
                       </span>
@@ -746,6 +776,7 @@ export default function Home() {
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   setIsReportsViewOpen(true);
+                  setIsCustomersViewOpen(false);
                   setSelectedEvento(null);
                 }}
                 className={`cursor-pointer border text-xs font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm text-center ${isReportsViewOpen
@@ -755,6 +786,23 @@ export default function Home() {
               >
                 <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>📊 Módulo de Informes</span>
+              </button>
+
+              {/* Botón Audiencia & CRM Móvil */}
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsCustomersViewOpen(true);
+                  setIsReportsViewOpen(false);
+                  setSelectedEvento(null);
+                }}
+                className={`cursor-pointer border text-xs font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm text-center ${isCustomersViewOpen
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-slate-900 border-slate-800 hover:border-emerald-500/30 text-slate-300 hover:bg-slate-800'
+                  }`}
+              >
+                <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>👥 Audiencia & CRM</span>
               </button>
 
               {/* Botón Reordenar Banners Web Móvil */}
@@ -813,6 +861,8 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isReportsViewOpen ? (
           <ReportsView onBack={() => setIsReportsViewOpen(false)} />
+        ) : isCustomersViewOpen ? (
+          <CustomersView onBack={() => setIsCustomersViewOpen(false)} />
         ) : selectedEvento ? (
           // Vista detallada de Localidades (Scraper)
           <LocalitiesView
@@ -959,6 +1009,10 @@ export default function Home() {
                             onOpenLocalities={setSelectedEvento}
                             onOpenArtworks={setArtworksEvento}
                             onConfigureSettings={setSettingsEvento}
+                            onCheckAvailability={(ev) => {
+                              const showId = ev.id || (ev as any).idShow || 501;
+                              setAvailabilityShow({ id: showId, name: ev.nombre });
+                            }}
                           />
                         ))}
                       </div>
@@ -982,6 +1036,10 @@ export default function Home() {
                             onOpenLocalities={setSelectedEvento}
                             onOpenArtworks={setArtworksEvento}
                             onConfigureSettings={setSettingsEvento}
+                            onCheckAvailability={(ev) => {
+                              const showId = ev.id || (ev as any).idShow || 501;
+                              setAvailabilityShow({ id: showId, name: ev.nombre });
+                            }}
                           />
                         ))}
                       </div>
@@ -1008,6 +1066,10 @@ export default function Home() {
                               onOpenLocalities={setSelectedEvento}
                               onOpenArtworks={setArtworksEvento}
                               onConfigureSettings={setSettingsEvento}
+                              onCheckAvailability={(ev) => {
+                                const showId = ev.id || (ev as any).idShow || 501;
+                                setAvailabilityShow({ id: showId, name: ev.nombre });
+                              }}
                             />
                           ))}
                         </div>
@@ -1047,6 +1109,10 @@ export default function Home() {
                                 onOpenLocalities={setSelectedEvento}
                                 onOpenArtworks={setArtworksEvento}
                                 onConfigureSettings={setSettingsEvento}
+                                onCheckAvailability={(ev) => {
+                                  const showId = ev.id || (ev as any).idShow || 501;
+                                  setAvailabilityShow({ id: showId, name: ev.nombre });
+                                }}
                               />
                             </div>
                           ))}
@@ -1113,6 +1179,15 @@ export default function Home() {
         <EventSettingsModal
           evento={settingsEvento}
           onClose={() => setSettingsEvento(null)}
+        />
+      )}
+
+      {/* Modal de Aforo y Disponibilidad en Vivo (Catalog API) */}
+      {availabilityShow && (
+        <AvailabilityModal
+          showId={availabilityShow.id}
+          eventName={availabilityShow.name}
+          onClose={() => setAvailabilityShow(null)}
         />
       )}
     </main>

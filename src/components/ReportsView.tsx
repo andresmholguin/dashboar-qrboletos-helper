@@ -20,7 +20,9 @@ import {
   Gift,
   Search,
   CheckCircle2,
-  Briefcase
+  Briefcase,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface LocalitySummary {
@@ -538,14 +540,19 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
                         <div className="space-y-2 flex-1">
                           {/* Fila 1: Checkbox y Título del evento */}
                           <div className="flex items-start sm:items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedUrls.has(ev.url)}
-                              onChange={() => toggleEventSelection(ev.url)}
-                              className="w-4 h-4 mt-0.5 sm:mt-0 text-emerald-600 bg-slate-100 border-slate-300 rounded focus:ring-emerald-500 dark:focus:ring-emerald-600 dark:ring-offset-slate-900 focus:ring-2 dark:bg-slate-800 dark:border-slate-700 cursor-pointer"
+                            <button
+                              type="button"
+                              onClick={() => toggleEventSelection(ev.url)}
+                              className="focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-md mt-0.5 sm:mt-0 transition-transform active:scale-90"
                               title={`Seleccionar ${ev.meta?.evento || 'este evento'} para reporte`}
-                            />
-                            <span className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">
+                            >
+                              {selectedUrls.has(ev.url) ? (
+                                <CheckSquare className="w-5 h-5 text-emerald-500" />
+                              ) : (
+                                <Square className="w-5 h-5 text-slate-400 hover:text-emerald-400 transition-colors" />
+                              )}
+                            </button>
+                            <span className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide cursor-pointer" onClick={() => toggleEventSelection(ev.url)}>
                               {ev.meta?.evento || 'Evento QRBoletos'}
                             </span>
                           </div>

@@ -91,10 +91,8 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
   const [expandedEvents, setExpandedEvents] = useState<Record<number, boolean>>({});
   const [searchFilter, setSearchFilter] = useState<string>('');
 
-  // Pestañas principales
-  const [activeTab, setActiveTab] = useState<'general' | 'individual'>('general');
-  const [selectedEventIdx, setSelectedEventIdx] = useState<number>(0);
-  const [individualSubTab, setIndividualSubTab] = useState<'general' | 'detailed'>('general');
+  // Selección de eventos para reportes filtrados
+  const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
   const [pdfLayout, setPdfLayout] = useState<'standard_portrait' | 'compact_landscape' | 'onepage_portrait'>('standard_portrait');
 
   useEffect(() => {
@@ -143,30 +141,27 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
     }
   };
 
-  const handleDownloadPdf = async (mode: 'general' | 'individual', type: 'general' | 'detailed' = 'general', targetUrl?: string) => {
+  const handleDownloadPdf = async () => {
     setIsDownloadingPdf(true);
     try {
+      const selectedArray = Array.from(selectedUrls);
+      const targetData = selectedArray.length > 0 
+        ? salesData.filter(ev => selectedArray.includes(ev.url))
+        : salesData;
+
+      if (targetData.length === 0) throw new Error("No hay eventos disponibles para generar el informe.");
+
       let response: Response;
-      // Si ya tenemos salesData cargado en memoria, usar POST para enviar los datos y generar el PDF de inmediato (3s sin re-scrapear)
-      if (salesData && salesData.length > 0) {
-        response = await fetch('/api/reports/download-pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            salesData,
-            mode,
-            type,
-            layout: pdfLayout,
-            targetUrl,
-          }),
-        });
-      } else {
-        let url = `/api/reports/download-pdf?mode=${mode}&type=${type}&layout=${pdfLayout}`;
-        if (targetUrl) {
-          url += `&targetUrl=${encodeURIComponent(targetUrl)}`;
-        }
-        response = await fetch(url);
-      }
+      response = await fetch('/api/reports/download-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          salesData: targetData,
+          mode: 'general',
+          type: 'general',
+          layout: pdfLayout,
+        }),
+      });
 
       if (!response.ok) {
         const rawText = await response.text();
@@ -195,7 +190,7 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       const a = document.createElement('a');
       a.href = blobUrl;
       const todayStr = new Date().toISOString().split('T')[0];
-      const filenamePrefix = mode === 'general' ? 'Informe_Consolidado_Ventas' : `Informe_Ventas_${type}`;
+      const filenamePrefix = selectedUrls.size > 0 ? 'Informe_Filtrado_Ventas' : 'Informe_Consolidado_Ventas';
       const layoutLabel = pdfLayout === 'compact_landscape' ? 'Compacto' : (pdfLayout === 'onepage_portrait' ? 'Ficha' : 'Vertical');
       a.download = `${filenamePrefix}_${layoutLabel}_${todayStr}.pdf`;
       document.body.appendChild(a);
@@ -209,14 +204,15 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
     }
   };
 
-  const handleDownloadExcel = async (targetUrl?: string) => {
+  const handleDownloadExcel = async () => {
     setIsDownloadingExcel(true);
     try {
-      let url = '/api/reports/download-excel';
-      if (targetUrl) {
-        url += `?targetUrl=${encodeURIComponent(targetUrl)}`;
-      }
-      const response = await fetch(url);
+      const selectedArray = Array.from(selectedUrls);
+      const response = await fetch('/api/reports/download-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUrls: selectedArray }),
+      });
       if (!response.ok) {
         const rawText = await response.text();
         let errText = rawText;
@@ -259,6 +255,15 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       ...prev,
       [index]: !prev[index],
     }));
+  };
+
+  const toggleEventSelection = (url: string) => {
+    setSelectedUrls((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
   };
 
   // Helper para convertir strings monetarios o enteros a números
@@ -366,85 +371,29 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
             </select>
           </div>
 
-          {activeTab === 'general' ? (
-            <>
-              <button
-                onClick={() => handleDownloadPdf('general')}
-                disabled={isDownloadingPdf || salesData.length === 0}
-                className="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
-                title="Generar y descargar informe consolidado en PDF"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>{isDownloadingPdf ? 'Generando PDF...' : 'PDF Consolidado'}</span>
-              </button>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf || salesData.length === 0}
+            className="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Generar y descargar informe en PDF"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>{isDownloadingPdf ? 'Generando PDF...' : (selectedUrls.size > 0 ? `PDF Selección (${selectedUrls.size})` : 'PDF Consolidado')}</span>
+          </button>
 
-              <button
-                onClick={() => handleDownloadExcel()}
-                disabled={isDownloadingExcel || salesData.length === 0}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
-                title="Generar y descargar informe consolidado en Excel (.xlsx)"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>{isDownloadingExcel ? 'Generando Excel...' : 'Excel Consolidado'}</span>
-              </button>
-            </>
-          ) : (
-            selectedEvent && (
-              <>
-                <button
-                  onClick={() => handleDownloadPdf('individual', individualSubTab, selectedEvent.url)}
-                  disabled={isDownloadingPdf}
-                  className="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
-                  title="Descargar PDF de este evento"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>{isDownloadingPdf ? 'Generando PDF...' : `PDF ${individualSubTab === 'detailed' ? 'Detallado' : 'General'}`}</span>
-                </button>
-
-                <button
-                  onClick={() => handleDownloadExcel(selectedEvent.url)}
-                  disabled={isDownloadingExcel}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
-                  title="Descargar Excel de este evento"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{isDownloadingExcel ? 'Generando Excel...' : 'Excel Evento'}</span>
-                </button>
-              </>
-            )
-          )}
+          <button
+            onClick={handleDownloadExcel}
+            disabled={isDownloadingExcel || salesData.length === 0}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Generar y descargar informe en Excel (.xlsx)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{isDownloadingExcel ? 'Generando Excel...' : (selectedUrls.size > 0 ? `Excel Selección (${selectedUrls.size})` : 'Excel Consolidado')}</span>
+          </button>
         </div>
       </div>
 
-      {/* Selector de Pestañas Principales */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-        <button
-          onClick={() => setActiveTab('general')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTab === 'general'
-              ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-900/60 hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-800'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Informe General Consolidado (Todos los Eventos en Venta)</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-black/20">
-            {salesData.length}
-          </span>
-        </button>
 
-        <button
-          onClick={() => setActiveTab('individual')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTab === 'individual'
-              ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-md shadow-blue-500/20'
-              : 'bg-slate-900/60 hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-800'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Informe Individual por Evento</span>
-        </button>
-      </div>
 
       {/* Alerta de Caché */}
       {isCached && !isLoading && (
@@ -474,10 +423,9 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       )}
 
       {/* ============================================================ */}
-      {/* VISTA 1: INFORME GENERAL CONSOLIDADO */}
+      {/* INFORME GENERAL CONSOLIDADO */}
       {/* ============================================================ */}
-      {activeTab === 'general' && (
-        <div className="space-y-6">
+      <div className="space-y-6">
           {/* Tarjetas KPI de Totales Consolidados */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-1">
@@ -588,8 +536,15 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
                       {/* Fila Cabecera del Evento */}
                       <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="space-y-2 flex-1">
-                          {/* Fila 1: Título del evento */}
-                          <div>
+                          {/* Fila 1: Checkbox y Título del evento */}
+                          <div className="flex items-start sm:items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedUrls.has(ev.url)}
+                              onChange={() => toggleEventSelection(ev.url)}
+                              className="w-4 h-4 mt-0.5 sm:mt-0 text-emerald-600 bg-slate-100 border-slate-300 rounded focus:ring-emerald-500 dark:focus:ring-emerald-600 dark:ring-offset-slate-900 focus:ring-2 dark:bg-slate-800 dark:border-slate-700 cursor-pointer"
+                              title={`Seleccionar ${ev.meta?.evento || 'este evento'} para reporte`}
+                            />
                             <span className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">
                               {ev.meta?.evento || 'Evento QRBoletos'}
                             </span>
@@ -761,298 +716,7 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* VISTA 2: INFORME INDIVIDUAL POR EVENTO */}
-      {/* ============================================================ */}
-      {activeTab === 'individual' && (
-        <div className="space-y-5">
-          {/* Selector de Evento y Modalidad */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1 space-y-1">
-              <label className="text-[10px] uppercase font-mono font-bold text-slate-500 dark:text-slate-400 block">
-                Selecciona el Evento a Consultar:
-              </label>
-              <select
-                value={selectedEventIdx}
-                onChange={(e) => setSelectedEventIdx(parseInt(e.target.value, 10))}
-                className="bg-slate-50 border border-slate-300 dark:bg-slate-950 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-xl px-3.5 py-2.5 w-full md:max-w-xl focus:outline-none focus:border-blue-500 cursor-pointer"
-              >
-                {salesData.map((ev, idx) => (
-                  <option key={idx} value={idx} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-200">
-                    {ev.meta?.evento || 'Evento'} {ev.meta?.espectaculo ? `(${ev.meta.espectaculo})` : ''} - {ev.meta?.sitio || ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sub-toggle: General vs Detallado */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-300 dark:border-slate-800 self-start md:self-auto">
-              <button
-                onClick={() => setIndividualSubTab('general')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  individualSubTab === 'general'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                General del Evento (Localidades)
-              </button>
-              <button
-                onClick={() => setIndividualSubTab('detailed')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  individualSubTab === 'detailed'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Detallado por Canales (Web / POS)
-              </button>
-            </div>
-          </div>
-
-          {selectedEvent && (
-            <div className="space-y-5">
-              {/* Tarjeta de Metadatos del Evento */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-2 flex-1">
-                  {/* Fila 1: Título del evento */}
-                  <div>
-                    <h2 className="text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wide">
-                      {selectedEvent.meta?.evento}
-                    </h2>
-                  </div>
-
-                  {/* Fila 2: Nombre de espectáculo */}
-                  {selectedEvent.meta?.espectaculo && (
-                    <div>
-                      <span className="text-xs bg-sky-600 text-white dark:bg-sky-500 px-2.5 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider inline-block shadow-sm">
-                        {selectedEvent.meta.espectaculo}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Fila 3: Entrega a Empresario */}
-                  {selectedEvent.entregaEmpresario && selectedEvent.entregaEmpresario.tiene && (
-                    <div>
-                      <span className="text-xs bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 border px-2.5 py-0.5 rounded-md font-mono font-bold inline-flex items-center gap-1 shadow-sm">
-                        <Briefcase className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-                        ENTREGA EMPRESARIO: {selectedEvent.entregaEmpresario.totalFormatted || `$${selectedEvent.entregaEmpresario.total.toLocaleString()}`}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Metadatos PULEP / Lugar / Fecha */}
-                  <div className="flex items-center gap-5 text-xs text-slate-500 dark:text-slate-400 flex-wrap pt-0.5">
-                    <span className="font-mono text-xs">
-                      <span className="text-[10px] uppercase font-semibold text-slate-400 mr-1">PULEP:</span>
-                      <strong className="text-slate-700 dark:text-slate-200">{selectedEvent.meta?.pulep || 'N/A'}</strong>
-                    </span>
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <MapPin className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                      <span className="text-[10px] uppercase font-semibold text-slate-400">Lugar:</span>
-                      <strong className="text-slate-700 dark:text-slate-200">{selectedEvent.meta?.sitio || 'N/A'}</strong>
-                    </span>
-                    {selectedEvent.meta?.fechaInicio && (
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        {selectedEvent.meta.fechaInicio}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {selectedEvent.url && (
-                  <a
-                    href={selectedEvent.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-950 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300 dark:hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 self-start transition-colors"
-                  >
-                    <span>Ver en QRBoletos</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                )}
-              </div>
-
-              {/* Sub-vista: General por Localidad */}
-              {individualSubTab === 'general' ? (
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/60 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                      Resumen de Ventas y Cortesías por Localidad
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                      {selectedEvent.resumenLocalidades?.length || 0} localidades
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs text-slate-800 dark:text-slate-300">
-                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase font-mono text-[9.5px] border-b border-slate-200 dark:border-slate-800">
-                        <tr>
-                          <th className="px-5 py-2.5">Localidad</th>
-                          <th className="px-5 py-2.5 text-right">Boletos Pagados</th>
-                          <th className="px-5 py-2.5 text-right text-rose-700 dark:text-rose-400">Cortesías Emitidas</th>
-                          <th className="px-5 py-2.5 text-right">Total Boletos</th>
-                          <th className="px-5 py-2.5 text-right">Recaudo Entradas (COP)</th>
-                          <th className="px-5 py-2.5 text-right">Cover Service (COP)</th>
-                          <th className="px-5 py-2.5 text-right">Total Recaudo (COP)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                        {(selectedEvent.resumenLocalidades || []).map((loc, lIdx) => {
-                          const pag = loc.boletosPagados !== undefined ? loc.boletosPagados : parseNum(loc.vendidas);
-                          const cor = loc.cortesias || 0;
-                          const totB = loc.totalBoletos !== undefined ? loc.totalBoletos : parseNum(loc.vendidas);
-                          const rEnt = parseNum(loc.recaudoEntradas);
-                          const rSer = parseNum(loc.recaudoServicio);
-                          const rTot = rEnt + rSer;
-
-                          return (
-                            <tr key={lIdx} className="hover:bg-slate-100/80 dark:hover:bg-slate-800/30">
-                              <td className="px-5 py-2.5 font-bold text-slate-900 dark:text-slate-100 uppercase">
-                                {loc.localidad}
-                              </td>
-                              <td className="px-5 py-2.5 text-right font-mono text-slate-800 dark:text-slate-200">
-                                {pag.toLocaleString()}
-                              </td>
-                              <td className={`px-5 py-2.5 text-right font-mono ${cor > 0 ? 'text-rose-700 dark:text-rose-400 font-bold bg-rose-100 dark:bg-rose-500/10' : 'text-slate-400 dark:text-slate-500'}`}>
-                                {cor.toLocaleString()}
-                              </td>
-                              <td className="px-5 py-2.5 text-right font-mono font-semibold text-slate-900 dark:text-white">
-                                {totB.toLocaleString()}
-                              </td>
-                              <td className="px-5 py-2.5 text-right font-mono text-emerald-800 dark:text-emerald-400 font-medium">
-                                ${rEnt.toLocaleString()}
-                              </td>
-                              <td className="px-5 py-2.5 text-right font-mono text-purple-800 dark:text-purple-300 font-medium">
-                                ${rSer.toLocaleString()}
-                              </td>
-                              <td className="px-5 py-2.5 text-right font-mono font-bold text-amber-800 dark:text-amber-400">
-                                ${rTot.toLocaleString()}
-                              </td>
-                            </tr>
-                          );
-                        })}
-
-                        {/* Fila Totales del Evento */}
-                        {(() => {
-                          const resumen = selectedEvent.resumenLocalidades || [];
-                          const totPag = resumen.reduce((a, l) => a + (l.boletosPagados !== undefined ? l.boletosPagados : parseNum(l.vendidas)), 0);
-                          const totCor = resumen.reduce((a, l) => a + (l.cortesias || 0), 0);
-                          const totB = resumen.reduce((a, l) => a + (l.totalBoletos !== undefined ? l.totalBoletos : parseNum(l.vendidas)), 0);
-                          const totEnt = resumen.reduce((a, l) => a + parseNum(l.recaudoEntradas), 0);
-                          const totSer = resumen.reduce((a, l) => a + parseNum(l.recaudoServicio), 0);
-                          const totGen = totEnt + totSer;
-
-                          return (
-                            <tr className="bg-slate-100 dark:bg-slate-950 font-extrabold border-t-2 border-slate-300 dark:border-slate-800 text-sm">
-                              <td className="px-5 py-3 uppercase text-slate-900 dark:text-white">TOTAL GENERAL EVENTO</td>
-                              <td className="px-5 py-3 text-right font-mono text-slate-900 dark:text-white">{totPag.toLocaleString()}</td>
-                              <td className="px-5 py-3 text-right font-mono text-rose-700 dark:text-rose-400">{totCor.toLocaleString()}</td>
-                              <td className="px-5 py-3 text-right font-mono text-slate-900 dark:text-white">{totB.toLocaleString()}</td>
-                              <td className="px-5 py-3 text-right font-mono text-emerald-800 dark:text-emerald-400">${totEnt.toLocaleString()}</td>
-                              <td className="px-5 py-3 text-right font-mono text-purple-800 dark:text-purple-300">${totSer.toLocaleString()}</td>
-                              <td className="px-5 py-3 text-right font-mono text-amber-800 dark:text-amber-400">${totGen.toLocaleString()}</td>
-                            </tr>
-                          );
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : (
-                /* Sub-vista: Detallado por Canales (Web vs Taquilla) */
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/60 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                      Desglose Detallado por Etapas, Referencias y Canales
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                      {selectedEvent.detalleCanales?.length || 0} registros
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs text-slate-800 dark:text-slate-300">
-                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase font-mono text-[9.5px] border-b border-slate-200 dark:border-slate-800">
-                        <tr>
-                          <th className="px-4 py-2.5">Localidad</th>
-                          <th className="px-4 py-2.5">Etapa</th>
-                          <th className="px-4 py-2.5">Referencia</th>
-                          <th className="px-4 py-2.5">Canal</th>
-                          <th className="px-4 py-2.5 text-center">Tipo</th>
-                          <th className="px-4 py-2.5 text-right">Cantidad</th>
-                          <th className="px-4 py-2.5 text-right">Valor Entrada</th>
-                          <th className="px-4 py-2.5 text-right">Total Entradas</th>
-                          <th className="px-4 py-2.5 text-right">Valor Servicio</th>
-                          <th className="px-4 py-2.5 text-right">Total Servicio</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                        {(selectedEvent.detalleCanales || []).map((det, dIdx) => {
-                          const isWeb = det.canal.toLowerCase().includes('web');
-                          const isCor = !!det.isCortesia;
-                          return (
-                            <tr key={dIdx} className="hover:bg-slate-100/80 dark:hover:bg-slate-800/30">
-                              <td className="px-4 py-2 font-bold text-slate-900 dark:text-slate-100 uppercase">
-                                {det.localidad}
-                              </td>
-                              <td className="px-4 py-2 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
-                                {det.etapa}
-                              </td>
-                              <td className="px-4 py-2 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-                                {det.referencia}
-                              </td>
-                              <td className="px-4 py-2">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold inline-flex items-center gap-1 border ${
-                                  isWeb ? 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30' : 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30'
-                                }`}>
-                                  {isWeb ? <Globe className="w-2.5 h-2.5" /> : <Store className="w-2.5 h-2.5" />}
-                                  {det.canal}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {isCor ? (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30">
-                                    CORTESÍA
-                                  </span>
-                                ) : (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-slate-200 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-transparent">
-                                    PAGADO
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-4 py-2 text-right font-mono font-bold text-slate-900 dark:text-white">
-                                {parseNum(det.cantidad).toLocaleString()}
-                              </td>
-                              <td className="px-4 py-2 text-right font-mono text-slate-600 dark:text-slate-400">
-                                {det.valorEntrada}
-                              </td>
-                              <td className="px-4 py-2 text-right font-mono text-emerald-800 dark:text-emerald-400 font-semibold">
-                                {det.totalEntradas}
-                              </td>
-                              <td className="px-4 py-2 text-right font-mono text-slate-600 dark:text-slate-400">
-                                {det.valorServicio}
-                              </td>
-                              <td className="px-4 py-2 text-right font-mono text-purple-800 dark:text-purple-300 font-semibold">
-                                {det.totalServicio}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

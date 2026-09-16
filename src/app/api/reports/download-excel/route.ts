@@ -9,6 +9,73 @@ import { verifyChromeSession } from '@/services/chromeSession';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
+export async function POST(request: Request) {
+  if (isRunningInCloud()) {
+    return forwardToLocalTunnel(request, '/api/reports/download-excel');
+  }
+
+  try {
+    const body = await request.json();
+    const targetUrls: string[] = body.targetUrls || [];
+
+    const tempExcelPath = path.join(process.cwd(), 'scratch', 'Informe_Ventas_QRBoletos.xlsx');
+
+    let eventsToScrape: any[] = [];
+    if (targetUrls.length > 0) {
+      eventsToScrape = targetUrls.map(u => ({ urlBase: u }));
+    } else {
+      const allEvents = await fetchEventosFromSheets();
+      eventsToScrape = allEvents.filter((e) =>
+        Boolean(
+          e.urlBase &&
+          e.urlBase.includes('/shows/') &&
+          (e.enVenta === true || String(e.enVenta).toLowerCase() === 'true')
+        )
+      );
+    }
+
+    if (eventsToScrape.length === 0) {
+      return new Response('No hay eventos con URL de show configurada para generar el informe.', { status: 400 });
+    }
+
+    const sessionStatus = await verifyChromeSession();
+    if (!sessionStatus.chromeOnline) {
+      return new Response(JSON.stringify({ success: false, code: 'CHROME_OFFLINE', error: 'Google Chrome no est abierto.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (!sessionStatus.sessionActive) {
+      return new Response(JSON.stringify({ success: false, code: 'SESSION_EXPIRED', error: 'Sesin caducada.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const scriptPath = path.join(process.cwd(), 'scripts', 'generate_sales_report_excel.py');
+    const tempEventsJsonPath = path.join(process.cwd(), 'scratch', 'temp_events_excel.json');
+    fs.writeFileSync(tempEventsJsonPath, JSON.stringify(eventsToScrape), 'utf-8');
+
+    const args = [scriptPath, '--events-json', tempEventsJsonPath, '--output-excel', tempExcelPath];
+    const pythonProcess = spawn('python', args, { cwd: process.cwd(), env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
+
+    let stderrData = '';
+    pythonProcess.stderr.on('data', (c) => { stderrData += c.toString(); });
+
+    const exitCode = await new Promise<number>((resolve) => { pythonProcess.on('close', resolve); });
+
+    if (exitCode !== 0 || !fs.existsSync(tempExcelPath)) {
+      return new Response(JSON.stringify({ success: false, error: stderrData || 'Error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const fileBuffer = fs.readFileSync(tempExcelPath);
+    const filename = 'Informe_Ventas_QRBoletos.xlsx';
+    return new Response(fileBuffer, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': 'attachment; filename=' + filename,
+        'Content-Length': fileBuffer.length.toString(),
+      },
+    });
+  } catch (error: any) {
+    return new Response(Error interno: , { status: 500 });
+  }
+}
+
 export async function GET(request: Request) {
   if (isRunningInCloud()) {
     return forwardToLocalTunnel(request, '/api/reports/download-excel');

@@ -91,8 +91,18 @@ export default function AvailabilityModal({ showId, eventName, onClose }: Availa
                   Catalog API v1
                 </span>
               </h3>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-slate-400 font-medium line-clamp-1">{eventName}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs text-slate-300 font-medium line-clamp-1">{eventName}</p>
+                {detail?.espectaculo && detail.espectaculo !== detail.evento && (
+                  <span className="text-[11px] text-teal-300 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-lg font-medium">
+                    {detail.espectaculo}
+                  </span>
+                )}
+                {detail?.venue?.nombre && (
+                  <span className="text-[11px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-lg">
+                    📍 {detail.venue.nombre}{detail.venue.ciudad ? `, ${detail.venue.ciudad}` : ''}
+                  </span>
+                )}
                 {currentShowId ? (
                   <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-1.5 py-0.5 rounded">
                     ID API: {currentShowId}
@@ -204,7 +214,7 @@ export default function AvailabilityModal({ showId, eventName, onClose }: Availa
                     <option value="">-- Selecciona el show correspondiente en QRBoletos --</option>
                     {catalogItems.map((item) => (
                       <option key={item.id_evento_espectaculo} value={item.id_evento_espectaculo}>
-                        {item.evento} (ID API: {item.id_evento_espectaculo})
+                        {item.evento}{item.espectaculo ? ' - ' + item.espectaculo : ''} (ID API: {item.id_evento_espectaculo})
                       </option>
                     ))}
                   </select>
@@ -245,13 +255,32 @@ export default function AvailabilityModal({ showId, eventName, onClose }: Availa
                 </div>
               </div>
 
+              {detail.incluye && detail.incluye.length > 0 && (
+                <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs space-y-2">
+                  <div className="font-bold flex items-center gap-2 text-indigo-200">
+                    <span>🎟️ Contenido del Abono / Combo</span>
+                    <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded font-mono">
+                      {detail.incluye.length} elementos incluidos
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {detail.incluye.map((inc: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950/60 p-2.5 rounded-xl border border-indigo-500/20 text-[11px] space-y-0.5">
+                        <p className="font-semibold text-white">{inc.evento || inc.espectaculo || `Item #${idx + 1}`}</p>
+                        {inc.localidad && <p className="text-slate-400">Localidad: {inc.localidad}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {totalAforo === 0 && (
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="font-bold text-amber-200">Aforo y cupos en 0 en la API de QRBoletos</p>
+                    <p className="font-bold text-amber-200">Nota técnica sobre aforos</p>
                     <p className="text-slate-400 leading-relaxed text-[11px]">
-                      La API oficial de QRBoletos retornó <code className="text-amber-300 font-mono">aforo: 0</code> y <code className="text-amber-300 font-mono">disponibles: 0</code> para las {detail.localidades?.length} localidades de este espectáculo. Las tarifas y etapas sí están vigentes. Puedes presionar el botón <strong className="text-amber-300 font-mono">{'{ } JSON'}</strong> arriba para ver la respuesta exacta de la API.
+                      Según la documentación oficial de Catalog API v1, para eventos con silletería numerada o palcos (<code className="text-amber-300 font-mono">placement=selectable</code>), el aforo fijo de la localidad queda vacío en base de datos. La API calcula las sillas en vivo desde el mapa de silletería. Puedes presionar el botón <strong className="text-amber-300 font-mono">{'{ } JSON'}</strong> para ver la respuesta cruda de la API.
                     </p>
                   </div>
                 </div>

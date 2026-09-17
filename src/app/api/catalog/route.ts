@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { QrboletosApiClient } from '@/lib/qrboletosApi';
+import { QrboletosApiClient, flattenCatalogItems } from '@/lib/qrboletosApi';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,17 +41,24 @@ export async function GET(request: NextRequest) {
     } catch (err: any) {
       // 3. Si el ID no existe en la API (p. ej. es el ID del scraper o Google Sheets), buscar por nombre en el catálogo activo
       const catalog = await client.getCatalog();
-      const catalogItems = catalog.data?.items || [];
+      const rawCatalogItems = catalog.data?.items || [];
+      const flatShows = flattenCatalogItems(rawCatalogItems);
 
       if (eventName) {
         const clean = (s: string) =>
           s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
         const targetClean = clean(eventName);
 
-        // Buscar coincidencia exacta o parcial
-        const matched = catalogItems.find((item) => {
-          const itemClean = clean(item.evento || '');
-          return itemClean === targetClean || itemClean.includes(targetClean) || targetClean.includes(itemClean);
+        // Buscar coincidencia exacta o parcial en el nombre del evento o del espectáculo
+        const matched = flatShows.find((show) => {
+          const eventClean = clean(show.evento || '');
+          const espClean = clean(show.espectaculo || '');
+          return (
+            eventClean === targetClean ||
+            eventClean.includes(targetClean) ||
+            targetClean.includes(eventClean) ||
+            (espClean && (espClean.includes(targetClean) || targetClean.includes(espClean)))
+          );
         });
 
         if (matched) {
@@ -60,7 +67,7 @@ export async function GET(request: NextRequest) {
             success: true,
             data: resolvedDetail.data,
             resolvedShowId: matched.id_evento_espectaculo,
-            catalogItems,
+            catalogItems: flatShows,
           });
         }
       }
@@ -70,7 +77,7 @@ export async function GET(request: NextRequest) {
           success: false,
           code: 'SHOW_NOT_FOUND',
           error: `El show ${showId} no está activo en el catálogo de QRBoletos.`,
-          catalogItems,
+          catalogItems: flatShows,
         },
         { status: 404 }
       );

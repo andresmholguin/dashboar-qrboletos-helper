@@ -59,20 +59,83 @@ export interface CustomersListResponse {
   time: string;
 }
 
-export interface CatalogItem {
+export interface CatalogEspectaculo {
   id_evento_espectaculo: number;
-  tipo: 'match' | 'subscription' | 'event';
-  evento: string;
   espectaculo: string;
   fecha_inicio: string;
   fecha_fin: string;
-  venue: {
+  venue?: {
     nombre: string;
     ciudad: string;
     direccion?: string;
     departamento?: string;
     pais?: string;
   };
+}
+
+export interface CatalogItem {
+  tipo: 'match' | 'subscription' | 'event';
+  evento: string;
+  id_evento_espectaculo?: number;
+  id_evento?: number;
+  espectaculo?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  venue?: {
+    nombre: string;
+    ciudad: string;
+    direccion?: string;
+    departamento?: string;
+    pais?: string;
+  };
+  espectaculos?: CatalogEspectaculo[];
+  incluye?: any[];
+}
+
+export interface FlatCatalogShow {
+  id_evento_espectaculo: number;
+  tipo: 'match' | 'subscription' | 'event';
+  id_evento?: number;
+  evento: string;
+  espectaculo: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  venue?: {
+    nombre: string;
+    ciudad: string;
+  };
+}
+
+export function flattenCatalogItems(items: CatalogItem[]): FlatCatalogShow[] {
+  const flattened: FlatCatalogShow[] = [];
+  for (const item of items || []) {
+    if (item.tipo === 'event' && item.espectaculos && item.espectaculos.length > 0) {
+      for (const esp of item.espectaculos) {
+        flattened.push({
+          id_evento_espectaculo: esp.id_evento_espectaculo,
+          tipo: item.tipo,
+          id_evento: item.id_evento,
+          evento: item.evento,
+          espectaculo: esp.espectaculo,
+          fecha_inicio: esp.fecha_inicio,
+          fecha_fin: esp.fecha_fin,
+          venue: esp.venue || item.venue,
+        });
+      }
+    } else if (item.id_evento_espectaculo) {
+      flattened.push({
+        id_evento_espectaculo: item.id_evento_espectaculo,
+        tipo: item.tipo,
+        id_evento: item.id_evento,
+        evento: item.evento,
+        espectaculo: item.espectaculo || '',
+        fecha_inicio: item.fecha_inicio,
+        fecha_fin: item.fecha_fin,
+        venue: item.venue,
+      });
+    }
+  }
+  return flattened;
 }
 
 export interface CatalogListResponse {

@@ -64,11 +64,23 @@ export interface TarifarioExtracted {
   advertencias?: string[];
 }
 
-export interface ChromeSyncLog {
-  timestamp: string;
-  level: 'info' | 'success' | 'warning' | 'error';
-  message: string;
-  localidad?: string;
-  referencia?: string;
+export interface LocalidadAvailability {
+  nombre: string;
+  aforo: number;
+  disponibles: number;
+  vendidos: number;
+  porcentaje: number;
+}
+
+export interface EventAvailabilitySummary {
+  showId: number;
+  idEvento?: number;
+  evento: string;
+  espectaculo: string;
+  totalAforo: number;
+  totalDisponibles: number;
+  totalVendidos: number;
+  porcentaje: number;
+  localidades: LocalidadAvailability[];
 }
 

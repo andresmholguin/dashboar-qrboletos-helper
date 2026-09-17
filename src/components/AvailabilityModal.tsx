@@ -41,12 +41,7 @@ export default function AvailabilityModal({ showId, eventName, onClose }: Availa
     setLoading(true);
     setError(null);
     try {
-      const savedId = typeof window !== 'undefined' ? localStorage.getItem('qrboletos_catalog_client_id') || localStorage.getItem('qrboletos_client_id') || '' : '';
-      const savedSecret = typeof window !== 'undefined' ? localStorage.getItem('qrboletos_catalog_client_secret') || localStorage.getItem('qrboletos_client_secret') || '' : '';
-      let url = `/api/catalog?id=${encodeURIComponent(idToFetch)}&name=${encodeURIComponent(eventName)}`;
-      if (savedId && savedSecret) {
-        url += '&clientId=' + encodeURIComponent(savedId) + '&clientSecret=' + encodeURIComponent(savedSecret);
-      }
+      const url = `/api/catalog?id=${encodeURIComponent(idToFetch)}&name=${encodeURIComponent(eventName)}`;
       const res = await fetch(url);
       const json = await res.json();
       setRawJson(json);
@@ -189,7 +184,7 @@ export default function AvailabilityModal({ showId, eventName, onClose }: Availa
                   <p className="font-bold">Estado de consulta</p>
                   <p className="text-slate-400">{error}</p>
                   <p className="text-[11px] text-slate-500 pt-1">
-                    Para vincular con la API, configura QRBOLETOS_CATALOG_CLIENT_ID y QRBOLETOS_CATALOG_CLIENT_SECRET (o ingrésalas desde Audiencia & CRM ➔ Credenciales).
+                    Verifica que las variables QRBOLETOS_CATALOG_CLIENT_ID y QRBOLETOS_CATALOG_CLIENT_SECRET estén configuradas en las Variables de Entorno de tu proyecto.
                   </p>
                 </div>
               </div>

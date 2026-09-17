@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Evento, Localidad } from '@/types';
+import { Evento, Localidad, EventAvailabilitySummary, LocalidadAvailability } from '@/types';
 import {
   ArrowLeft,
   Search,
@@ -19,20 +19,28 @@ import {
   X,
   Sparkles,
   Zap,
-  Palette
+  Palette,
+  Ticket
 } from 'lucide-react';
 import TarifarioUploaderModal from './TarifarioUploaderModal';
 
-
 interface LocalitiesViewProps {
   evento: Evento;
+  eventoAvailability?: EventAvailabilitySummary;
   onBack: () => void;
   onSaveLocalities: (rowId: string, localidades: Localidad[]) => Promise<void>;
   onOpenArtworks?: () => void;
   onConfigureSettings?: () => void;
 }
 
-export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpenArtworks, onConfigureSettings }: LocalitiesViewProps) {
+export default function LocalitiesView({
+  evento,
+  eventoAvailability,
+  onBack,
+  onSaveLocalities,
+  onOpenArtworks,
+  onConfigureSettings
+}: LocalitiesViewProps) {
   const [htmlContent, setHtmlContent] = useState('');
   const [localidades, setLocalidades] = useState<Localidad[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +51,8 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
   const [success, setSuccess] = useState<string | null>(null);
   const [showTarifarioModal, setShowTarifarioModal] = useState(false);
   const [isExtractingFromChrome, setIsExtractingFromChrome] = useState(false);
+  const [availability, setAvailability] = useState<EventAvailabilitySummary | null>(eventoAvailability || null);
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
 
   // Obtener el dominio del evento
   let domain = 'https://dashboard.qrboletos.com';
@@ -71,6 +81,81 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
     }
     setError(null);
   }, [evento]);
+
+  // Sincronizar o cargar aforo de localidades desde la API de Catálogo
+  useEffect(() => {
+    if (eventoAvailability) {
+      setAvailability(eventoAvailability);
+      return;
+    }
+
+    const fetchAvailability = async () => {
+      setIsAvailabilityLoading(true);
+      try {
+        const showId = evento.showId || evento.id;
+        const res = await fetch(`/api/catalog?id=${encodeURIComponent(showId || '')}&name=${encodeURIComponent(evento.nombre || '')}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          const d = data.data;
+          const totalAforo = d.localidades?.reduce((acc: number, l: any) => acc + (l.aforo || 0), 0) || 0;
+          const totalDisponibles = d.localidades?.reduce((acc: number, l: any) => acc + (l.disponibles || 0), 0) || 0;
+          const totalVendidos = Math.max(0, totalAforo - totalDisponibles);
+          const porcentaje = totalAforo > 0 ? Math.round((totalVendidos / totalAforo) * 100) : 0;
+          setAvailability({
+            showId: d.id_evento_espectaculo,
+            idEvento: d.id_evento,
+            evento: d.evento || evento.nombre,
+            espectaculo: d.espectaculo || '',
+            totalAforo,
+            totalDisponibles,
+            totalVendidos,
+            porcentaje,
+            localidades: (d.localidades || []).map((l: any) => {
+              const aforo = l.aforo || 0;
+              const disponibles = l.disponibles || 0;
+              const vendidos = Math.max(0, aforo - disponibles);
+              const pct = aforo > 0 ? Math.round((vendidos / aforo) * 100) : 0;
+              return {
+                nombre: l.localidad,
+                aforo,
+                disponibles,
+                vendidos,
+                porcentaje: pct,
+              };
+            }),
+          });
+        }
+      } catch (e) {
+        console.warn('Error cargando aforo de localidades:', e);
+      } finally {
+        setIsAvailabilityLoading(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [evento, eventoAvailability]);
+
+  // Normalizar y buscar aforo de una localidad específica
+  const cleanStr = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const getLocalityAvailability = (locName: string): LocalidadAvailability | null => {
+    if (!availability?.localidades || availability.localidades.length === 0) return null;
+    const target = cleanStr(locName);
+    if (!target) return null;
+
+    // 1. Coincidencia exacta
+    const exact = availability.localidades.find((l) => cleanStr(l.nombre) === target);
+    if (exact) return exact;
+
+    // 2. Coincidencia por inclusión
+    return (
+      availability.localidades.find((l) => {
+        const candidate = cleanStr(l.nombre);
+        return candidate && (candidate.includes(target) || target.includes(candidate));
+      }) || null
+    );
+  };
 
   // Convertir URL relativa a absoluta
   const makeAbsoluteUrl = (url: string): string => {
@@ -464,6 +549,42 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
             </div>
           </div>
 
+          {/* Resumen Global de Aforo del Evento si está disponible */}
+          {availability && (
+            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Ticket className="w-4 h-4 shrink-0" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    Aforo Total Vendido: <span className="font-mono text-emerald-400 font-extrabold">{availability.totalVendidos.toLocaleString()}</span> / <span className="font-mono text-slate-300">{availability.totalAforo.toLocaleString()}</span> ({availability.porcentaje}%)
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono">
+                    Disponibles en taquilla/online: <strong className="text-slate-300">{availability.totalDisponibles.toLocaleString()}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-48">
+                <div className="w-full bg-slate-900 border border-slate-800 rounded-full h-2.5 overflow-hidden p-0.5">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      availability.porcentaje >= 90
+                        ? 'bg-gradient-to-r from-rose-500 to-amber-500'
+                        : availability.porcentaje >= 60
+                        ? 'bg-gradient-to-r from-amber-500 to-emerald-400'
+                        : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(0, availability.porcentaje))}%` }}
+                  />
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-300 shrink-0">
+                  {availability.porcentaje}%
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Listado de tarjetas de localidad - Altamente optimizado en espacio */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredLocalidades.map((loc, idx) => {
@@ -471,6 +592,7 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
               const configLink = loc.links?.find(l => l.label === 'Configuración')?.url || loc.url;
               const pricesLink = loc.links?.find(l => l.label === 'Precios')?.url;
               const seatsLink = loc.links?.find(l => l.label === 'Acomodación')?.url;
+              const locAvail = getLocalityAvailability(loc.nombre);
 
               return (
                 <div
@@ -484,6 +606,50 @@ export default function LocalitiesView({ evento, onBack, onSaveLocalities, onOpe
                       {loc.nombre}
                     </span>
                   </div>
+
+                  {/* Aforo Vendido y Total + Barra de Progresión de la Localidad */}
+                  {locAvail ? (
+                    <div className="space-y-1.5 py-1 bg-slate-900/40 rounded-lg px-2.5 py-2 border border-slate-800/70">
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-slate-400 flex items-center gap-1 font-sans">
+                          <Ticket className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span>Vendidos: <strong className="text-slate-200 font-mono">{locAvail.vendidos.toLocaleString()}</strong> / {locAvail.aforo.toLocaleString()}</span>
+                        </span>
+                        <span
+                          className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
+                            locAvail.porcentaje >= 90
+                              ? 'bg-rose-500/20 text-rose-400'
+                              : locAvail.porcentaje >= 60
+                              ? 'bg-amber-500/20 text-amber-400'
+                              : 'bg-emerald-500/20 text-emerald-400'
+                          }`}
+                        >
+                          {locAvail.porcentaje}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-900 border border-slate-800 rounded-full h-2 overflow-hidden p-0.5">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            locAvail.porcentaje >= 90
+                              ? 'bg-gradient-to-r from-rose-500 to-amber-500'
+                              : locAvail.porcentaje >= 60
+                              ? 'bg-gradient-to-r from-amber-500 to-emerald-400'
+                              : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(0, locAvail.porcentaje))}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                        <span>Disponibles: <strong className="text-emerald-400">{locAvail.disponibles.toLocaleString()}</strong></span>
+                        <span>Aforo: <strong className="text-slate-300">{locAvail.aforo.toLocaleString()}</strong></span>
+                      </div>
+                    </div>
+                  ) : isAvailabilityLoading ? (
+                    <div className="py-2 space-y-1.5 animate-pulse bg-slate-900/40 rounded-lg px-2.5 py-2">
+                      <div className="h-2.5 bg-slate-800 rounded w-2/3"></div>
+                      <div className="h-2 bg-slate-900 rounded w-full"></div>
+                    </div>
+                  ) : null}
 
                   {/* Botones de acción - Compactos y distribuidos */}
                   <div className="grid grid-cols-3 gap-1.5">

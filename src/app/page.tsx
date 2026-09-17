@@ -12,7 +12,7 @@ import EventSettingsModal from '@/components/EventSettingsModal';
 import TarifarioUploaderModal from '@/components/TarifarioUploaderModal';
 import ChromeTabSelectorModal, { DetectedTab } from '@/components/ChromeTabSelectorModal';
 import packageJson from '../../package.json';
-import { Evento, Localidad } from '@/types';
+import { Evento, Localidad, EventAvailabilitySummary } from '@/types';
 
 import { getEventTimestamp } from '@/utils/dateFormatter';
 import {
@@ -67,6 +67,8 @@ export default function Home() {
   const [selectedTab, setSelectedTab] = useState<'todos' | 'a_la_venta' | 'en_configuracion' | 'archivados'>('a_la_venta');
   const [artworksEvento, setArtworksEvento] = useState<Evento | null>(null);
   const [settingsEvento, setSettingsEvento] = useState<Evento | null>(null);
+  const [catalogSummary, setCatalogSummary] = useState<Record<string, EventAvailabilitySummary>>({});
+  const [isCatalogLoading, setIsCatalogLoading] = useState(false);
 
   // Cerrar menú de acciones al hacer clic fuera
   useEffect(() => {
@@ -107,9 +109,53 @@ export default function Home() {
     }
   };
 
-  // Cargar eventos iniciales al cargar la página
+  // Cargar resumen de aforos de todos los eventos desde la API de Catálogo
+  const fetchCatalogSummary = async () => {
+    setIsCatalogLoading(true);
+    try {
+      const res = await fetch('/api/catalog?summary=true');
+      const data = await res.json();
+      if (data.success && data.data) {
+        setCatalogSummary(data.data);
+      }
+    } catch (err) {
+      console.warn('Error al cargar aforos del catálogo:', err);
+    } finally {
+      setIsCatalogLoading(false);
+    }
+  };
+
+  // Normalizar nombre de evento para coincidencias flexibles
+  const cleanEventName = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Obtener disponibilidad y aforo de un evento según catálogo
+  const getEventAvailability = (ev: Evento): EventAvailabilitySummary | undefined => {
+    if (!catalogSummary || Object.keys(catalogSummary).length === 0) return undefined;
+    // 1. Coincidencia por showId
+    if (ev.showId && catalogSummary[String(ev.showId)]) return catalogSummary[String(ev.showId)];
+    // 2. Coincidencia por id
+    if (ev.id && catalogSummary[String(ev.id)]) return catalogSummary[String(ev.id)];
+    // 3. Coincidencia por eventId
+    if (ev.eventId && catalogSummary[String(ev.eventId)]) return catalogSummary[String(ev.eventId)];
+    // 4. Coincidencia por nombre exacto normalizado
+    const nameClean = cleanEventName(ev.nombre || '');
+    if (nameClean && catalogSummary[nameClean]) return catalogSummary[nameClean];
+    // 5. Coincidencia parcial por nombre
+    for (const [key, val] of Object.entries(catalogSummary)) {
+      if (isNaN(Number(key))) {
+        if (nameClean && (key.includes(nameClean) || nameClean.includes(key))) {
+          return val;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  // Cargar eventos iniciales y aforos al cargar la página
   useEffect(() => {
     fetchEventos();
+    fetchCatalogSummary();
   }, []);
 
   const fetchEventos = async () => {
@@ -177,7 +223,7 @@ export default function Home() {
       const data = await res.json();
       if (data.success) {
         setSyncToast(`¡Sincronización exitosa! ${data.result.totalSynced} eventos cargados desde la API.`);
-        await fetchEventos();
+        await Promise.all([fetchEventos(), fetchCatalogSummary()]);
       } else {
         setSyncToast(`Error: ${data.error || 'No se pudo sincronizar'}`);
       }
@@ -867,6 +913,7 @@ export default function Home() {
           // Vista detallada de Localidades (Scraper)
           <LocalitiesView
             evento={selectedEvento}
+            eventoAvailability={getEventAvailability(selectedEvento)}
             onBack={() => setSelectedEvento(null)}
             onSaveLocalities={handleSaveLocalities}
             onOpenArtworks={() => setArtworksEvento(selectedEvento)}
@@ -1004,6 +1051,8 @@ export default function Home() {
                           <EventCard
                             key={evento.id}
                             evento={evento}
+                            availability={getEventAvailability(evento)}
+                            isAvailabilityLoading={isCatalogLoading}
                             onToggleFavorite={handleToggleFavorite}
                             onDeleteEvent={handleDeleteEvent}
                             onOpenLocalities={setSelectedEvento}
@@ -1031,6 +1080,8 @@ export default function Home() {
                           <EventCard
                             key={evento.id}
                             evento={evento}
+                            availability={getEventAvailability(evento)}
+                            isAvailabilityLoading={isCatalogLoading}
                             onToggleFavorite={handleToggleFavorite}
                             onDeleteEvent={handleDeleteEvent}
                             onOpenLocalities={setSelectedEvento}
@@ -1061,6 +1112,8 @@ export default function Home() {
                             <EventCard
                               key={evento.id}
                               evento={evento}
+                              availability={getEventAvailability(evento)}
+                              isAvailabilityLoading={isCatalogLoading}
                               onToggleFavorite={handleToggleFavorite}
                               onDeleteEvent={handleDeleteEvent}
                               onOpenLocalities={setSelectedEvento}
@@ -1104,6 +1157,8 @@ export default function Home() {
                               <EventCard
                                 key={evento.id}
                                 evento={evento}
+                                availability={getEventAvailability(evento)}
+                                isAvailabilityLoading={isCatalogLoading}
                                 onToggleFavorite={handleToggleFavorite}
                                 onDeleteEvent={handleDeleteEvent}
                                 onOpenLocalities={setSelectedEvento}

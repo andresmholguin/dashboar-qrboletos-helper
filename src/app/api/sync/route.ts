@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import {
   isSheetsConfigured,
-  syncEventsFromFirestore,
-  checkFirestoreUpdates,
-  fetchEventosFromSheets
+  syncEventsFromCatalog,
+  checkCatalogUpdates,
+  fetchEventosFromSheets,
 } from '@/services/googleSheets';
 
 export async function GET() {
@@ -16,7 +16,7 @@ export async function GET() {
       }, { status: 400 });
     }
 
-    const check = await checkFirestoreUpdates();
+    const check = await checkCatalogUpdates();
     return NextResponse.json({
       success: true,
       check,
@@ -24,7 +24,7 @@ export async function GET() {
   } catch (error: any) {
     console.error('Error en GET /api/sync:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Error al consultar actualizaciones' },
+      { success: false, error: error.message || 'Error al consultar actualizaciones del catálogo' },
       { status: 500 }
     );
   }
@@ -40,7 +40,7 @@ export async function POST() {
       }, { status: 400 });
     }
 
-    const result = await syncEventsFromFirestore();
+    const result = await syncEventsFromCatalog();
     return NextResponse.json({
       success: true,
       result,
@@ -48,7 +48,7 @@ export async function POST() {
   } catch (error: any) {
     console.error('Error en POST /api/sync:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Error al sincronizar con Firestore' },
+      { success: false, error: error.message || 'Error al sincronizar con la API de Catálogo' },
       { status: 500 }
     );
   }

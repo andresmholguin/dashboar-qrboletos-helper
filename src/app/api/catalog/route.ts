@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { QrboletosApiClient, flattenCatalogItems } from '@/lib/qrboletosApi';
 
+// Caché en memoria del servidor para el resumen de aforos (45s)
+let summaryCache: { data: Record<string, any>; expiresAt: number } | null = null;
+
+const clean = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const showId = searchParams.get('id') || undefined;
     const eventName = searchParams.get('name') || undefined;
-
-    // Permitir pasar credenciales temporales si el usuario las provee desde la UI
-    const customClientId = searchParams.get('clientId') || undefined;
-    const customClientSecret = searchParams.get('clientSecret') || undefined;
+    const isSummary = searchParams.get('summary') === 'true';
 
     const client = new QrboletosApiClient({
       scope: 'catalog',
-      clientId: customClientId,
-      clientSecret: customClientSecret,
     });
 
     if (!client.hasCredentials('catalog')) {
@@ -22,10 +23,77 @@ export async function GET(request: NextRequest) {
         {
           success: false,
           code: 'MISSING_CREDENTIALS',
-          error: 'Credenciales de Catálogo no configuradas. Proporciona QRBOLETOS_CATALOG_CLIENT_ID y QRBOLETOS_CATALOG_CLIENT_SECRET (o QRBOLETOS_CLIENT_ID / QRBOLETOS_CLIENT_SECRET) en .env.local o mediante la interfaz.',
+          error: 'Credenciales de Catálogo no configuradas en las Variables de Entorno (QRBOLETOS_CATALOG_CLIENT_ID / QRBOLETOS_CATALOG_CLIENT_SECRET).',
         },
         { status: 400 }
       );
+    }
+
+    // 0. Si se solicita el resumen completo de aforos para todos los eventos del catálogo
+    if (isSummary) {
+      if (summaryCache && summaryCache.expiresAt > Date.now()) {
+        return NextResponse.json({ success: true, data: summaryCache.data, cached: true });
+      }
+
+      const catalog = await client.getCatalog();
+      const rawCatalogItems = catalog.data?.items || [];
+      const flatShows = flattenCatalogItems(rawCatalogItems);
+
+      const detailsResults = await Promise.allSettled(
+        flatShows.map((s) => client.getCatalogShowDetail(s.id_evento_espectaculo))
+      );
+
+      const summaryMap: Record<string, any> = {};
+
+      detailsResults.forEach((res, idx) => {
+        const s = flatShows[idx];
+        if (res.status === 'fulfilled' && res.value.ok && res.value.data) {
+          const d = res.value.data;
+          const totalAforo = d.localidades?.reduce((acc, l) => acc + (l.aforo || 0), 0) || 0;
+          const totalDisponibles = d.localidades?.reduce((acc, l) => acc + (l.disponibles || 0), 0) || 0;
+          const totalVendidos = Math.max(0, totalAforo - totalDisponibles);
+          const porcentaje = totalAforo > 0 ? Math.round((totalVendidos / totalAforo) * 100) : 0;
+
+          const summaryItem = {
+            showId: d.id_evento_espectaculo,
+            idEvento: s.id_evento,
+            evento: d.evento,
+            espectaculo: d.espectaculo,
+            totalAforo,
+            totalDisponibles,
+            totalVendidos,
+            porcentaje,
+            localidades: (d.localidades || []).map((l) => {
+              const aforo = l.aforo || 0;
+              const disponibles = l.disponibles || 0;
+              const vendidos = Math.max(0, aforo - disponibles);
+              const pct = aforo > 0 ? Math.round((vendidos / aforo) * 100) : 0;
+              return {
+                nombre: l.localidad,
+                aforo,
+                disponibles,
+                vendidos,
+                porcentaje: pct,
+              };
+            }),
+          };
+
+          // Indexar por showId
+          summaryMap[String(d.id_evento_espectaculo)] = summaryItem;
+          // Indexar por id_evento
+          if (s.id_evento) {
+            summaryMap[String(s.id_evento)] = summaryItem;
+          }
+          // Indexar por nombre normalizado
+          const eventClean = clean(d.evento || '');
+          if (eventClean) {
+            summaryMap[eventClean] = summaryItem;
+          }
+        }
+      });
+
+      summaryCache = { data: summaryMap, expiresAt: Date.now() + 45 * 1000 };
+      return NextResponse.json({ success: true, data: summaryMap });
     }
 
     // 1. Si no se especificó ID, devolver la lista completa del catálogo
@@ -45,8 +113,6 @@ export async function GET(request: NextRequest) {
       const flatShows = flattenCatalogItems(rawCatalogItems);
 
       if (eventName) {
-        const clean = (s: string) =>
-          s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
         const targetClean = clean(eventName);
 
         // Buscar coincidencia exacta o parcial en el nombre del evento o del espectáculo

@@ -19,7 +19,6 @@ import {
   ChevronsRight,
   Sparkles,
   Award,
-  Key,
   Database
 } from 'lucide-react';
 import { Customer } from '@/lib/qrboletosApi';
@@ -46,28 +45,11 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('todos');
   const [selectedEventsCountFilter, setSelectedEventsCountFilter] = useState<string>('todos');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [isCredsModalOpen, setIsCredsModalOpen] = useState(false);
-  const [credsTab, setCredsTab] = useState<'customers' | 'catalog'>('customers');
-  const [customersClientId, setCustomersClientId] = useState('');
-  const [customersClientSecret, setCustomersClientSecret] = useState('');
-  const [catalogClientId, setCatalogClientId] = useState('');
-  const [catalogClientSecret, setCatalogClientSecret] = useState('');
 
   // Paginación de la tabla visual
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const isAbortingRef = useRef(false);
-
-  useEffect(() => {
-    const cId = localStorage.getItem('qrboletos_customers_client_id') || localStorage.getItem('qrboletos_client_id') || '';
-    const cSec = localStorage.getItem('qrboletos_customers_client_secret') || localStorage.getItem('qrboletos_client_secret') || '';
-    const catId = localStorage.getItem('qrboletos_catalog_client_id') || '';
-    const catSec = localStorage.getItem('qrboletos_catalog_client_secret') || '';
-    setCustomersClientId(cId);
-    setCustomersClientSecret(cSec);
-    setCatalogClientId(catId);
-    setCatalogClientSecret(catSec);
-  }, []);
 
   // Reiniciar a la página 1 cuando cambia la búsqueda, filtro de evento, filtro de cantidad o tamaño de página
   useEffect(() => {
@@ -111,9 +93,6 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
     isAbortingRef.current = false;
 
     try {
-      const savedId = localStorage.getItem('qrboletos_customers_client_id') || localStorage.getItem('qrboletos_client_id') || '';
-      const savedSecret = localStorage.getItem('qrboletos_customers_client_secret') || localStorage.getItem('qrboletos_client_secret') || '';
-
       let allCustomers: Customer[] = isFullRefresh ? [] : [...customers];
       if (isFullRefresh) {
         await clearCustomersDb();
@@ -129,9 +108,6 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         page++;
         let url = '/api/customers?limit=500';
         if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
-        if (savedId && savedSecret) {
-          url += '&clientId=' + encodeURIComponent(savedId) + '&clientSecret=' + encodeURIComponent(savedSecret);
-        }
 
         const res = await fetch(url);
         const json = await res.json();
@@ -173,26 +149,6 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
       setSyncingAll(false);
       setLoading(false);
     }
-  };
-
-  const handleSaveCredentials = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (customersClientId.trim()) {
-      localStorage.setItem('qrboletos_customers_client_id', customersClientId.trim());
-      localStorage.setItem('qrboletos_client_id', customersClientId.trim());
-    }
-    if (customersClientSecret.trim()) {
-      localStorage.setItem('qrboletos_customers_client_secret', customersClientSecret.trim());
-      localStorage.setItem('qrboletos_client_secret', customersClientSecret.trim());
-    }
-    if (catalogClientId.trim()) {
-      localStorage.setItem('qrboletos_catalog_client_id', catalogClientId.trim());
-    }
-    if (catalogClientSecret.trim()) {
-      localStorage.setItem('qrboletos_catalog_client_secret', catalogClientSecret.trim());
-    }
-    setIsCredsModalOpen(false);
-    syncAllCustomers(true);
   };
 
   const uniqueEvents = useMemo(() => {
@@ -333,15 +289,6 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         </div>
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto flex-wrap">
-          <button
-            onClick={() => setIsCredsModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border border-slate-700 hover:border-emerald-500/40"
-            title="Configurar credenciales OAuth2 de QRBoletos"
-          >
-            <Key className="w-3.5 h-3.5 text-amber-400" />
-            <span>Credenciales API</span>
-          </button>
-
           <button
             onClick={() => syncAllCustomers(true)}
             disabled={syncingAll}
@@ -517,11 +464,11 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
             <p className="text-xs text-slate-400 max-w-md mx-auto">{error}</p>
             <div className="pt-2">
               <button
-                onClick={() => setIsCredsModalOpen(true)}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+                onClick={() => syncAllCustomers(true)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all shadow-md inline-flex items-center gap-2 cursor-pointer border border-slate-700"
               >
-                <Key className="w-4 h-4" />
-                <span>Ingresar Credenciales API</span>
+                <RefreshCw className="w-4 h-4 text-emerald-400" />
+                <span>Reintentar Conexión</span>
               </button>
             </div>
           </div>
@@ -817,142 +764,6 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
                 Cerrar
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Configuración de Credenciales API */}
-      {isCredsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                  <Key className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                    Credenciales API QRBoletos
-                  </h3>
-                  <p className="text-[11px] text-slate-400">OAuth2 Client Credentials</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsCredsModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex border-b border-slate-800 bg-slate-950/40">
-              <button
-                type="button"
-                onClick={() => setCredsTab('customers')}
-                className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
-                  credsTab === 'customers'
-                    ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                👥 Clientes (Customers API)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCredsTab('catalog')}
-                className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
-                  credsTab === 'catalog'
-                    ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🎟️ Catálogo & Aforo
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveCredentials} className="p-6 space-y-4 text-xs">
-              {credsTab === 'customers' ? (
-                <>
-                  <p className="text-slate-400 leading-relaxed">
-                    Credenciales específicas para <strong className="text-white">Customers API v1</strong> (listado de compradores, cédulas, teléfonos, LTV).
-                  </p>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
-                      Client ID (Clientes)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej: 3409008efcf0ab6b6fc7..."
-                      value={customersClientId}
-                      onChange={(e) => setCustomersClientId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
-                      Client Secret (Clientes)
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Ej: 05c1abd5ff673d7e29ff..."
-                      value={customersClientSecret}
-                      onChange={(e) => setCustomersClientSecret(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-slate-400 leading-relaxed">
-                    Credenciales específicas para <strong className="text-white">Catalog API v1</strong> (aforos en vivo, cupos disponibles por localidad y etapas de precio).
-                  </p>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
-                      Client ID (Catálogo / Eventos)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej: credencial_cliente_catalogo..."
-                      value={catalogClientId}
-                      onChange={(e) => setCatalogClientId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-mono text-slate-300 uppercase font-bold block">
-                      Client Secret (Catálogo / Eventos)
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Ej: credencial_secreto_catalogo..."
-                      value={catalogClientSecret}
-                      onChange={(e) => setCatalogClientSecret(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCredsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-md cursor-pointer active:scale-95"
-                >
-                  Guardar y Aplicar
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

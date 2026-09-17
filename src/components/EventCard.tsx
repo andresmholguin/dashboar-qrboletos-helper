@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Evento } from '@/types';
+import { Evento, EventAvailabilitySummary } from '@/types';
 import { formatDateString } from '@/utils/dateFormatter';
 import {
   Layers,
@@ -15,11 +15,14 @@ import {
   MoreVertical,
   Calendar,
   MapPin,
-  Users
+  Users,
+  Ticket
 } from 'lucide-react';
 
 interface EventCardProps {
   evento: Evento;
+  availability?: EventAvailabilitySummary;
+  isAvailabilityLoading?: boolean;
   onToggleFavorite: (id: string, currentStatus: boolean) => void;
   onDeleteEvent: (id: string) => void;
   onOpenLocalities: (evento: Evento) => void;
@@ -30,6 +33,8 @@ interface EventCardProps {
 
 export default function EventCard({
   evento,
+  availability,
+  isAvailabilityLoading,
   onToggleFavorite,
   onDeleteEvent,
   onOpenLocalities,
@@ -236,6 +241,61 @@ export default function EventCard({
           >
             {evento.nombre}
           </h3>
+
+          {/* Barra de Progresión de Aforo Vendido y Total */}
+          <div className="pt-2 pb-1 space-y-1.5">
+            {isAvailabilityLoading ? (
+              <div className="space-y-1.5 animate-pulse">
+                <div className="flex justify-between text-[11px] text-slate-500 font-mono">
+                  <span>Consultando aforo...</span>
+                  <span className="w-12 h-3 bg-slate-800 rounded"></span>
+                </div>
+                <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                  <div className="h-full bg-slate-800 w-1/3 rounded-full animate-pulse" />
+                </div>
+              </div>
+            ) : availability ? (
+              <>
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-slate-400 font-medium flex items-center gap-1">
+                    <Ticket className="w-3 h-3 text-emerald-400" />
+                    <span>Aforo Vendido:</span>
+                  </span>
+                  <span className="font-bold text-slate-200">
+                    <span className="text-emerald-400">{availability.totalVendidos.toLocaleString()}</span>
+                    <span className="text-slate-500"> / </span>
+                    <span>{availability.totalAforo.toLocaleString()}</span>
+                    <span className="text-slate-400 text-[10px] ml-1">({availability.porcentaje}%)</span>
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800/90 shadow-inner">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      availability.porcentaje >= 95
+                        ? 'bg-gradient-to-r from-amber-500 to-rose-500'
+                        : availability.porcentaje >= 60
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                        : 'bg-gradient-to-r from-cyan-500 to-emerald-400'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(availability.porcentaje > 0 ? 3 : 0, availability.porcentaje))}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <Ticket className="w-3 h-3 opacity-40" />
+                    <span>Aforo Vendido:</span>
+                  </span>
+                  <span className="text-[10px]">Sin datos en API</span>
+                </div>
+                <div className="h-2 w-full bg-slate-950/80 rounded-full border border-slate-850 overflow-hidden">
+                  <div className="h-full w-0 bg-slate-800" />
+                </div>
+              </div>
+            )}
+          </div>
 
           {evento.espectaculo && evento.espectaculo !== evento.nombre && (
             <p className="text-xs text-amber-300/90 font-medium line-clamp-1 flex items-center gap-1">

@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { Evento, Localidad } from '../types';
 import { parseSpanishDateToISO } from '../utils/dateFormatter';
+import { QrboletosApiClient, flattenCatalogItems } from '../lib/qrboletosApi';
 
 // Rango para la consulta y escritura en Sheets
 const SHEET_NAME = 'Eventos';
@@ -542,64 +543,128 @@ export async function updateEventoMetadataInSheets(
   return true;
 }
 
-export interface RawFirestoreEvent {
-  id: string;
+export interface CatalogLiveEvent {
+  id: string; // id_evento
+  showId: string; // id_evento_espectaculo
   titulo: string;
+  fecha: string; // YYYY-MM-DD
   enlace: string;
   imagen: string;
-  fecha: string;
+  espectaculo: string;
+  sitio: string;
+}
+
+export type RawFirestoreEvent = CatalogLiveEvent;
+
+/**
+ * Extrae los afiches oficiales de CloudFront y los enlaces públicos
+ * directamente de la página pública de QRBoletos (www.qrboletos.com)
+ * mediante 1 sola petición HTTP ligera y parsing por regex.
+ */
+export async function fetchCatalogFlyersMap(): Promise<Record<string, { img: string; link: string }>> {
+  const map: Record<string, { img: string; link: string }> = {};
+  try {
+    const res = await fetch('https://www.qrboletos.com/', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+    if (!res.ok) return map;
+    const html = await res.text();
+
+    const cardRegex = /<a[^>]+href=["']([^"']*\/event\/[a-z0-9-]+-(\d+)\.aspx)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+    while ((match = cardRegex.exec(html)) !== null) {
+      const link = match[1];
+      const id = match[2];
+      const inner = match[3];
+      const imgMatch = inner.match(/src=["']([^"']+)["']/i);
+      if (id) {
+        map[id] = {
+          link: link.startsWith('http') ? link : `https://www.qrboletos.com${link}`,
+          img: imgMatch ? imgMatch[1] : '',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Advertencia: no se pudieron extraer afiches desde www.qrboletos.com:', err);
+  }
+  return map;
 }
 
 /**
- * Obtiene los eventos crudos desde el endpoint de caché de Firestore.
+ * Obtiene los eventos en vivo desde la API oficial de Catálogo de QRBoletos
+ * complementados con sus afiches oficiales de CloudFront.
  */
-export async function fetchFirestoreEventsRaw(): Promise<RawFirestoreEvent[]> {
-  const res = await fetch(FIRESTORE_URL, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Error consultando Firestore: ${res.status} ${res.statusText}`);
+export async function fetchCatalogEvents(): Promise<CatalogLiveEvent[]> {
+  const client = new QrboletosApiClient({ scope: 'catalog' });
+  if (!client.hasCredentials('catalog')) {
+    throw new Error('Credenciales de Catálogo no configuradas en variables de entorno (QRBOLETOS_CATALOG_CLIENT_ID / QRBOLETOS_CATALOG_CLIENT_SECRET).');
   }
-  const data = await res.json();
-  const rawValues = data?.fields?.eventos?.arrayValue?.values || [];
 
-  return rawValues.map((v: any) => {
-    const fields = v.mapValue?.fields || {};
-    const resObj: any = {};
-    for (const k in fields) {
-      resObj[k] = Object.values(fields[k])[0];
+  // 1. Catálogo oficial
+  const catalog = await client.getCatalog();
+  const rawItems = catalog.data?.items || [];
+  const flatShows = flattenCatalogItems(rawItems);
+
+  // 2. Mapa de afiches desde qrboletos.com
+  const flyersMap = await fetchCatalogFlyersMap();
+
+  const results: CatalogLiveEvent[] = [];
+  const seenIds = new Set<string>();
+
+  for (const s of flatShows) {
+    const eventIdStr = String(s.id_evento || s.id_evento_espectaculo);
+    if (seenIds.has(eventIdStr)) continue;
+    seenIds.add(eventIdStr);
+
+    const flyer = flyersMap[eventIdStr];
+
+    let isoDate = '';
+    if (s.fecha_inicio) {
+      isoDate = s.fecha_inicio.split(' ')[0] || '';
     }
-    return {
-      id: resObj.id || '',
-      titulo: resObj.titulo || '',
-      enlace: resObj.enlace || '',
-      imagen: resObj.imagen || '',
-      fecha: resObj.fecha || '',
-    };
-  });
+
+    results.push({
+      id: eventIdStr,
+      showId: String(s.id_evento_espectaculo),
+      titulo: s.evento.trim(),
+      fecha: isoDate,
+      enlace: flyer?.link || `https://www.qrboletos.com/event/${eventIdStr}.aspx`,
+      imagen: flyer?.img || '',
+      espectaculo: s.espectaculo || '',
+      sitio: s.venue?.nombre || '',
+    });
+  }
+
+  return results;
 }
+
+export const fetchFirestoreEventsRaw = fetchCatalogEvents;
 
 export interface SyncCheckResult {
   hasUpdates: boolean;
   newCount: number;
   updatedCount: number;
   totalRemote: number;
-  newEvents: RawFirestoreEvent[];
+  newEvents: CatalogLiveEvent[];
   updatedEvents: Array<{ id: string; titulo: string; changes: string[] }>;
 }
 
 /**
- * Compara los eventos de la API de Firestore con los existentes en Google Sheets
+ * Compara los eventos de la API oficial de Catálogo con los existentes en Google Sheets
  * e identifica si hay eventos nuevos o fechas/títulos modificados.
  */
-export async function checkFirestoreUpdates(): Promise<SyncCheckResult> {
-  const remoteEvents = await fetchFirestoreEventsRaw();
+export async function checkCatalogUpdates(): Promise<SyncCheckResult> {
+  const remoteEvents = await fetchCatalogEvents();
   const currentEvents = await fetchEventosFromSheets();
 
-  const newEvents: RawFirestoreEvent[] = [];
+  const newEvents: CatalogLiveEvent[] = [];
   const updatedEvents: Array<{ id: string; titulo: string; changes: string[] }> = [];
 
   for (const remote of remoteEvents) {
     const cleanRemoteTitle = remote.titulo.replace(/[\n\r]+/g, ' - ').replace(/\s+/g, ' ').trim();
-    const remoteIsoDate = parseSpanishDateToISO(remote.fecha);
+    const remoteIsoDate = remote.fecha;
 
     // Buscar si ya existe por ID o por coincidencia exacta de nombre
     const existing = currentEvents.find((e) => {
@@ -614,14 +679,17 @@ export async function checkFirestoreUpdates(): Promise<SyncCheckResult> {
       newEvents.push(remote);
     } else {
       const changes: string[] = [];
-      if (existing.fecha !== remoteIsoDate) {
+      if (remoteIsoDate && existing.fecha !== remoteIsoDate) {
         changes.push(`Fecha: ${existing.fecha} -> ${remoteIsoDate}`);
       }
-      if (existing.imageUrl !== remote.imagen && remote.imagen) {
-        changes.push('Imagen actualizada');
+      if (remote.imagen && existing.imageUrl !== remote.imagen) {
+        changes.push('Afiche actualizado');
       }
-      if (existing.enlace !== remote.enlace && remote.enlace) {
+      if (remote.enlace && existing.enlace !== remote.enlace) {
         changes.push('Enlace actualizado');
+      }
+      if (!existing.enVenta) {
+        changes.push('Promovido de EN CONFIGURACIÓN a A LA VENTA');
       }
       if (changes.length > 0) {
         updatedEvents.push({ id: remote.id, titulo: cleanRemoteTitle, changes });
@@ -639,12 +707,14 @@ export async function checkFirestoreUpdates(): Promise<SyncCheckResult> {
   };
 }
 
+export const checkFirestoreUpdates = checkCatalogUpdates;
+
 /**
- * Sincroniza los eventos de Firestore hacia Google Sheets.
- * Conserva los datos de configuración (Promoter ID, Event ID, Show ID, Localidades)
- * de los eventos existentes que coincidan.
+ * Sincroniza los eventos de la API oficial de Catálogo hacia Google Sheets.
+ * Conserva los datos de configuración (Promoter ID, Event ID, Show ID, Localidades y enlaces de acción)
+ * de los eventos existentes que coincidan, y preserva eventos en configuración o históricos.
  */
-export async function syncEventsFromFirestore(): Promise<{
+export async function syncEventsFromCatalog(): Promise<{
   success: boolean;
   totalSynced: number;
   addedCount: number;
@@ -658,8 +728,8 @@ export async function syncEventsFromFirestore(): Promise<{
   const sheets = getSheetsInstance();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID!;
 
-  // 1. Obtener eventos de Firestore
-  const remoteEvents = await fetchFirestoreEventsRaw();
+  // 1. Obtener eventos en vivo de la API de Catálogo + afiches
+  const remoteEvents = await fetchCatalogEvents();
 
   // 2. Obtener eventos actuales de Google Sheets para preservar configuraciones
   let currentEvents: Evento[] = [];
@@ -673,17 +743,17 @@ export async function syncEventsFromFirestore(): Promise<{
   let updatedCount = 0;
   const todayIso = new Date().toISOString().split('T')[0];
 
-  // 3. Mapear los eventos de Firestore combinando con datos existentes
   const finalRows: any[][] = [];
   const matchedExistingKeys = new Set<string>();
   const seenIds = new Set<string>();
 
+  // 3. Mapear los eventos de la API combinando con datos existentes
   for (const remote of remoteEvents) {
     if (remote.id && seenIds.has(remote.id)) continue;
     if (remote.id) seenIds.add(remote.id);
 
     const cleanTitle = remote.titulo.replace(/[\n\r]+/g, ' - ').replace(/\s+/g, ' ').trim();
-    const isoDate = parseSpanishDateToISO(remote.fecha);
+    const isoDate = remote.fecha;
 
     // Buscar coincidencia en los existentes por ID oficial o por nombre exacto
     const existing = currentEvents.find((e) => {
@@ -704,26 +774,26 @@ export async function syncEventsFromFirestore(): Promise<{
     const row = [
       remote.id, // Columna A: ID oficial QRBoletos
       cleanTitle, // Columna B: Nombre del evento
-      isoDate, // Columna C: Fecha normalizada YYYY-MM-DD
+      isoDate || existing?.fecha || '', // Columna C: Fecha normalizada YYYY-MM-DD
       existing?.promoterId || '', // Columna D: Promoter ID preservado
       existing?.eventId || '', // Columna E: Event ID preservado
-      existing?.showId || '', // Columna F: Show ID preservado
+      existing?.showId || remote.showId || '', // Columna F: Show ID preservado o actualizado
       existing?.urlBase || '', // Columna G: URL base preservada
       existing?.fechaCreacion || todayIso, // Columna H: Fecha de creación
       existing?.favorito ? 'SI' : 'NO', // Columna I: Favorito
-      existing?.localidades ? JSON.stringify(existing.localidades) : '[]', // Columna J: Localidades JSON
-      remote.imagen || existing?.imageUrl || '', // Columna K: Imagen
+      existing?.localidades ? JSON.stringify(existing.localidades) : '[]', // Columna J: Localidades JSON con enlaces preservados
+      remote.imagen || existing?.imageUrl || '', // Columna K: Afiche CloudFront o preservado
       remote.enlace || existing?.enlace || '', // Columna L: Enlace público
-      'A LA VENTA', // Columna M: Estado Venta
-      existing?.espectaculo || '', // Columna N: Espectáculo
-      existing?.sitio || '', // Columna O: Sitio
+      'A LA VENTA', // Columna M: Estado Venta (automáticamente promovido)
+      remote.espectaculo || existing?.espectaculo || '', // Columna N: Espectáculo
+      remote.sitio || existing?.sitio || '', // Columna O: Sitio
     ];
 
     finalRows.push(row);
   }
 
   // 3.1. PRESERVAR EVENTOS NO LISTADOS A VENTA:
-  // Conservar todos los eventos locales, manuales o detectados en Chrome que NO están en la API pública de Firestore
+  // Conservar todos los eventos locales, borradores en configuración o históricos que NO están en la API activa
   for (const existing of currentEvents) {
     const key = existing.id || existing.rowId || existing.nombre;
     if (existing.id && seenIds.has(existing.id)) continue;
@@ -752,10 +822,9 @@ export async function syncEventsFromFirestore(): Promise<{
 
   // 4. Limpiar toda la pestaña Eventos y escribir encabezados + filas
   try {
-    // Limpiar hasta la columna Z y fila 200 para no dejar basura previa
     await sheets.spreadsheets.values.clear({
       spreadsheetId,
-      range: `${SHEET_NAME}!A1:Z200`,
+      range: `${SHEET_NAME}!A1:Z250`,
     });
   } catch (clearErr) {
     console.warn('Error limpiando rango:', clearErr);
@@ -783,6 +852,8 @@ export async function syncEventsFromFirestore(): Promise<{
     events: freshEvents,
   };
 }
+
+export const syncEventsFromFirestore = syncEventsFromCatalog;
 
 // ============================================================================
 // GESTIÓN DINÁMICA DEL TÚNEL LOCAL EN GOOGLE SHEETS (OPCIÓN A)

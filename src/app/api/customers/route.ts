@@ -10,14 +10,8 @@ export async function GET(request: NextRequest) {
     const updated_since = searchParams.get('updated_since') || undefined;
     const id = searchParams.get('id') || undefined;
 
-    // Permitir pasar credenciales temporales si el usuario las provee desde la UI
-    const customClientId = searchParams.get('clientId') || undefined;
-    const customClientSecret = searchParams.get('clientSecret') || undefined;
-
     const client = new QrboletosApiClient({
       scope: 'customers',
-      clientId: customClientId,
-      clientSecret: customClientSecret,
     });
 
     if (!client.hasCredentials('customers')) {
@@ -25,7 +19,7 @@ export async function GET(request: NextRequest) {
         {
           success: false,
           code: 'MISSING_CREDENTIALS',
-          error: 'Credenciales de Clientes no configuradas. Proporciona QRBOLETOS_CUSTOMERS_CLIENT_ID y QRBOLETOS_CUSTOMERS_CLIENT_SECRET (o QRBOLETOS_CLIENT_ID / QRBOLETOS_CLIENT_SECRET) en .env.local o mediante la interfaz.',
+          error: 'Credenciales de Clientes no configuradas en las Variables de Entorno (QRBOLETOS_CUSTOMERS_CLIENT_ID / QRBOLETOS_CUSTOMERS_CLIENT_SECRET).',
         },
         { status: 400 }
       );

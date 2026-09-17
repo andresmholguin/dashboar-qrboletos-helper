@@ -76,7 +76,12 @@ export default function EventCard({
     };
   }, [isMenuOpen]);
 
-  const imageSrc = evento.imageUrl || (evento as any).imagen;
+  let rawImg = evento.imageUrl || (evento as any).imagen || '';
+  // Si la imagen proviene del carrusel de banners horizontales (/banners/), sustituir por el afiche vertical canónico (720x639)
+  if (evento.id && (rawImg.includes('/banners/') || !rawImg)) {
+    rawImg = `https://d1bw1k6fnbki29.cloudfront.net/eventos/${evento.id}/home.jpg`;
+  }
+  const imageSrc = rawImg;
   const isOnSale = evento.enVenta !== false;
   const localitiesCount = evento.localidades?.length || 0;
 

@@ -54,6 +54,36 @@ export async function GET(request: NextRequest) {
           const totalVendidos = Math.max(0, totalAforo - totalDisponibles);
           const porcentaje = totalAforo > 0 ? Math.round((totalVendidos / totalAforo) * 100) : 0;
 
+          // Consolidar localidades duplicadas (ej. secciones inactivas con aforo 0 y activas con aforo > 0)
+          const locMap = new Map<string, { nombre: string; aforo: number; disponibles: number }>();
+          for (const l of d.localidades || []) {
+            const norm = clean(l.localidad || '');
+            if (!norm) continue;
+            if (!locMap.has(norm)) {
+              locMap.set(norm, {
+                nombre: l.localidad,
+                aforo: l.aforo || 0,
+                disponibles: l.disponibles || 0,
+              });
+            } else {
+              const prev = locMap.get(norm)!;
+              prev.aforo += (l.aforo || 0);
+              prev.disponibles += (l.disponibles || 0);
+            }
+          }
+
+          const consolidatedLocalidades = Array.from(locMap.values()).map((l) => {
+            const vendidos = Math.max(0, l.aforo - l.disponibles);
+            const pct = l.aforo > 0 ? Math.round((vendidos / l.aforo) * 100) : 0;
+            return {
+              nombre: l.nombre,
+              aforo: l.aforo,
+              disponibles: l.disponibles,
+              vendidos,
+              porcentaje: pct,
+            };
+          });
+
           const summaryItem = {
             showId: d.id_evento_espectaculo,
             idEvento: s.id_evento,
@@ -63,19 +93,7 @@ export async function GET(request: NextRequest) {
             totalDisponibles,
             totalVendidos,
             porcentaje,
-            localidades: (d.localidades || []).map((l) => {
-              const aforo = l.aforo || 0;
-              const disponibles = l.disponibles || 0;
-              const vendidos = Math.max(0, aforo - disponibles);
-              const pct = aforo > 0 ? Math.round((vendidos / aforo) * 100) : 0;
-              return {
-                nombre: l.localidad,
-                aforo,
-                disponibles,
-                vendidos,
-                porcentaje: pct,
-              };
-            }),
+            localidades: consolidatedLocalidades,
           };
 
           // Indexar por showId

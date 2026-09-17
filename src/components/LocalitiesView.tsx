@@ -110,19 +110,35 @@ export default function LocalitiesView({
             totalDisponibles,
             totalVendidos,
             porcentaje,
-            localidades: (d.localidades || []).map((l: any) => {
-              const aforo = l.aforo || 0;
-              const disponibles = l.disponibles || 0;
-              const vendidos = Math.max(0, aforo - disponibles);
-              const pct = aforo > 0 ? Math.round((vendidos / aforo) * 100) : 0;
-              return {
-                nombre: l.localidad,
-                aforo,
-                disponibles,
-                vendidos,
-                porcentaje: pct,
-              };
-            }),
+            localidades: (() => {
+              const locMap = new Map<string, { nombre: string; aforo: number; disponibles: number }>();
+              for (const l of d.localidades || []) {
+                const norm = cleanStr(l.localidad || '');
+                if (!norm) continue;
+                if (!locMap.has(norm)) {
+                  locMap.set(norm, {
+                    nombre: l.localidad,
+                    aforo: l.aforo || 0,
+                    disponibles: l.disponibles || 0,
+                  });
+                } else {
+                  const prev = locMap.get(norm)!;
+                  prev.aforo += (l.aforo || 0);
+                  prev.disponibles += (l.disponibles || 0);
+                }
+              }
+              return Array.from(locMap.values()).map((l) => {
+                const vendidos = Math.max(0, l.aforo - l.disponibles);
+                const pct = l.aforo > 0 ? Math.round((vendidos / l.aforo) * 100) : 0;
+                return {
+                  nombre: l.nombre,
+                  aforo: l.aforo,
+                  disponibles: l.disponibles,
+                  vendidos,
+                  porcentaje: pct,
+                };
+              });
+            })(),
           });
         }
       } catch (e) {
@@ -135,7 +151,7 @@ export default function LocalitiesView({
     fetchAvailability();
   }, [evento, eventoAvailability]);
 
-  // Normalizar y buscar aforo de una localidad específica
+  // Normalizar y buscar aforo de una localidad específica consolidando duplicados
   const cleanStr = (s: string) =>
     s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -144,17 +160,30 @@ export default function LocalitiesView({
     const target = cleanStr(locName);
     if (!target) return null;
 
-    // 1. Coincidencia exacta
-    const exact = availability.localidades.find((l) => cleanStr(l.nombre) === target);
-    if (exact) return exact;
+    // Buscar todas las coincidencias exactas primero, o por inclusión
+    const exactMatches = availability.localidades.filter((l) => cleanStr(l.nombre) === target);
+    const matches = exactMatches.length > 0
+      ? exactMatches
+      : availability.localidades.filter((l) => {
+          const candidate = cleanStr(l.nombre);
+          return candidate && (candidate.includes(target) || target.includes(candidate));
+        });
 
-    // 2. Coincidencia por inclusión
-    return (
-      availability.localidades.find((l) => {
-        const candidate = cleanStr(l.nombre);
-        return candidate && (candidate.includes(target) || target.includes(candidate));
-      }) || null
-    );
+    if (matches.length === 0) return null;
+
+    // Consolidar todos los aforos y disponibles coincidentes
+    const aforo = matches.reduce((acc, m) => acc + (m.aforo || 0), 0);
+    const disponibles = matches.reduce((acc, m) => acc + (m.disponibles || 0), 0);
+    const vendidos = Math.max(0, aforo - disponibles);
+    const porcentaje = aforo > 0 ? Math.round((vendidos / aforo) * 100) : 0;
+
+    return {
+      nombre: matches[0].nombre,
+      aforo,
+      disponibles,
+      vendidos,
+      porcentaje,
+    };
   };
 
   // Convertir URL relativa a absoluta

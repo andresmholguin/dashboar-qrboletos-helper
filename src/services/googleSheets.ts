@@ -558,8 +558,7 @@ export type RawFirestoreEvent = CatalogLiveEvent;
 
 /**
  * Extrae los afiches oficiales de CloudFront y los enlaces públicos
- * directamente de la página pública de QRBoletos (www.qrboletos.com)
- * mediante 1 sola petición HTTP ligera y parsing por regex.
+ * directamente de la cuadrícula de eventos en la página pública de QRBoletos (www.qrboletos.com).
  */
 export async function fetchCatalogFlyersMap(): Promise<Record<string, { img: string; link: string }>> {
   const map: Record<string, { img: string; link: string }> = {};
@@ -572,17 +571,20 @@ export async function fetchCatalogFlyersMap(): Promise<Record<string, { img: str
     if (!res.ok) return map;
     const html = await res.text();
 
-    const cardRegex = /<a[^>]+href=["']([^"']*\/event\/[a-z0-9-]+-(\d+)\.aspx)["'][^>]*>([\s\S]*?)<\/a>/gi;
-    let match;
-    while ((match = cardRegex.exec(html)) !== null) {
-      const link = match[1];
-      const id = match[2];
-      const inner = match[3];
-      const imgMatch = inner.match(/src=["']([^"']+)["']/i);
-      if (id) {
+    // Dividir por bloques de tarjeta de evento de la cuadrícula principal (.card.card-event)
+    const cardBlocks = html.split(/class=["']card card-event/gi);
+    for (let i = 1; i < cardBlocks.length; i++) {
+      const block = cardBlocks[i];
+      const linkMatch = block.match(/href=["']?([^"'\s>]*\/event\/[a-z0-9-]+-(\d+)\.aspx)["']?/i);
+
+      if (linkMatch && linkMatch[2]) {
+        const id = linkMatch[2];
+        const link = linkMatch[1];
+        // Garantizar afiche oficial uniforme home.jpg (720x639)
+        const img = `https://d1bw1k6fnbki29.cloudfront.net/eventos/${id}/home.jpg`;
         map[id] = {
           link: link.startsWith('http') ? link : `https://www.qrboletos.com${link}`,
-          img: imgMatch ? imgMatch[1] : '',
+          img,
         };
       }
     }
@@ -594,7 +596,7 @@ export async function fetchCatalogFlyersMap(): Promise<Record<string, { img: str
 
 /**
  * Obtiene los eventos en vivo desde la API oficial de Catálogo de QRBoletos
- * complementados con sus afiches oficiales de CloudFront.
+ * asignando sus afiches oficiales de CloudFront con tamaño uniforme (720x639).
  */
 export async function fetchCatalogEvents(): Promise<CatalogLiveEvent[]> {
   const client = new QrboletosApiClient({ scope: 'catalog' });
@@ -607,7 +609,7 @@ export async function fetchCatalogEvents(): Promise<CatalogLiveEvent[]> {
   const rawItems = catalog.data?.items || [];
   const flatShows = flattenCatalogItems(rawItems);
 
-  // 2. Mapa de afiches desde qrboletos.com
+  // 2. Mapa de enlaces desde qrboletos.com
   const flyersMap = await fetchCatalogFlyersMap();
 
   const results: CatalogLiveEvent[] = [];
@@ -625,13 +627,16 @@ export async function fetchCatalogEvents(): Promise<CatalogLiveEvent[]> {
       isoDate = s.fecha_inicio.split(' ')[0] || '';
     }
 
+    // Afiche uniforme y canónico para todas las tarjetas (720x639)
+    const uniformPoster = `https://d1bw1k6fnbki29.cloudfront.net/eventos/${eventIdStr}/home.jpg`;
+
     results.push({
       id: eventIdStr,
       showId: String(s.id_evento_espectaculo),
       titulo: s.evento.trim(),
       fecha: isoDate,
       enlace: flyer?.link || `https://www.qrboletos.com/event/${eventIdStr}.aspx`,
-      imagen: flyer?.img || '',
+      imagen: uniformPoster,
       espectaculo: s.espectaculo || '',
       sitio: s.venue?.nombre || '',
     });
@@ -810,7 +815,7 @@ export async function syncEventsFromCatalog(): Promise<{
         existing.fechaCreacion || todayIso,
         existing.favorito ? 'SI' : 'NO',
         existing.localidades ? JSON.stringify(existing.localidades) : '[]',
-        existing.imageUrl || '',
+        (existing.imageUrl && !existing.imageUrl.includes('/banners/')) ? existing.imageUrl : (existing.id ? `https://d1bw1k6fnbki29.cloudfront.net/eventos/${existing.id}/home.jpg` : ''),
         existing.enlace || '',
         existing.enVenta ? 'A LA VENTA' : 'EN CONFIGURACION',
         existing.espectaculo || '',

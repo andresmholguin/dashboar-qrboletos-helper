@@ -563,7 +563,7 @@ export default function Home() {
             {/* Versión con link a Documentación */}
             <Link
               href="/docs"
-              className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-mono font-bold transition-all border border-slate-700/60 hover:border-emerald-500/40 shadow-sm"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-mono font-bold transition-all border border-slate-700/60 hover:border-emerald-500/40 shadow-sm"
               title="Ver documentación, alcances y registro de versiones (v1.2.0)"
             >
               <BookOpen className="w-2.5 h-2.5 text-emerald-400" />
@@ -655,23 +655,7 @@ export default function Home() {
                     <span>Nuevo Evento</span>
                   </button>
 
-                  <div className="my-1 border-t border-slate-800" />
-
-                  {/* 2. Botón Documentación & Versiones */}
-                  <Link
-                    href="/docs"
-                    onClick={() => setIsActionsMenuOpen(false)}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
-                    title="Ver documentación de versiones y alcances del sistema"
-                  >
-                    <BookOpen className="w-4 h-4 text-emerald-400" />
-                    <span className="flex-1">Docs & Versiones</span>
-                    <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-mono px-1.5 py-0.5 rounded border border-emerald-500/20">
-                      v{packageJson.version}
-                    </span>
-                  </Link>
-
-                  {/* 3. Botón Sincronizar API */}
+                  {/* 2. Botón Sincronizar API */}
                   <button
                     onClick={() => {
                       setIsActionsMenuOpen(false);
@@ -733,16 +717,6 @@ export default function Home() {
                 </div>
               )}
             </div>
-
-            {/* Botón Acceso Rápido Docs */}
-            <Link
-              href="/docs"
-              className="p-2 bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5 text-xs font-semibold px-2.5"
-              title="Documentación y Registro de Versiones"
-            >
-              <BookOpen className="w-4 h-4 text-emerald-400" />
-              <span className="hidden lg:inline text-xs text-slate-300">Docs</span>
-            </Link>
 
             {/* Botón de Cambio de Tema */}
             <button
@@ -851,16 +825,6 @@ export default function Home() {
                 <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-spin' : ''}`} />
                 <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners Web'}</span>
               </button>
-
-              {/* Botón Documentación & Versiones Móvil */}
-              <Link
-                href="/docs"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
-              >
-                <BookOpen className="w-4 h-4 text-emerald-400" />
-                <span>Documentación v{packageJson.version}</span>
-              </Link>
 
               {/* Botón Google Sheet */}
               {isSheetsMode && (

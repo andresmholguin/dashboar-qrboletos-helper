@@ -29,6 +29,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/versiones",
+        destination: "/docs",
+        permanent: false,
+      },
+      {
+        source: "/changelog",
+        destination: "/docs",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

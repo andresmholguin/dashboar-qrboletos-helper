@@ -11,6 +11,7 @@ import ArtworksManagerModal from '@/components/ArtworksManagerModal';
 import EventSettingsModal from '@/components/EventSettingsModal';
 import TarifarioUploaderModal from '@/components/TarifarioUploaderModal';
 import ChromeTabSelectorModal, { DetectedTab } from '@/components/ChromeTabSelectorModal';
+import Link from 'next/link';
 import packageJson from '../../package.json';
 import { Evento, Localidad, EventAvailabilitySummary } from '@/types';
 
@@ -39,7 +40,8 @@ import {
   BarChart3,
   ArrowDownUp,
   Users,
-  Ticket
+  Ticket,
+  BookOpen
 } from 'lucide-react';
 
 export default function Home() {
@@ -535,11 +537,12 @@ export default function Home() {
       <nav className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo y Badge */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => {
                 setSelectedEvento(null);
                 setIsReportsViewOpen(false);
+                setIsCustomersViewOpen(false);
                 setIsMobileMenuOpen(false);
               }}
               className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 active:scale-[0.98] transition-all text-left bg-transparent border-none p-0 focus:outline-none"
@@ -561,10 +564,20 @@ export default function Home() {
                   QRBoletos
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium tracking-wider -mt-1 block">
-                  Dashboard Helper <span className="ml-1 px-1 py-0.5 rounded text-[8px] bg-slate-800 text-slate-300 font-mono">v{packageJson.version}</span>
+                  Dashboard Helper
                 </span>
               </div>
             </button>
+
+            {/* Versión con link a Documentación */}
+            <Link
+              href="/docs"
+              className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-mono font-bold transition-all border border-slate-700/60 hover:border-emerald-500/40 shadow-sm"
+              title="Ver documentación, alcances y registro de versiones (v1.2.0)"
+            >
+              <BookOpen className="w-2.5 h-2.5 text-emerald-400" />
+              <span>v{packageJson.version}</span>
+            </Link>
 
             {/* Estado de Persistencia */}
             <div className="shrink-0">
@@ -679,6 +692,20 @@ export default function Home() {
                     )}
                   </button>
 
+                  {/* 2.2 Botón Documentación & Versiones */}
+                  <Link
+                    href="/docs"
+                    onClick={() => setIsActionsMenuOpen(false)}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+                    title="Ver documentación de versiones y alcances del sistema"
+                  >
+                    <BookOpen className="w-4 h-4 text-emerald-400" />
+                    <span className="flex-1">Docs & Versiones</span>
+                    <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-mono px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      v{packageJson.version}
+                    </span>
+                  </Link>
+
                   {/* 3. Botón Sincronizar API */}
                   <button
                     onClick={() => {
@@ -741,6 +768,16 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* Botón Acceso Rápido Docs */}
+            <Link
+              href="/docs"
+              className="p-2 bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5 text-xs font-semibold px-2.5"
+              title="Documentación y Registro de Versiones"
+            >
+              <BookOpen className="w-4 h-4 text-emerald-400" />
+              <span className="hidden lg:inline text-xs text-slate-300">Docs</span>
+            </Link>
 
             {/* Botón de Cambio de Tema */}
             <button
@@ -863,6 +900,16 @@ export default function Home() {
                 <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-spin' : ''}`} />
                 <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners Web'}</span>
               </button>
+
+              {/* Botón Documentación & Versiones Móvil */}
+              <Link
+                href="/docs"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
+              >
+                <BookOpen className="w-4 h-4 text-emerald-400" />
+                <span>Documentación v{packageJson.version}</span>
+              </Link>
 
               {/* Botón Google Sheet */}
               {isSheetsMode && (

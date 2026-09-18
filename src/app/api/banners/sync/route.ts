@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       reorderOnly = false,
       dryRun = false,
       cdpUrl = 'http://localhost:9222',
+      events = null,
     } = body;
 
     // Verificar si Chrome CDP responde
@@ -73,16 +74,21 @@ export async function POST(request: Request) {
     }
 
     let eventsList: any[] = [];
-    try {
-      if (isSheetsConfigured()) {
+    if (Array.isArray(events) && events.length > 0) {
+      eventsList = events.map(ev => ({
+        ...ev,
+        fecha: ev.fecha ? parseSpanishDateToISO(ev.fecha) : ''
+      }));
+    } else if (isSheetsConfigured()) {
+      try {
         const rawEvents = await fetchEventosFromSheets();
         eventsList = rawEvents.map(ev => ({
           ...ev,
           fecha: ev.fecha ? parseSpanishDateToISO(ev.fecha) : ''
         }));
+      } catch (e) {
+        console.warn('No se pudieron consultar eventos de Sheets:', e);
       }
-    } catch (e) {
-      console.warn('No se pudieron consultar eventos de Sheets:', e);
     }
 
     // Guardar imagen si viene en base64

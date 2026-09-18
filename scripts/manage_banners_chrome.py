@@ -499,18 +499,45 @@ def reorder_banners_chronologically(page: Page, banners_url: str, events_list: L
         log("INFO", "  [DRY-RUN] Simulado: Reorganizacion de banners completada.")
         return True
 
-    success = page.evaluate("""(orderedIds) => {
+    ajax_result = page.evaluate(r"""(orderedIds) => {
         try {
             if (!window.CryptoJS || !$ak) return { success: false, error: "CryptoJS o $ak no inicializado" };
+            
+            // Extraer dinamicamente la llave y token anti-CSRF unicos generados por QRBoletos
+            let csrfKey = null;
+            let csrfVal = null;
+            
+            const updateFn = jQuery('table#list tbody').data('ui-sortable')?.options?.update;
+            if (updateFn) {
+                const fnStr = updateFn.toString();
+                const match = fnStr.match(/['\"]([a-zA-Z0-9_-]{8,25})['\"]\s*:\s*['\"]([a-f0-9]{64})['\"]/);
+                if (match) {
+                    csrfKey = match[1];
+                    csrfVal = match[2];
+                }
+            }
+
+            if (!csrfKey) {
+                const hiddenInputs = Array.from(document.querySelectorAll("input[type='hidden']"));
+                for (const inp of hiddenInputs) {
+                    if (inp.name && inp.name.length >= 8 && inp.name !== '__VIEWSTATE') {
+                        csrfKey = inp.name;
+                        csrfVal = inp.value;
+                        break;
+                    }
+                }
+            }
             
             var form = {};
             form['task'] = 'order';
             form['orden'] = orderedIds;
             
             var data = {
-                'form': CryptoJS.AES.encrypt(JSON.stringify(form), $ak, {format: CryptoJSAesJson}).toString(),
-                'INA6cbMwtl': '51cce821388343db5a8ba86ca0b21ff26e8f7b336d45bb493752d43c3ec694de'
+                'form': CryptoJS.AES.encrypt(JSON.stringify(form), $ak, {format: CryptoJSAesJson}).toString()
             };
+            if (csrfKey && csrfVal) {
+                data[csrfKey] = csrfVal;
+            }
             
             return new Promise((resolve) => {
                 jQuery.ajax({
@@ -527,7 +554,7 @@ def reorder_banners_chronologically(page: Page, banners_url: str, events_list: L
                         }
                     },
                     error: function(err) {
-                        resolve({ success: false, error: err.statusText });
+                        resolve({ success: false, error: err.statusText || 'Error de red' });
                     }
                 });
             });
@@ -535,6 +562,11 @@ def reorder_banners_chronologically(page: Page, banners_url: str, events_list: L
             return { success: false, error: e.toString() };
         }
     }""", target_order_ids)
+
+    if not ajax_result or not ajax_result.get("success"):
+        err_msg = ajax_result.get("error") if ajax_result else "Desconocido"
+        log("ERROR", f"Fallo al guardar el orden cronologico en QRBoletos: {err_msg}")
+        return False
 
     time.sleep(1.5)
     page.reload(wait_until="domcontentloaded")

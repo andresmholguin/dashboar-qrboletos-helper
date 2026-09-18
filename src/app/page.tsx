@@ -243,7 +243,10 @@ export default function Home() {
       const res = await fetch('/api/banners/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reorderOnly: true }),
+        body: JSON.stringify({
+          reorderOnly: true,
+          events: eventos
+        }),
       });
 
       if (!res.ok) {

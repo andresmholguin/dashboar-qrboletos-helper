@@ -25,17 +25,17 @@ async function clickLoginIfCredentialsPresent(webSocketUrl: string): Promise<boo
       const timer = setTimeout(() => {
         try { ws.close(); } catch {}
         resolve(false);
-      }, 3000);
+      }, 4000);
 
       ws.onopen = () => {
         const expression = `(() => {
-          const pass = document.querySelector("#txtPassword, input[name*='txtPassword'], input[type='password']");
           const btn = document.querySelector("#login-button, button[type='submit'], input[type='submit'], .btn-primary");
-          if (pass && pass.value && pass.value.length > 0 && btn) {
+          if (btn) {
+            btn.focus();
             btn.click();
             return 'CLICKED';
           }
-          return 'NO_ACTION';
+          return 'NO_BTN';
         })()`;
         ws.send(JSON.stringify({
           id: 101,
@@ -70,12 +70,13 @@ async function clickLoginIfCredentialsPresent(webSocketUrl: string): Promise<boo
 /**
  * Verifica si Google Chrome está en ejecución con el puerto de depuración 9222
  * y si la sesión de QRBoletos está activa o redirigida a la página de login.
- * Si detecta credenciales cargadas en login.aspx, hace clic automáticamente.
+ * Si detecta el botón de iniciar sesión en pantalla, hace clic de inmediato
+ * y espera de forma reactiva la redirección.
  */
 export async function verifyChromeSession(cdpUrl = 'http://localhost:9222'): Promise<ChromeSessionStatus> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
+    const timeout = setTimeout(() => controller.abort(), 4000);
 
     const res = await fetch(`${cdpUrl}/json/list`, {
       cache: 'no-store',
@@ -110,31 +111,42 @@ export async function verifyChromeSession(cdpUrl = 'http://localhost:9222'): Pro
     const loginTab = qrTabs.find(
       (t) =>
         t.url.toLowerCase().includes('login.aspx') ||
+        t.url.toLowerCase().includes('user/login') ||
         t.title?.toLowerCase().includes('iniciar sesión') ||
         t.title?.toLowerCase().includes('login')
     );
 
     if (loginTab) {
       if (loginTab.webSocketDebuggerUrl) {
-        // Intentar auto-login si ya tiene credenciales cargadas
+        // Intentar auto-login inmediato pulsando 'Iniciar sesión'
         const clicked = await clickLoginIfCredentialsPresent(loginTab.webSocketDebuggerUrl);
         if (clicked) {
-          // Esperar 2.5s a que el servidor de QRBoletos procese el login y redirija
-          await new Promise((r) => setTimeout(r, 2500));
-          const refreshRes = await fetch(`${cdpUrl}/json/list`, { cache: 'no-store' });
-          if (refreshRes.ok) {
-            const refreshedTabs: ChromeTab[] = await refreshRes.json();
-            const refreshedQrTabs = refreshedTabs.filter(
-              (t) => t.type === 'page' && t.url && t.url.toLowerCase().includes('qrboletos.com')
-            );
-            const stillLogin = refreshedQrTabs.find((t) => t.url.toLowerCase().includes('login.aspx'));
-            if (!stillLogin && refreshedQrTabs.length > 0) {
-              return {
-                chromeOnline: true,
-                sessionActive: true,
-                currentUrl: refreshedQrTabs[0].url,
-              };
-            }
+          // Polling dinámico de hasta 10 segundos esperando que QRBoletos procese y redirija
+          const startTime = Date.now();
+          while (Date.now() - startTime < 10000) {
+            await new Promise((r) => setTimeout(r, 600));
+            try {
+              const refreshRes = await fetch(`${cdpUrl}/json/list`, { cache: 'no-store' });
+              if (refreshRes.ok) {
+                const refreshedTabs: ChromeTab[] = await refreshRes.json();
+                const refreshedQrTabs = refreshedTabs.filter(
+                  (t) => t.type === 'page' && t.url && t.url.toLowerCase().includes('qrboletos.com')
+                );
+                const stillLogin = refreshedQrTabs.some(
+                  (t) =>
+                    t.url.toLowerCase().includes('login.aspx') ||
+                    t.url.toLowerCase().includes('user/login') ||
+                    t.title?.toLowerCase().includes('iniciar sesión')
+                );
+                if (!stillLogin && refreshedQrTabs.length > 0) {
+                  return {
+                    chromeOnline: true,
+                    sessionActive: true,
+                    currentUrl: refreshedQrTabs[0].url,
+                  };
+                }
+              }
+            } catch {}
           }
         }
       }

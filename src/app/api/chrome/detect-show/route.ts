@@ -3,6 +3,7 @@ import { parseEventUrl } from '@/services/urlParser';
 import { parseShowMetadata, parseLocalidadesFromHtml } from '@/services/localitiesParser';
 import { parseSpanishDateToISO } from '@/utils/dateFormatter';
 import { Evento, Localidad } from '@/types';
+import { verifyChromeSession } from '@/services/chromeSession';
 
 interface ChromeTab {
   id: string;
@@ -131,19 +132,33 @@ async function handleDetect(request: Request, selectedTabId?: string | null, man
 
   // Comprobar si las pestañas de QRBoletos están en la pantalla de inicio de sesión
   const loginTab = qrTabs.find(
-    (t) => t.url.toLowerCase().includes('login.aspx') || t.title?.toLowerCase().includes('iniciar sesión')
+    (t) =>
+      t.url.toLowerCase().includes('login.aspx') ||
+      t.url.toLowerCase().includes('user/login') ||
+      t.title?.toLowerCase().includes('iniciar sesión')
   );
-  if (loginTab && qrTabs.every((t) => t.url.toLowerCase().includes('login.aspx') || t.title?.toLowerCase().includes('iniciar sesión'))) {
-    return NextResponse.json(
-      {
-        success: false,
-        code: 'SESSION_EXPIRED',
-        error: 'Tu sesión en Google Chrome ha caducado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentar.',
-        sessionExpired: true,
-        tabUrl: loginTab.url,
-      },
-      { status: 401 }
-    );
+  if (loginTab && qrTabs.every((t) => t.url.toLowerCase().includes('login.aspx') || t.url.toLowerCase().includes('user/login') || t.title?.toLowerCase().includes('iniciar sesión'))) {
+    const sessionRes = await verifyChromeSession(cdpUrl);
+    if (sessionRes.sessionActive) {
+      // Sesión recuperada exitosamente con auto-login
+      const refreshCheck = await fetch(`${cdpUrl}/json/list`, { cache: 'no-store' });
+      if (refreshCheck.ok) {
+        tabs = await refreshCheck.json();
+        qrTabs.length = 0;
+        qrTabs.push(...tabs.filter((t: ChromeTab) => t.type === 'page' && t.url && t.url.includes('qrboletos.com')));
+      }
+    } else {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'SESSION_EXPIRED',
+          error: 'Tu sesión en Google Chrome ha caducado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentar.',
+          sessionExpired: true,
+          tabUrl: loginTab.url,
+        },
+        { status: 401 }
+      );
+    }
   }
 
   // 3. Caso Múltiples Pestañas: Si hay más de 1 pestaña y el usuario NO ha seleccionado una todavía

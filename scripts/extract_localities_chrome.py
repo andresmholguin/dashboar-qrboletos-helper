@@ -100,6 +100,23 @@ def main():
 
             current_url = matched_url or target_page.url
             if "login.aspx" in current_url.lower() or "user/login" in current_url.lower():
+                log("ℹ️ Pantalla de login detectada en Chrome. Haciendo clic automático en 'Iniciar sesión'...")
+                try:
+                    btn = target_page.query_selector("#login-button, button[type='submit'], input[type='submit'], .btn-primary")
+                    if btn:
+                        btn.click()
+                        start_t = time.time()
+                        while time.time() - start_t < 10:
+                            time.sleep(0.6)
+                            curr_check = target_page.url.lower()
+                            if "login.aspx" not in curr_check and "user/login" not in curr_check:
+                                log("✅ Auto-login exitoso en Chrome.")
+                                current_url = target_page.url
+                                break
+                except Exception as e_login:
+                    log(f"Aviso en auto-login: {e_login}")
+
+            if "login.aspx" in current_url.lower() or "user/login" in current_url.lower():
                 log("❌ [SESION EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")
                 print(json.dumps({
                     "success": False,

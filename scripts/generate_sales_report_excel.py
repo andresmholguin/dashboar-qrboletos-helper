@@ -45,6 +45,46 @@ class SessionExpiredError(Exception):
     """Excepción lanzada cuando la sesión de QRBoletos en Chrome ha expirado."""
     pass
 
+async def ensure_authenticated_async(page, target_url=None, max_wait_sec=10):
+    """
+    Si la página de Chrome está en la pantalla de login de QRBoletos o tiene el botón 'Iniciar sesión',
+    hace clic de inmediato (ya que los datos están autocompletados en el navegador)
+    y espera en bucle hasta que la redirección a una página autenticada se complete.
+    """
+    curr_url = page.url.lower()
+    is_login = ("login.aspx" in curr_url or "user/login" in curr_url)
+
+    if not is_login:
+        try:
+            has_btn = await page.evaluate("() => !!document.querySelector('#login-button, button[type=\"submit\"], .btn-primary')")
+            has_login_title = await page.evaluate("() => document.title && document.title.toLowerCase().includes('iniciar sesión')")
+            is_login = has_btn and has_login_title
+        except Exception:
+            pass
+
+    if is_login:
+        log("ℹ️ Pantalla de inicio de sesión detectada. Haciendo clic automático en 'Iniciar sesión'...")
+        try:
+            btn = await page.query_selector("#login-button, button[type='submit'], input[type='submit'], .btn-primary")
+            if btn:
+                await btn.click()
+                start_t = asyncio.get_event_loop().time()
+                while asyncio.get_event_loop().time() - start_t < max_wait_sec:
+                    await asyncio.sleep(0.6)
+                    curr_check = page.url.lower()
+                    if "login.aspx" not in curr_check and "user/login" not in curr_check:
+                        log("✅ Auto-login completado exitosamente en Chrome.")
+                        if target_url and target_url.lower() not in curr_check:
+                            await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+                        return True
+        except Exception as e:
+            log(f"Aviso durante auto-login: {e}")
+
+    curr_url = page.url.lower()
+    if "login.aspx" in curr_url or "user/login" in curr_url:
+        return False
+    return True
+
 async def scrape_show_sales(page, show_url):
     """Navega a la URL de summary.aspx y extrae los datos de ventas estructurados."""
     if "/reports/sales/summary.aspx" not in show_url:
@@ -62,41 +102,9 @@ async def scrape_show_sales(page, show_url):
     await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
 
     # Verificación instantánea de sesión activa en QRBoletos (con auto-login si ya tiene credenciales)
-    curr_url = page.url.lower()
-    if "login.aspx" in curr_url or "user/login" in curr_url:
-        try:
-            has_creds = await page.evaluate('''() => {
-                const pass = document.querySelector("input[type='password']");
-                return !!(pass && pass.value && pass.value.length > 0);
-            }''')
-            if has_creds:
-                log("ℹ️ Credenciales recordadas detectadas en login.aspx. Haciendo clic automático en 'Iniciar sesión'...")
-                login_btn = await page.query_selector("#login-button, button[type='submit'], input[type='submit'], .btn-primary")
-                if login_btn:
-                    await login_btn.click()
-                    try:
-                        await page.wait_for_load_state("domcontentloaded", timeout=12000)
-                    except Exception:
-                        pass
-                    await asyncio.sleep(2)
-                    if "login.aspx" not in page.url.lower():
-                        log("✅ Auto-login exitoso. Redirigiendo a informe...")
-                        await page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
-        except Exception as e_login:
-            log(f"Aviso en intento de auto-login: {e_login}")
-
-    curr_url = page.url.lower()
-    if "login.aspx" in curr_url or "user/login" in curr_url:
+    is_authed = await ensure_authenticated_async(page, target_url=target_url)
+    if not is_authed:
         log("❌ [SESION EXPIRADA] Redirección a login.aspx detectada en Google Chrome.")
-        raise SessionExpiredError("SESSION_EXPIRED: La sesión en QRBoletos ha caducado. Por favor inicia sesión en Google Chrome.")
-
-    is_login_page = await page.evaluate('''() => {
-        const hasUserInput = !!document.querySelector("#txtUsuario, input[type='password']");
-        const hasLoginTitle = document.title && document.title.toLowerCase().includes("iniciar sesión");
-        return hasUserInput || hasLoginTitle;
-    }''')
-    if is_login_page:
-        log("❌ [SESION EXPIRADA] Formulario de inicio de sesión detectado en Google Chrome.")
         raise SessionExpiredError("SESSION_EXPIRED: La sesión en QRBoletos ha caducado. Por favor inicia sesión en Google Chrome.")
 
     await page.wait_for_selector(".table, table, h1, h2", timeout=9000)
@@ -794,27 +802,13 @@ async def async_main(args, events_to_process):
 
         context = browser.contexts[0] if browser.contexts else browser.new_context()
 
-        # Chequeo preventivo: verificar si alguna pestaña abierta de QRBoletos está en login y si tiene credenciales
+        # Chequeo preventivo: verificar si alguna pestaña abierta de QRBoletos está en login y hacer auto-login
         for existing_page in context.pages:
             try:
                 ep_url = existing_page.url.lower()
                 if "qrboletos.com" in ep_url and ("login.aspx" in ep_url or "user/login" in ep_url):
-                    has_creds = await existing_page.evaluate('''() => {
-                        const pass = document.querySelector("input[type='password']");
-                        return !!(pass && pass.value && pass.value.length > 0);
-                    }''')
-                    if has_creds:
-                        log("ℹ️ Credenciales recordadas detectadas en pestaña de login. Haciendo clic automático en 'Iniciar sesión'...")
-                        login_btn = await existing_page.query_selector("#login-button, button[type='submit'], input[type='submit'], .btn-primary")
-                        if login_btn:
-                            await login_btn.click()
-                            try:
-                                await existing_page.wait_for_load_state("domcontentloaded", timeout=12000)
-                            except Exception:
-                                pass
-                            await asyncio.sleep(2)
-
-                    if "login.aspx" in existing_page.url.lower() or "user/login" in existing_page.url.lower():
+                    is_authed = await ensure_authenticated_async(existing_page)
+                    if not is_authed:
                         log("❌ [SESION EXPIRADA] Se detectó una pestaña de QRBoletos en la pantalla de inicio de sesión.")
                         if args.json_out:
                             print(json.dumps({

@@ -9,6 +9,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [1.2.0] - 2026-09-18
 ### Añadido
 - **Página de Documentación y Versiones (`/docs`):** Nueva URL interactiva con el desglose exhaustivo de todos los alcances funcionales de la app, arquitectura técnica, integraciones de APIs y cronología de releases.
+- **Desacoplamiento de Módulos a Páginas Dedicadas (`/informes` y `/clientes`):** Rutas independientes y ligeras con navegación directa en la barra superior, enlaces canónicos y alias de redirección amigables (`/reports`, `/reportes`, `/crm`, `/customers`, `/audiencia`).
 - **Integración Oficial con Catalog API v1 (Eventry / QRBoletos):**
   - Sincronización oficial de eventos activos sin depender de scraping de base de datos externa.
   - Métricas de aforo en vivo: consulta en tiempo real de cupos vendidos vs aforo total y porcentaje de ocupación.

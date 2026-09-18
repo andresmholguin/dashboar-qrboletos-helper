@@ -41,6 +41,31 @@ const nextConfig: NextConfig = {
         destination: "/docs",
         permanent: false,
       },
+      {
+        source: "/reports",
+        destination: "/informes",
+        permanent: false,
+      },
+      {
+        source: "/reportes",
+        destination: "/informes",
+        permanent: false,
+      },
+      {
+        source: "/crm",
+        destination: "/clientes",
+        permanent: false,
+      },
+      {
+        source: "/customers",
+        destination: "/clientes",
+        permanent: false,
+      },
+      {
+        source: "/audiencia",
+        destination: "/clientes",
+        permanent: false,
+      },
     ];
   },
 };

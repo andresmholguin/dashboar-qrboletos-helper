@@ -4,8 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import AddEventForm from '@/components/AddEventForm';
 import EventCard from '@/components/EventCard';
 import LocalitiesView from '@/components/LocalitiesView';
-import ReportsView from '@/components/ReportsView';
-import CustomersView from '@/components/CustomersView';
 import AvailabilityModal from '@/components/AvailabilityModal';
 import ArtworksManagerModal from '@/components/ArtworksManagerModal';
 import EventSettingsModal from '@/components/EventSettingsModal';
@@ -63,8 +61,6 @@ export default function Home() {
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isArchiveExpanded, setIsArchiveExpanded] = useState(false);
-  const [isReportsViewOpen, setIsReportsViewOpen] = useState(false);
-  const [isCustomersViewOpen, setIsCustomersViewOpen] = useState(false);
   const [availabilityShow, setAvailabilityShow] = useState<{ id: number | string; name: string } | null>(null);
   const [selectedTab, setSelectedTab] = useState<'todos' | 'a_la_venta' | 'en_configuracion' | 'archivados'>('a_la_venta');
   const [artworksEvento, setArtworksEvento] = useState<Evento | null>(null);
@@ -325,7 +321,6 @@ export default function Home() {
             ? detected.localidades
             : existing.localidades,
         };
-        setIsReportsViewOpen(false);
         setSelectedEvento(merged);
         setSyncToast(`¡Show detectado existente! ${merged.nombre} (ID: ${merged.rowId || merged.id})`);
       } else {
@@ -355,7 +350,6 @@ export default function Home() {
             if (saveData.success && saveData.event) {
               const persistedEvent = saveData.event as Evento;
               setEventos((prev) => [persistedEvent, ...prev]);
-              setIsReportsViewOpen(false);
               setSelectedEvento(persistedEvent);
               setSyncToast(`¡Nuevo show detectado y guardado en Sheets! ${persistedEvent.nombre}`);
               return;
@@ -372,7 +366,6 @@ export default function Home() {
           fechaCreacion: new Date().toISOString().split('T')[0],
         };
         setEventos((prev) => [localDetected, ...prev]);
-        setIsReportsViewOpen(false);
         setSelectedEvento(localDetected);
         setSyncToast(`¡Show detectado! ${localDetected.nombre}`);
       }
@@ -541,8 +534,6 @@ export default function Home() {
             <button
               onClick={() => {
                 setSelectedEvento(null);
-                setIsReportsViewOpen(false);
-                setIsCustomersViewOpen(false);
                 setIsMobileMenuOpen(false);
               }}
               className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 active:scale-[0.98] transition-all text-left bg-transparent border-none p-0 focus:outline-none"
@@ -614,6 +605,26 @@ export default function Home() {
               />
             </div>
 
+            {/* Acceso Directo: Informes */}
+            <Link
+              href="/informes"
+              className="p-2 bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5 text-xs font-semibold px-2.5"
+              title="Módulo de Informes de Ventas y Cortesías (/informes)"
+            >
+              <BarChart3 className="w-4 h-4 text-emerald-400" />
+              <span className="hidden lg:inline text-xs text-slate-300">Informes</span>
+            </Link>
+
+            {/* Acceso Directo: Audiencia & CRM */}
+            <Link
+              href="/clientes"
+              className="p-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-indigo-400 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5 text-xs font-semibold px-2.5"
+              title="Directorio de Audiencia & CRM (/clientes)"
+            >
+              <Users className="w-4 h-4 text-indigo-400" />
+              <span className="hidden lg:inline text-xs text-slate-300">Audiencia & CRM</span>
+            </Link>
+
             {/* Menú Desplegable de Acciones / Herramientas */}
             <div className="relative" ref={actionsMenuRef}>
               <button
@@ -646,53 +657,7 @@ export default function Home() {
 
                   <div className="my-1 border-t border-slate-800" />
 
-                  {/* 2. Botón Módulo de Informes */}
-                  <button
-                    onClick={() => {
-                      setIsActionsMenuOpen(false);
-                      setIsReportsViewOpen(!isReportsViewOpen);
-                      setIsCustomersViewOpen(false);
-                      setSelectedEvento(null);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${isReportsViewOpen
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                      }`}
-                    title="Ver informe consolidado de ventas y exportar a Excel / PDF"
-                  >
-                    <BarChart3 className="w-4 h-4 text-emerald-500" />
-                    <span className="flex-1">Informes</span>
-                    {isReportsViewOpen && (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">
-                        Activo
-                      </span>
-                    )}
-                  </button>
-
-                  {/* 2.1 Botón Módulo de Audiencia (CRM) */}
-                  <button
-                    onClick={() => {
-                      setIsActionsMenuOpen(false);
-                      setIsCustomersViewOpen(!isCustomersViewOpen);
-                      setIsReportsViewOpen(false);
-                      setSelectedEvento(null);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${isCustomersViewOpen
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                      }`}
-                    title="Directorio de compradores, historial de boletas y exportación para pauta"
-                  >
-                    <Users className="w-4 h-4 text-emerald-400" />
-                    <span className="flex-1">Audiencia & CRM</span>
-                    {isCustomersViewOpen && (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-mono font-bold">
-                        Activo
-                      </span>
-                    )}
-                  </button>
-
-                  {/* 2.2 Botón Documentación & Versiones */}
+                  {/* 2. Botón Documentación & Versiones */}
                   <Link
                     href="/docs"
                     onClick={() => setIsActionsMenuOpen(false)}
@@ -855,38 +820,24 @@ export default function Home() {
 
 
               {/* Botón Módulo de Informes Móvil */}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsReportsViewOpen(true);
-                  setIsCustomersViewOpen(false);
-                  setSelectedEvento(null);
-                }}
-                className={`cursor-pointer border text-xs font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm text-center ${isReportsViewOpen
-                    ? 'bg-emerald-600 text-white border-emerald-500'
-                    : 'bg-slate-900 border-slate-800 hover:border-emerald-500/30 text-slate-300 hover:bg-slate-800'
-                  }`}
+              <Link
+                href="/informes"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
               >
-                <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <BarChart3 className="w-4 h-4 text-emerald-400" />
                 <span>📊 Módulo de Informes</span>
-              </button>
+              </Link>
 
               {/* Botón Audiencia & CRM Móvil */}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsCustomersViewOpen(true);
-                  setIsReportsViewOpen(false);
-                  setSelectedEvento(null);
-                }}
-                className={`cursor-pointer border text-xs font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm text-center ${isCustomersViewOpen
-                    ? 'bg-emerald-600 text-white border-emerald-500'
-                    : 'bg-slate-900 border-slate-800 hover:border-emerald-500/30 text-slate-300 hover:bg-slate-800'
-                  }`}
+              <Link
+                href="/clientes"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
               >
-                <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <Users className="w-4 h-4 text-indigo-400" />
                 <span>👥 Audiencia & CRM</span>
-              </button>
+              </Link>
 
               {/* Botón Reordenar Banners Web Móvil */}
               <button
@@ -952,11 +903,7 @@ export default function Home() {
 
       {/* Contenido Principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isReportsViewOpen ? (
-          <ReportsView onBack={() => setIsReportsViewOpen(false)} />
-        ) : isCustomersViewOpen ? (
-          <CustomersView onBack={() => setIsCustomersViewOpen(false)} />
-        ) : selectedEvento ? (
+        {selectedEvento ? (
           // Vista detallada de Localidades (Scraper)
           <LocalitiesView
             evento={selectedEvento}

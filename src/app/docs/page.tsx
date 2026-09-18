@@ -79,7 +79,7 @@ const APP_SCOPES: FeatureScope[] = [
       'Exportación con 1 clic a Excel (.xlsx) y CSV con soporte UTF-8 BOM para marketing y remarketing.',
       'Modal de auditoría para inspeccionar el JSON original (Raw JSON) de cada cliente.'
     ],
-    technicalDetails: 'GET /api/customers | IndexedDB local con transacciones readwrite.',
+    technicalDetails: 'Ruta dedicada: /clientes | GET /api/customers | IndexedDB local con transacciones readwrite.',
     icon: Users
   },
   {
@@ -182,7 +182,7 @@ const APP_SCOPES: FeatureScope[] = [
       'Generación de reportes ejecutivos en formato PDF con formato formal de liquidación.',
       'Exportación a hojas de cálculo Excel (.xlsx) con fórmulas automáticas de sumatoria.'
     ],
-    technicalDetails: 'Generadores Python openpyxl y ReportLab ejecutados en sandbox.',
+    technicalDetails: 'Ruta dedicada: /informes | Generadores Python openpyxl y ReportLab ejecutados en sandbox.',
     icon: FileText
   },
   {
@@ -284,6 +284,10 @@ const RELEASES: VersionRelease[] = [
       {
         type: 'added',
         text: 'Nueva página interactiva de documentación técnica y de versiones (/docs).'
+      },
+      {
+        type: 'added',
+        text: 'Desacoplamiento de módulos hacia rutas dedicadas /informes y /clientes con navegación directa en barra superior y alias de redirección.'
       },
       {
         type: 'changed',

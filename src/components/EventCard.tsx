@@ -186,7 +186,7 @@ export default function EventCard({
                       className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Palette className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>🎨 Actualizar Artes</span>
+                      <span>Actualizar Artes</span>
                     </button>
                   )}
                   {onConfigureSettings && (
@@ -199,7 +199,7 @@ export default function EventCard({
                       className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Settings className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                      <span>⚙️ Configurar Evento</span>
+                      <span>Configurar Evento</span>
                     </button>
                   )}
                   {onCheckAvailability && (
@@ -211,7 +211,7 @@ export default function EventCard({
                       }}
                       className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors cursor-pointer"
                     >
-                      <span className="text-emerald-400 text-xs">🎟️</span>
+                      <Ticket className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       <span>Aforo y Cupos en Vivo</span>
                     </button>
                   )}

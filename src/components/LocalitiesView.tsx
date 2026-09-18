@@ -346,6 +346,39 @@ export default function LocalitiesView({
       return a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' });
     });
 
+  // Targets para apertura masiva en pestañas
+  const configTargets = filteredLocalidades
+    .map(loc => loc.links?.find(l => l.label === 'Configuración')?.url || loc.url)
+    .filter((url): url is string => Boolean(url));
+
+  const priceTargets = filteredLocalidades
+    .map(loc => loc.links?.find(l => l.label === 'Precios')?.url)
+    .filter((url): url is string => Boolean(url));
+
+  const seatTargets = filteredLocalidades
+    .map(loc => loc.links?.find(l => l.label === 'Acomodación')?.url)
+    .filter((url): url is string => Boolean(url));
+
+  const [bulkOpeningMsg, setBulkOpeningMsg] = useState<string | null>(null);
+
+  const openUrlsInTabs = (targets: string[], typeLabel: string) => {
+    const absoluteUrls = targets.map(makeAbsoluteUrl).filter(Boolean);
+    if (absoluteUrls.length === 0) return;
+
+    setBulkOpeningMsg(`Abriendo ${absoluteUrls.length} pestañas de ${typeLabel}...`);
+    setTimeout(() => setBulkOpeningMsg(null), 5000);
+
+    absoluteUrls.forEach((url, idx) => {
+      setTimeout(() => {
+        window.open(url, '_blank');
+      }, idx * 100);
+    });
+  };
+
+  const handleOpenAllConfig = () => openUrlsInTabs(configTargets, 'Configuración');
+  const handleOpenAllPrices = () => openUrlsInTabs(priceTargets, 'Precios');
+  const handleOpenAllSeats = () => openUrlsInTabs(seatTargets, 'Asientos');
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
       {/* Cabecera del panel */}
@@ -370,13 +403,13 @@ export default function LocalitiesView({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
 
           {/* Botón para Importar Localidades directamente desde Chrome con el Bot */}
           <button
             onClick={handleExtractFromChrome}
             disabled={isExtractingFromChrome}
-            className="bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-600 text-emerald-800 dark:text-emerald-400 hover:text-white border border-emerald-300 dark:border-emerald-500/30 hover:border-emerald-500 rounded-xl px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+            className="h-9 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-600 text-emerald-800 dark:text-emerald-400 hover:text-white border border-emerald-300 dark:border-emerald-500/30 hover:border-emerald-500 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-50 whitespace-nowrap"
             title="Importar todas las localidades directamente desde la pestaña activa de Chrome con el bot"
           >
             <Zap className={`w-3.5 h-3.5 fill-current ${isExtractingFromChrome ? 'animate-pulse' : ''}`} />
@@ -386,22 +419,22 @@ export default function LocalitiesView({
           {/* Botón para Cargar Tarifario con IA */}
           <button
             onClick={() => setShowTarifarioModal(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+            className="h-9 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
             title="Extraer precios de foto del comité y cargar en Chrome"
           >
             <Sparkles className="w-3.5 h-3.5 fill-current" />
-            Cargar Tarifario con IA
+            <span>Cargar Tarifario IA</span>
           </button>
 
           {/* Botón para Reemplazar / Actualizar Artes */}
           {onOpenArtworks && (
             <button
               onClick={onOpenArtworks}
-              className="bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="h-9 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
               title="Actualizar o reemplazar el QRBoleto digital y el diseño físico (Boca y Godex) en las localidades"
             >
               <Palette className="w-3.5 h-3.5" />
-              <span>🎨 Actualizar Artes</span>
+              <span>Actualizar Artes</span>
             </button>
           )}
 
@@ -409,11 +442,11 @@ export default function LocalitiesView({
           {onConfigureSettings && (
             <button
               onClick={onConfigureSettings}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-3.5 py-2 text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="h-9 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
               title="Configurar descripción, términos, edad mínima, switches e imágenes del evento"
             >
               <Settings className="w-3.5 h-3.5" />
-              <span>⚙️ Configurar Evento</span>
+              <span>Configurar Evento</span>
             </button>
           )}
 
@@ -421,17 +454,17 @@ export default function LocalitiesView({
           {localidades.length > 0 && !showPastePanel && (
             <button
               onClick={handleActivateUpdate}
-              className="bg-amber-50 dark:bg-amber-600/10 hover:bg-amber-600 text-amber-900 dark:text-amber-400 hover:text-white border border-amber-300 dark:border-amber-500/20 hover:border-amber-600 rounded-xl px-3 py-2 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="h-9 px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
               title="Actualizar manualmente pegando código HTML"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Pegar HTML
+              <span>Pegar HTML</span>
             </button>
           )}
 
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-3 py-2 rounded-full border border-slate-300 dark:border-slate-800 flex items-center gap-1.5">
+          <span className="h-9 px-3 py-2 text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-300 dark:border-slate-800 flex items-center gap-1.5 whitespace-nowrap">
             <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />
-            {domain.replace('https://', '')}
+            <span>{domain.replace('https://', '')}</span>
           </span>
         </div>
       </div>
@@ -559,24 +592,91 @@ export default function LocalitiesView({
       {/* Vista B: Listado de Localidades (Si hay localidades guardadas y no se está actualizando) */}
       {!showPastePanel && localidades.length > 0 && (
         <div className="space-y-4 mt-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
-              <Armchair className="text-emerald-500 w-5 h-5" />
-              Localidades Encontradas ({filteredLocalidades.length})
-            </h3>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800/80">
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
+                <Armchair className="text-emerald-500 w-5 h-5" />
+                Localidades Encontradas ({filteredLocalidades.length})
+              </h3>
+
+              {/* Botones de Apertura Masiva de Localidades en Nuevas Pestañas */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-inner">
+                <span className="text-[11px] font-bold text-slate-400 px-2 flex items-center gap-1">
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                  Abrir todas en pestañas:
+                </span>
+                
+                {/* Abrir Configuración de todas */}
+                <button
+                  type="button"
+                  onClick={handleOpenAllConfig}
+                  disabled={configTargets.length === 0}
+                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-pink-950/50 text-slate-300 hover:text-pink-300 border border-slate-700/80 hover:border-pink-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={`Abrir pestaña de Configuración para cada una de las ${configTargets.length} localidades`}
+                >
+                  <Settings className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                  <span>Configuración</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
+                    {configTargets.length}
+                  </span>
+                </button>
+
+                {/* Abrir Precios de todas */}
+                <button
+                  type="button"
+                  onClick={handleOpenAllPrices}
+                  disabled={priceTargets.length === 0}
+                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-amber-950/50 text-slate-300 hover:text-amber-300 border border-slate-700/80 hover:border-amber-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={`Abrir pestaña de Precios para cada una de las ${priceTargets.length} localidades`}
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Precios</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
+                    {priceTargets.length}
+                  </span>
+                </button>
+
+                {/* Abrir Asientos de todas */}
+                <button
+                  type="button"
+                  onClick={handleOpenAllSeats}
+                  disabled={seatTargets.length === 0}
+                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-blue-950/50 text-slate-300 hover:text-blue-300 border border-slate-700/80 hover:border-blue-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={`Abrir pestaña de Acomodación/Asientos para cada una de las ${seatTargets.length} localidades`}
+                >
+                  <Armchair className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>Asientos</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
+                    {seatTargets.length}
+                  </span>
+                </button>
+              </div>
+            </div>
             
             {/* Buscador de localidades */}
-            <div className="relative w-full md:w-64">
-              <Search className="w-4.5 h-4.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <div className="relative w-full lg:w-64">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Buscar localidad..."
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
+
+          {bulkOpeningMsg && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3.5 py-2.5 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-200">
+              <span className="flex items-center gap-2 font-semibold">
+                <ExternalLink className="w-4 h-4 animate-bounce shrink-0" />
+                {bulkOpeningMsg}
+              </span>
+              <span className="text-[11px] text-slate-400">
+                💡 Si tu navegador abre solo una pestaña, haz clic en el ícono de ventanas emergentes bloqueadas en la barra de URL y selecciona &quot;Permitir siempre&quot;.
+              </span>
+            </div>
+          )}
 
           {/* Resumen Global de Aforo del Evento si está disponible */}
           {availability && (

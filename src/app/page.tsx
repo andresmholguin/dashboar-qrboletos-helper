@@ -39,7 +39,8 @@ import {
   ArrowDownUp,
   Users,
   Ticket,
-  BookOpen
+  BookOpen,
+  Calendar
 } from 'lucide-react';
 
 export default function Home() {
@@ -591,138 +592,41 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Controles en Escritorio (md en adelante) */}
-          <div className="hidden md:flex items-center gap-3">
-            {/* Buscador */}
-            <div className="relative w-64">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Buscar evento..."
-                className="w-full bg-slate-900 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-400"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+          {/* Menú de Navegación Superior Unificado (Desktop) */}
+          <div className="hidden md:flex items-center gap-2">
+            <Link
+              href="/"
+              onClick={() => setSelectedEvento(null)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-1.5"
+              title="Catálogo de Eventos"
+            >
+              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Eventos</span>
+            </Link>
 
-            {/* Acceso Directo: Informes */}
             <Link
               href="/informes"
-              className="p-2 bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5 text-xs font-semibold px-2.5"
-              title="Módulo de Informes de Ventas y Cortesías (/informes)"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all flex items-center gap-1.5"
+              title="Módulo de Informes de Ventas y Cortesías"
             >
-              <BarChart3 className="w-4 h-4 text-emerald-400" />
-              <span className="hidden lg:inline text-xs text-slate-300">Informes</span>
+              <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Informes</span>
             </Link>
 
-            {/* Acceso Directo: Audiencia & CRM */}
             <Link
               href="/clientes"
-              className="p-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/40 text-slate-300 hover:text-indigo-400 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5 text-xs font-semibold px-2.5"
-              title="Directorio de Audiencia & CRM (/clientes)"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all flex items-center gap-1.5"
+              title="Directorio de Audiencia & CRM"
             >
-              <Users className="w-4 h-4 text-indigo-400" />
-              <span className="hidden lg:inline text-xs text-slate-300">Audiencia & CRM</span>
+              <Users className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Audiencia & CRM</span>
             </Link>
-
-            {/* Menú Desplegable de Acciones / Herramientas */}
-            <div className="relative" ref={actionsMenuRef}>
-              <button
-                onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                aria-label="Abrir menú de herramientas y acciones"
-                aria-expanded={isActionsMenuOpen}
-                className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm text-slate-200 active:scale-95 shrink-0 ${isActionsMenuOpen ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''
-                  }`}
-                title="Menú de herramientas y acciones"
-              >
-                <Menu className="w-4 h-4 text-emerald-500" />
-                <span>Menú</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isActionsMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Popover desplegable */}
-              {isActionsMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
-                  {/* 1. Botón Nuevo Evento (Destacado) */}
-                  <button
-                    onClick={() => {
-                      setIsActionsMenuOpen(false);
-                      setIsAddModalOpen(true);
-                    }}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Nuevo Evento</span>
-                  </button>
-
-                  {/* 2. Botón Sincronizar API */}
-                  <button
-                    onClick={() => {
-                      setIsActionsMenuOpen(false);
-                      handleSyncFromApi();
-                    }}
-                    disabled={isSyncing}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer disabled:opacity-50"
-                    title="Consultar y sincronizar eventos desde la API de QRBoletos"
-                  >
-                    <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar API'}</span>
-                  </button>
-
-                  {/* 4. Botón Reordenar Banners */}
-                  <button
-                    onClick={() => {
-                      setIsActionsMenuOpen(false);
-                      handleReorderBanners();
-                    }}
-                    disabled={isReorderingBanners}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer disabled:opacity-50"
-                    title="Reordenar cronológicamente los banners en línea según la fecha del evento"
-                  >
-                    <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-spin' : ''}`} />
-                    <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners'}</span>
-                  </button>
-
-                  {/* 5. Botón Detectar Show en Chrome */}
-                  <button
-                    onClick={() => {
-                      setIsActionsMenuOpen(false);
-                      handleDetectChromeShow();
-                    }}
-                    disabled={isDetectingChrome}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-amber-300 hover:bg-amber-500/10 transition-all cursor-pointer disabled:opacity-50"
-                    title="Detectar y abrir el show en borrador o configuración que tienes en Chrome"
-                  >
-                    <Sparkles className={`w-4 h-4 text-amber-400 ${isDetectingChrome ? 'animate-spin' : ''}`} />
-                    <span>{isDetectingChrome ? 'Detectando...' : 'Detectar en Chrome'}</span>
-                  </button>
-
-                  {/* 6. Botón Google Sheet */}
-                  {isSheetsMode && (
-                    <>
-                      <div className="my-1 border-t border-slate-800" />
-                      <a
-                        href="https://docs.google.com/spreadsheets/d/1saVyrEYq8ITiSESR4Z13vJufjVvuKVmm9vjAsUFq3jg"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setIsActionsMenuOpen(false)}
-                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
-                      >
-                        <Database className="w-4 h-4 text-emerald-500" />
-                        <span className="flex-1">Google Sheet</span>
-                        <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-                      </a>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Botón de Cambio de Tema */}
             <button
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              className="p-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer shadow-sm active:scale-95"
+              className="p-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer shadow-sm active:scale-95 ml-1"
               title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
@@ -751,108 +655,36 @@ export default function Home() {
 
         {/* Dropdown del Menú Móvil */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-900 bg-slate-950 p-4 space-y-4 shadow-xl animate-fade-in">
-            {/* Buscador Móvil */}
-            <div className="relative w-full">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Buscar evento..."
-                className="w-full bg-slate-900 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-500"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+          <div className="md:hidden border-t border-slate-900 bg-slate-950 p-4 space-y-2 shadow-xl animate-fade-in">
+            <Link
+              href="/"
+              onClick={() => {
+                setSelectedEvento(null);
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5"
+            >
+              <Calendar className="w-4 h-4 text-emerald-400" />
+              <span>Eventos</span>
+            </Link>
 
-            {/* Botones en menú móvil */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Botón Detectar Show en Chrome Móvil */}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  handleDetectChromeShow();
-                }}
-                disabled={isDetectingChrome}
-                className="cursor-pointer bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 text-xs font-bold py-3 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all flex items-center justify-center gap-1.5 shadow-sm text-center sm:col-span-2"
-              >
-                <Sparkles className={`w-4 h-4 text-amber-700 dark:text-amber-400 ${isDetectingChrome ? 'animate-spin' : ''}`} />
-                <span>{isDetectingChrome ? 'Detectando en Chrome...' : '🎯 Detectar Show Activo en Chrome'}</span>
-              </button>
+            <Link
+              href="/informes"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-900 transition-all"
+            >
+              <BarChart3 className="w-4 h-4 text-emerald-400" />
+              <span>Informes</span>
+            </Link>
 
-              {/* Botón Sincronizar API Móvil */}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  handleSyncFromApi();
-                }}
-                disabled={isSyncing}
-                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
-              >
-                <RefreshCw className={`w-4 h-4 text-emerald-600 dark:text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar API'}</span>
-              </button>
-
-
-              {/* Botón Módulo de Informes Móvil */}
-              <Link
-                href="/informes"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
-              >
-                <BarChart3 className="w-4 h-4 text-emerald-400" />
-                <span>📊 Módulo de Informes</span>
-              </Link>
-
-              {/* Botón Audiencia & CRM Móvil */}
-              <Link
-                href="/clientes"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
-              >
-                <Users className="w-4 h-4 text-indigo-400" />
-                <span>👥 Audiencia & CRM</span>
-              </Link>
-
-              {/* Botón Reordenar Banners Web Móvil */}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  handleReorderBanners();
-                }}
-                disabled={isReorderingBanners}
-                className="cursor-pointer bg-slate-900 border border-slate-800 hover:border-cyan-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
-              >
-                <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-spin' : ''}`} />
-                <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners Web'}</span>
-              </button>
-
-              {/* Botón Google Sheet */}
-              {isSheetsMode && (
-                <a
-                  href="https://docs.google.com/spreadsheets/d/1saVyrEYq8ITiSESR4Z13vJufjVvuKVmm9vjAsUFq3jg"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="cursor-pointer bg-slate-900 border border-slate-850 hover:border-emerald-500/30 text-xs font-semibold py-3 rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm text-slate-300 text-center"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Database className="w-4.5 h-4.5 text-emerald-500" />
-                  <span>Google Sheet</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-                </a>
-              )}
-
-              {/* Botón Nuevo Evento */}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsAddModalOpen(true);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-1.5 cursor-pointer w-full sm:col-span-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Nuevo Evento</span>
-              </button>
-            </div>
+            <Link
+              href="/clientes"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-900 transition-all"
+            >
+              <Users className="w-4 h-4 text-indigo-400" />
+              <span>Audiencia & CRM</span>
+            </Link>
           </div>
         )}
       </nav>
@@ -889,15 +721,126 @@ export default function Home() {
 
             {/* Contenedor de la lista de eventos */}
             <div className="space-y-6">
-              {/* Cabecera de la lista con Pestañas de Filtrado */}
-              <div className="border-b border-slate-800 pb-4 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                  <LayoutGrid className="w-4.5 h-4.5 text-emerald-500" />
-                  Eventos ({eventos.length})
-                </h2>
+              {/* Cabecera de la lista con Buscador, Menú de Eventos y Pestañas de Filtrado */}
+              <div className="border-b border-slate-800 pb-4 mb-2 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+                {/* Lado Izquierdo: Título Eventos + Buscador + Menú de Acciones */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h2 className="text-base font-bold text-slate-200 flex items-center gap-2 shrink-0">
+                    <LayoutGrid className="w-4.5 h-4.5 text-emerald-500" />
+                    Eventos ({eventos.length})
+                  </h2>
 
-                {/* Filtro de Pestañas */}
-                <div className="flex items-center gap-1.5 p-1 bg-slate-950/80 border border-slate-800 rounded-xl overflow-x-auto">
+                  {/* Buscador de Eventos */}
+                  <div className="relative w-48 sm:w-60">
+                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Buscar evento..."
+                      className="w-full bg-slate-900 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-400"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Menú Desplegable de Acciones / Herramientas de Eventos */}
+                  <div className="relative shrink-0" ref={actionsMenuRef}>
+                    <button
+                      onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                      aria-label="Abrir menú de herramientas y acciones"
+                      aria-expanded={isActionsMenuOpen}
+                      className={`cursor-pointer bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm text-slate-200 active:scale-95 ${
+                        isActionsMenuOpen ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''
+                      }`}
+                      title="Menú de herramientas y acciones de eventos"
+                    >
+                      <Menu className="w-4 h-4 text-emerald-500" />
+                      <span>Menú</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isActionsMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Popover desplegable */}
+                    {isActionsMenuOpen && (
+                      <div className="absolute left-0 top-full mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
+                        {/* 1. Botón Nuevo Evento (Destacado) */}
+                        <button
+                          onClick={() => {
+                            setIsActionsMenuOpen(false);
+                            setIsAddModalOpen(true);
+                          }}
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Nuevo Evento</span>
+                        </button>
+
+                        <div className="my-1 border-t border-slate-800" />
+
+                        {/* 2. Botón Sincronizar API */}
+                        <button
+                          onClick={() => {
+                            setIsActionsMenuOpen(false);
+                            handleSyncFromApi();
+                          }}
+                          disabled={isSyncing}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                          title="Consultar y sincronizar eventos desde la API de QRBoletos"
+                        >
+                          <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
+                          <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar API'}</span>
+                        </button>
+
+                        {/* 3. Botón Reordenar Banners */}
+                        <button
+                          onClick={() => {
+                            setIsActionsMenuOpen(false);
+                            handleReorderBanners();
+                          }}
+                          disabled={isReorderingBanners}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                          title="Reordenar cronológicamente los banners en línea según la fecha del evento"
+                        >
+                          <ArrowDownUp className={`w-4 h-4 text-cyan-400 ${isReorderingBanners ? 'animate-spin' : ''}`} />
+                          <span>{isReorderingBanners ? 'Ordenando...' : 'Reordenar Banners'}</span>
+                        </button>
+
+                        {/* 4. Botón Detectar Show en Chrome */}
+                        <button
+                          onClick={() => {
+                            setIsActionsMenuOpen(false);
+                            handleDetectChromeShow();
+                          }}
+                          disabled={isDetectingChrome}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-amber-300 hover:bg-amber-500/10 transition-all cursor-pointer disabled:opacity-50"
+                          title="Detectar y abrir el show en borrador o configuración que tienes en Chrome"
+                        >
+                          <Sparkles className={`w-4 h-4 text-amber-400 ${isDetectingChrome ? 'animate-spin' : ''}`} />
+                          <span>{isDetectingChrome ? 'Detectando...' : 'Detectar en Chrome'}</span>
+                        </button>
+
+                        {/* 5. Botón Google Sheet */}
+                        {isSheetsMode && (
+                          <>
+                            <div className="my-1 border-t border-slate-800" />
+                            <a
+                              href="https://docs.google.com/spreadsheets/d/1saVyrEYq8ITiSESR4Z13vJufjVvuKVmm9vjAsUFq3jg"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => setIsActionsMenuOpen(false)}
+                              className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+                            >
+                              <Database className="w-4 h-4 text-emerald-500" />
+                              <span className="flex-1">Google Sheet</span>
+                              <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Lado Derecho: Filtro de Pestañas */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-950/80 border border-slate-800 rounded-xl overflow-x-auto self-start xl:self-auto">
                   <button
                     onClick={() => setSelectedTab('todos')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${selectedTab === 'todos'

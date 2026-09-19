@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { isRunningInCloud } from '@/services/tunnelProxy';
 
 export interface SnapshotConfig {
   autoSnapshotEnabled: boolean;
@@ -17,12 +18,31 @@ export interface SnapshotMetadata {
   totalBoletos: number;
 }
 
-const SNAPSHOTS_DIR = path.join(process.cwd(), 'scratch', 'snapshots');
+const LOCAL_SNAPSHOTS_DIR = path.join(process.cwd(), 'data', 'snapshots');
+const SEED_SNAPSHOTS_DIR = path.join(process.cwd(), 'data', 'snapshots');
+const SNAPSHOTS_DIR = isRunningInCloud()
+  ? path.join('/tmp', 'snapshots')
+  : LOCAL_SNAPSHOTS_DIR;
+
 const CONFIG_FILE = path.join(SNAPSHOTS_DIR, 'config.json');
 
 function ensureDir() {
   if (!fs.existsSync(SNAPSHOTS_DIR)) {
     fs.mkdirSync(SNAPSHOTS_DIR, { recursive: true });
+  }
+  // En Vercel/Cloud, copiar snapshots base del repositorio a /tmp/snapshots para que estén disponibles
+  if (isRunningInCloud() && fs.existsSync(SEED_SNAPSHOTS_DIR)) {
+    try {
+      const files = fs.readdirSync(SEED_SNAPSHOTS_DIR);
+      for (const f of files) {
+        const dest = path.join(SNAPSHOTS_DIR, f);
+        if (!fs.existsSync(dest)) {
+          fs.copyFileSync(path.join(SEED_SNAPSHOTS_DIR, f), dest);
+        }
+      }
+    } catch (e) {
+      console.warn('Error inicializando seed snapshots en Vercel:', e);
+    }
   }
 }
 
@@ -92,6 +112,10 @@ export function purgeOldSnapshots(maxDays = 7): number {
           const raw = fs.readFileSync(filePath, 'utf-8');
           const data = JSON.parse(raw);
           const createdAt = data.createdAt ? new Date(data.createdAt).getTime() : 0;
+          // Proteger el snapshot base del Lunes de la semana activa (hasta 8 días) para que sirva toda la semana
+          if (data.isMonday && (now - createdAt <= 8 * 24 * 60 * 60 * 1000)) {
+            continue;
+          }
           if (createdAt && (now - createdAt > maxAgeMs)) {
             fs.unlinkSync(filePath);
             purgedCount++;

@@ -81,21 +81,21 @@ export async function POST(request: Request) {
     }
 
     if (action === 'take_snapshot') {
-      // Guardar captura con los datos de ventas actuales
-      const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
-      if (!fs.existsSync(cachePath)) {
-        return NextResponse.json(
-          { success: false, error: 'No hay datos de ventas en caché. Por favor consulta las ventas primero.' },
-          { status: 400 }
-        );
+      // Guardar captura con datos de ventas enviados o desde el caché
+      let salesData = body.salesData;
+      if (!salesData || !Array.isArray(salesData) || salesData.length === 0) {
+        const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
+        if (fs.existsSync(cachePath)) {
+          try {
+            const cache = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+            salesData = cache.salesData || [];
+          } catch {}
+        }
       }
 
-      const cache = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
-      const salesData = cache.salesData || [];
-
-      if (salesData.length === 0) {
+      if (!salesData || salesData.length === 0) {
         return NextResponse.json(
-          { success: false, error: 'Los datos de ventas en caché están vacíos.' },
+          { success: false, error: 'No hay datos de ventas disponibles para guardar la instantánea.' },
           { status: 400 }
         );
       }

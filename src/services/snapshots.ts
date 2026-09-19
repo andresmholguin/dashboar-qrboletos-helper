@@ -76,6 +76,54 @@ export function getColombiaWeekKey(d: Date = new Date()): { weekKey: string; isM
   };
 }
 
+// Purgar snapshots con más de maxDays días (por defecto 7 días)
+export function purgeOldSnapshots(maxDays = 7): number {
+  ensureDir();
+  try {
+    const files = fs.readdirSync(SNAPSHOTS_DIR);
+    const now = Date.now();
+    const maxAgeMs = maxDays * 24 * 60 * 60 * 1000;
+    let purgedCount = 0;
+
+    for (const f of files) {
+      if (f.endsWith('.json') && f !== 'config.json') {
+        const filePath = path.join(SNAPSHOTS_DIR, f);
+        try {
+          const raw = fs.readFileSync(filePath, 'utf-8');
+          const data = JSON.parse(raw);
+          const createdAt = data.createdAt ? new Date(data.createdAt).getTime() : 0;
+          if (createdAt && (now - createdAt > maxAgeMs)) {
+            fs.unlinkSync(filePath);
+            purgedCount++;
+          }
+        } catch {
+          try { fs.unlinkSync(filePath); purgedCount++; } catch {}
+        }
+      }
+    }
+    return purgedCount;
+  } catch (err) {
+    console.error('Error purgando snapshots viejos:', err);
+    return 0;
+  }
+}
+
+function formatSnapshotLabel(date: Date, isMonday: boolean): string {
+  const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  
+  // Usar hora Colombia (UTC-5)
+  const cotDate = new Date(date.getTime() - 5 * 3600 * 1000);
+  const dayName = dayNames[cotDate.getUTCDay()];
+  const dayNum = cotDate.getUTCDate();
+  const monthName = monthNames[cotDate.getUTCMonth()];
+  
+  const hours = String(date.getHours()).padStart(2, '0');
+  const mins = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${dayName} ${dayNum} ${monthName} (${hours}:${mins})`;
+}
+
 export function saveSnapshot(salesData: any[], customLabel?: string): SnapshotMetadata {
   ensureDir();
   const now = new Date();
@@ -94,6 +142,8 @@ export function saveSnapshot(salesData: any[], customLabel?: string): SnapshotMe
     });
   });
 
+  const generatedLabel = customLabel || (isMonday ? `Lunes ${cotDateStr} (00:00)` : formatSnapshotLabel(now, isMonday));
+
   const payload = {
     id,
     filename,
@@ -101,7 +151,7 @@ export function saveSnapshot(salesData: any[], customLabel?: string): SnapshotMe
     cotDate: cotDateStr,
     weekKey,
     isMonday,
-    label: customLabel || (isMonday ? `Lunes ${cotDateStr}` : `Captura ${cotDateStr} ${now.toLocaleTimeString('es-CO')}`),
+    label: generatedLabel,
     totalEvents: salesData.length,
     totalBoletos,
     salesData,
@@ -111,6 +161,9 @@ export function saveSnapshot(salesData: any[], customLabel?: string): SnapshotMe
 
   // Si fue un lunes o auto-snapshot, actualizar semana
   saveSnapshotConfig({ lastAutoSnapshotWeek: weekKey });
+
+  // Purgar snapshots de más de 7 días
+  purgeOldSnapshots(7);
 
   return {
     id,
@@ -206,8 +259,11 @@ export function getComparison(currentSales: any[], targetSnapshotId?: string) {
         return (curUrl && beUrl && (curUrl.includes(beUrl) || beUrl.includes(curUrl))) || (curEvName && beName && curEvName === beName);
       });
 
-      let evDelta = 0;
+      const isNewEvent = !baseEv;
       const baseLocs = baseEv?.resumenLocalidades || [];
+
+      let curEventTotalBoletos = 0;
+      let prevEventTotalBoletos = 0;
 
       const locComparisons = (curEv.resumenLocalidades || []).map((curLoc: any) => {
         const curLocName = norm(curLoc.localidad || '');
@@ -215,16 +271,18 @@ export function getComparison(currentSales: any[], targetSnapshotId?: string) {
 
         const curTotal = curLoc.totalBoletos !== undefined
           ? curLoc.totalBoletos
-          : parseInt(String(curLoc.vendidas || '0').replace(/[^0-9]/g, ''), 10);
+          : parseInt(String(curLoc.vendidas || '0').replace(/[^0-9]/g, ''), 10) || 0;
 
         const prevTotal = baseLoc
           ? (baseLoc.totalBoletos !== undefined
               ? baseLoc.totalBoletos
-              : parseInt(String(baseLoc.vendidas || '0').replace(/[^0-9]/g, ''), 10))
+              : parseInt(String(baseLoc.vendidas || '0').replace(/[^0-9]/g, ''), 10) || 0)
           : 0;
 
+        curEventTotalBoletos += curTotal;
+        prevEventTotalBoletos += prevTotal;
+
         const delta = Math.max(0, curTotal - prevTotal);
-        evDelta += delta;
 
         return {
           localidad: curLoc.localidad,
@@ -234,11 +292,15 @@ export function getComparison(currentSales: any[], targetSnapshotId?: string) {
         };
       });
 
+      const evDelta = Math.max(0, curEventTotalBoletos - prevEventTotalBoletos);
       totalDeltaGlobal += evDelta;
 
       return {
         evento: curEv.meta?.evento,
         url: curUrl,
+        isNewEvent,
+        boletosActuales: curEventTotalBoletos,
+        boletosAnteriores: prevEventTotalBoletos,
         deltaEvento: evDelta,
         localidades: locComparisons,
       };

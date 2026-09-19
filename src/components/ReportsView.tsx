@@ -62,6 +62,17 @@ interface RecaudoMetodo {
   totalStr: string;
 }
 
+interface SnapshotItem {
+  id: string;
+  filename: string;
+  label: string;
+  createdAt: string;
+  weekKey: string;
+  isMonday: boolean;
+  totalBoletos: number;
+  totalEvents: number;
+}
+
 interface EventSalesData {
   meta: {
     evento?: string;
@@ -93,6 +104,10 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
   const [expandedEvents, setExpandedEvents] = useState<Record<number, boolean>>({});
   const [searchFilter, setSearchFilter] = useState<string>('');
 
+  // Instantáneas y comparativo semanal
+  const [snapshotsList, setSnapshotsList] = useState<SnapshotItem[]>([]);
+  const [compareSnapshotId, setCompareSnapshotId] = useState<string>('latest_monday');
+
   // Selección de eventos para reportes filtrados
   const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
   const [pdfLayout, setPdfLayout] = useState<'standard_portrait' | 'compact_landscape' | 'onepage_portrait'>('standard_portrait');
@@ -100,7 +115,51 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
   useEffect(() => {
     // Al ingresar al módulo Informes, cargar datos de inmediato (usando caché si existe o scraper si no)
     fetchSales(false);
+    loadSnapshots();
   }, []);
+
+  const loadSnapshots = async () => {
+    try {
+      const res = await fetch('/api/reports/snapshots');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.snapshots)) {
+        setSnapshotsList(data.snapshots);
+        if (data.config?.compareSnapshotId) {
+          setCompareSnapshotId(data.config.compareSnapshotId);
+        }
+      }
+    } catch (e) {
+      console.warn('Error cargando lista de instantáneas:', e);
+    }
+  };
+
+  const checkAndSaveTodaySnapshot = async (currentSales: EventSalesData[]) => {
+    try {
+      const res = await fetch('/api/reports/snapshots');
+      const d = await res.json();
+      if (d.success && Array.isArray(d.snapshots)) {
+        setSnapshotsList(d.snapshots);
+        const now = Date.now();
+        const hasRecent = d.snapshots.some((s: SnapshotItem) => {
+          const t = new Date(s.createdAt).getTime();
+          return now - t < 18 * 60 * 60 * 1000;
+        });
+        if (!hasRecent && currentSales.length > 0) {
+          await fetch('/api/reports/snapshots', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'take_snapshot', salesData: currentSales }),
+          });
+          const updated = await (await fetch('/api/reports/snapshots')).json();
+          if (updated.success && updated.snapshots) {
+            setSnapshotsList(updated.snapshots);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error en verificación de instantánea diaria:', e);
+    }
+  };
 
   const fetchSales = async (force: boolean) => {
     setIsLoading(true);
@@ -136,6 +195,10 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       setSalesData(data.salesData || []);
       setIsCached(!!data.cached);
       setCacheAge(data.cacheAgeMinutes || 0);
+
+      if (data.salesData && data.salesData.length > 0) {
+        checkAndSaveTodaySnapshot(data.salesData);
+      }
     } catch (err: any) {
       setError(err.message || 'Error al conectar con el servicio de reportes.');
     } finally {
@@ -162,6 +225,7 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
           mode: 'general',
           type: 'general',
           layout: pdfLayout,
+          compareSnapshotId: compareSnapshotId,
         }),
       });
 
@@ -367,6 +431,29 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
               </option>
               <option value="onepage_portrait" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-200">
                 📋 Ficha Liquidación (One-Page)
+              </option>
+            </select>
+          </div>
+
+          {/* Selector de Comparativo Semanal */}
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 px-2.5 py-1.5 rounded-xl shadow-inner">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-semibold uppercase hidden xl:inline">Comparar con:</span>
+            <select
+              value={compareSnapshotId}
+              onChange={(e) => setCompareSnapshotId(e.target.value)}
+              className="bg-transparent text-slate-900 dark:text-slate-200 text-xs font-bold focus:outline-none cursor-pointer max-w-[190px] truncate"
+              title="Compara la cantidad de boletos vendidos contra un informe previo"
+            >
+              <option value="latest_monday" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-200">
+                📅 Lunes de esta semana
+              </option>
+              {snapshotsList.map((snap) => (
+                <option key={snap.id} value={snap.id} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-200">
+                  🕒 {snap.label} ({snap.totalBoletos.toLocaleString()} bol.)
+                </option>
+              ))}
+              <option value="none" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-200">
+                🚫 Sin comparativo
               </option>
             </select>
           </div>

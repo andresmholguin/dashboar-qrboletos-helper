@@ -221,6 +221,28 @@ def build_css(layout):
         .tag-web { background: #eff6ff; color: #1d4ed8; padding: 1px 4px; border-radius: 2px; font-weight: 700; font-size: 8px; }
         .tag-pos { background: #ecfdf5; color: #047857; padding: 1px 4px; border-radius: 2px; font-weight: 700; font-size: 8px; }
         .tag-cortesia { background: #fef2f2; color: #b91c1c; padding: 1px 4px; border-radius: 2px; font-weight: 700; font-size: 8px; border: 1px solid #fca5a5; }
+
+        .event-comparison-box {
+            margin-top: 3px;
+            margin-bottom: 4px;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 4px;
+            padding: 3.5px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8.5px;
+        }
+        .comp-left { display: flex; align-items: center; gap: 6px; }
+        .comp-tag { font-weight: 800; color: #166534; font-size: 8.5px; letter-spacing: 0.2px; }
+        .comp-badge-new { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; font-size: 7.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; }
+        .comp-baseline { color: #475569; font-size: 8px; font-weight: 500; }
+        .comp-right { display: flex; align-items: center; gap: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .comp-stat { font-size: 9px; font-weight: 700; color: #166534; }
+        .comp-stat strong { font-size: 10px; font-weight: 800; color: #15803d; }
+        .comp-sub { color: #64748b; font-size: 8px; }
+
         .footer {
             margin-top: 10px;
             border-top: 1px solid #e2e8f0;
@@ -363,6 +385,27 @@ def build_css(layout):
         }
         .sig-name { font-weight: 700; color: #0f172a; }
         .sig-role { font-size: 8.5px; color: #64748b; }
+
+        .event-comparison-box {
+            margin-top: 4px;
+            margin-bottom: 6px;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 5px;
+            padding: 5px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
+        }
+        .comp-left { display: flex; align-items: center; gap: 8px; }
+        .comp-tag { font-weight: 800; color: #166534; font-size: 9px; letter-spacing: 0.2px; }
+        .comp-badge-new { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; font-size: 8px; font-weight: 800; padding: 1.5px 6px; border-radius: 3px; }
+        .comp-baseline { color: #475569; font-size: 8.5px; font-weight: 500; }
+        .comp-right { display: flex; align-items: center; gap: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .comp-stat { font-size: 10px; font-weight: 700; color: #166534; }
+        .comp-stat strong { font-size: 11px; font-weight: 800; color: #15803d; }
+        .comp-sub { color: #64748b; font-size: 8.5px; }
 
         .footer {
             margin-top: 10px;
@@ -567,6 +610,28 @@ def build_css(layout):
             font-size: 11px;
             font-weight: 700;
         }
+
+        .event-comparison-box {
+            margin-top: 4px;
+            margin-bottom: 5px;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 5px;
+            padding: 5px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
+        }
+        .comp-left { display: flex; align-items: center; gap: 8px; }
+        .comp-tag { font-weight: 800; color: #166534; font-size: 9px; letter-spacing: 0.2px; }
+        .comp-badge-new { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; font-size: 8px; font-weight: 800; padding: 1.5px 6px; border-radius: 3px; }
+        .comp-baseline { color: #475569; font-size: 8.5px; font-weight: 500; }
+        .comp-right { display: flex; align-items: center; gap: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .comp-stat { font-size: 10px; font-weight: 700; color: #166534; }
+        .comp-stat strong { font-size: 11px; font-weight: 800; color: #15803d; }
+        .comp-sub { color: #64748b; font-size: 8.5px; }
+
         .footer {
             margin-top: 12px;
             border-top: 1px solid #e2e8f0;
@@ -578,7 +643,79 @@ def build_css(layout):
         }
         """
 
-def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="general", target_url=None, layout="standard_portrait"):
+def get_event_comparison(ev, comparison_data):
+    if not comparison_data or not isinstance(comparison_data, dict):
+        return None
+    events = comparison_data.get("events", [])
+    if not events:
+        return None
+    
+    baseline = comparison_data.get("baseline", {})
+    baseline_label = baseline.get("label", "Semana Anterior")
+    
+    norm = lambda s: str(s or "").lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
+    
+    ev_url = norm(ev.get("url", ""))
+    ev_name = norm(ev.get("meta", {}).get("evento", ""))
+    
+    for c in events:
+        c_url = norm(c.get("url", ""))
+        c_name = norm(c.get("evento", ""))
+        
+        url_match = bool(ev_url and c_url and (ev_url in c_url or c_url in ev_url))
+        name_match = bool(ev_name and c_name and ev_name == c_name)
+        
+        if url_match or name_match:
+            return {
+                "baseline_label": baseline_label,
+                "is_new": c.get("isNewEvent", False),
+                "actual": c.get("boletosActuales", 0),
+                "anterior": c.get("boletosAnteriores", 0),
+                "delta": c.get("deltaEvento", 0)
+            }
+    return None
+
+def render_comparison_box(comp_info):
+    if not comp_info:
+        return ""
+    baseline_label = comp_info.get("baseline_label", "Semana Anterior")
+    is_new = comp_info.get("is_new", False)
+    actual = comp_info.get("actual", 0)
+    anterior = comp_info.get("anterior", 0)
+    delta = comp_info.get("delta", 0)
+
+    if is_new:
+        delta_str = f"+{format_num(actual)}" if actual > 0 else "0"
+        return f"""
+        <div class="event-comparison-box">
+            <div class="comp-left">
+                <span class="comp-tag">&#x1F4CA; COMPARATIVO SEMANAL:</span>
+                <span class="comp-badge-new">EVENTO NUEVO</span>
+                <span class="comp-baseline">vs. {baseline_label}</span>
+            </div>
+            <div class="comp-right">
+                <span class="comp-stat"><strong>{delta_str}</strong> boletos vendidos</span>
+                <span class="comp-sub">(Sin registro previo en base de comparación)</span>
+            </div>
+        </div>
+        """
+    else:
+        sign = "+" if delta > 0 else ""
+        delta_str = f"{sign}{format_num(delta)}"
+        return f"""
+        <div class="event-comparison-box">
+            <div class="comp-left">
+                <span class="comp-tag">&#x1F4CA; COMPARATIVO SEMANAL:</span>
+                <span class="comp-baseline">Base: {baseline_label}</span>
+            </div>
+            <div class="comp-right">
+                <span class="comp-stat"><strong>{delta_str}</strong> boletos vendidos esta semana</span>
+                <span class="comp-sub">(Base: {format_num(anterior)} &rarr; Actual: {format_num(actual)})</span>
+            </div>
+        </div>
+        """
+
+def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="general", target_url=None, layout="standard_portrait", comparison_data=None):
     """Genera un archivo PDF profesional según el layout seleccionado."""
     if target_url:
         filtered = [ev for ev in sales_data if target_url in ev.get("url", "") or ev.get("url", "") in target_url]
@@ -717,6 +854,7 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
             <div class="ticker-item"><span class="ticker-label">Cover Service:</span> <span class="ticker-val service">{format_cop(grand_recaudo_servicio)}</span></div>
             <div class="ticker-item"><span class="ticker-label">Gran Total:</span> <span class="ticker-val highlight" style="color: #60a5fa;">{format_cop(grand_total_cop)}</span></div>
             {f'<div class="ticker-item"><span class="ticker-label" style="color: #d97706;">Entrega Empresario:</span> <span class="ticker-val" style="color: #d97706;">{format_cop(grand_entrega_empresario)}</span></div>' if grand_entrega_empresario > 0 else ''}
+            {f'<div class="ticker-item"><span class="ticker-label" style="color: #4ade80;">Crecimiento Semanal:</span> <span class="ticker-val highlight">+{format_num(comparison_data.get("totalDeltaGlobal", 0))}</span></div>' if comparison_data and comparison_data.get("totalDeltaGlobal") is not None else ''}
         </div>
         """
 
@@ -786,6 +924,7 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
                     </tr>
                     </tbody>
                 </table>
+                {render_comparison_box(get_event_comparison(ev, comparison_data))}
             </div>
             """
 
@@ -921,6 +1060,7 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
                         </tr>
                         </tbody>
                     </table>
+                    {render_comparison_box(get_event_comparison(ev, comparison_data))}
                 </div>
 
                 <!-- Sección de Firmas de Conformidad al pie -->
@@ -1031,6 +1171,7 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
                         </tr>
                         </tbody>
                     </table>
+                    {render_comparison_box(get_event_comparison(ev, comparison_data))}
                 </div>
                 """
 
@@ -1104,6 +1245,7 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
                         </tr>
                         </tbody>
                     </table>
+                    {render_comparison_box(get_event_comparison(ev, comparison_data))}
                 </div>
                 """
 
@@ -1145,6 +1287,12 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
             <span style="font-size: 12px; font-weight: 800; color: #b45309; font-family: ui-monospace, monospace;">{format_cop(grand_entrega_empresario)}</span>
         </div>
         ''' if grand_entrega_empresario > 0 else ''}
+        {f'''
+        <div style="margin-top: -6px; margin-bottom: 14px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; page-break-inside: avoid;">
+            <span style="font-size: 9.5px; font-weight: 700; color: #166534; text-transform: uppercase;">📊 Crecimiento Neto en la Semana ({comparison_data.get("baseline", {}).get("label", "Semana")}):</span>
+            <span style="font-size: 12px; font-weight: 800; color: #15803d; font-family: ui-monospace, monospace;">+{format_num(comparison_data.get("totalDeltaGlobal", 0))} boletos vendidos</span>
+        </div>
+        ''' if comparison_data and comparison_data.get("totalDeltaGlobal") is not None else ''}
 
         <div class="footer">
             <span>Informe Oficial de Ventas generado por QRBoletos Dashboard Helper</span>
@@ -1186,6 +1334,7 @@ def main():
     parser.add_argument("--type", default="general", choices=["general", "detailed"], help="Tipo de informe (para individual)")
     parser.add_argument("--target-url", help="URL base del evento en caso de modo individual")
     parser.add_argument("--layout", default="standard_portrait", choices=["standard_portrait", "compact_landscape", "onepage_portrait"], help="Diseño de visualización del PDF")
+    parser.add_argument("--comparison-json", help="Ruta al archivo JSON con datos comparativos de ventas")
     args = parser.parse_args()
 
     if not os.path.exists(args.sales_json):
@@ -1200,13 +1349,22 @@ def main():
     if not isinstance(sales_data, list):
         sales_data = [sales_data]
 
+    comparison_data = None
+    if args.comparison_json and os.path.exists(args.comparison_json):
+        try:
+            with open(args.comparison_json, "r", encoding="utf-8") as f:
+                comparison_data = json.load(f)
+        except Exception as e:
+            sys.stderr.write(f"Advertencia: No se pudo leer {args.comparison_json}: {e}\n")
+
     generate_pdf_report(
         sales_data=sales_data,
         output_pdf=args.output_pdf,
         mode=args.mode,
         report_type=args.type,
         target_url=args.target_url,
-        layout=args.layout
+        layout=args.layout,
+        comparison_data=comparison_data
     )
 
 if __name__ == "__main__":

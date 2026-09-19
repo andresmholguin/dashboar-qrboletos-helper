@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fetchEventosFromSheets } from '@/services/googleSheets';
 import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 import { verifyChromeSession } from '@/services/chromeSession';
+import { getComparison } from '@/services/snapshots';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -22,15 +23,22 @@ export async function POST(request: Request) {
       type: reportType = 'general',
       layout = 'standard_portrait',
       targetUrl,
+      compareSnapshotId = 'latest_monday',
     } = body;
 
     const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
     let salesJsonPath = cachePath;
 
+    let finalSalesData = salesData;
     if (salesData && Array.isArray(salesData) && salesData.length > 0) {
       const tempJson = path.join(process.cwd(), 'scratch', `temp_client_sales_${Date.now()}.json`);
       fs.writeFileSync(tempJson, JSON.stringify({ salesData }, null, 2), 'utf-8');
       salesJsonPath = tempJson;
+    } else if (fs.existsSync(cachePath)) {
+      try {
+        const c = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+        finalSalesData = c.salesData || [];
+      } catch {}
     }
 
     const pdfScript = path.join(process.cwd(), 'scripts', 'generate_sales_report_pdf.py');
@@ -49,6 +57,20 @@ export async function POST(request: Request) {
       pdfArgs.push('--target-url', targetUrl);
     }
 
+    let tempComparisonPath: string | null = null;
+    if (compareSnapshotId && compareSnapshotId !== 'none' && Array.isArray(finalSalesData) && finalSalesData.length > 0) {
+      try {
+        const comparison = getComparison(finalSalesData, compareSnapshotId);
+        if (comparison) {
+          tempComparisonPath = path.join(process.cwd(), 'scratch', `temp_comparison_${Date.now()}.json`);
+          fs.writeFileSync(tempComparisonPath, JSON.stringify(comparison, null, 2), 'utf-8');
+          pdfArgs.push('--comparison-json', tempComparisonPath);
+        }
+      } catch (errComp) {
+        console.warn('No se pudo calcular comparativo para PDF:', errComp);
+      }
+    }
+
     const pythonPdf = spawn('python', pdfArgs, {
       cwd: process.cwd(),
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
@@ -60,6 +82,10 @@ export async function POST(request: Request) {
     const pdfExit = await new Promise<number>((resolve) => {
       pythonPdf.on('close', resolve);
     });
+
+    if (tempComparisonPath && fs.existsSync(tempComparisonPath)) {
+      try { fs.unlinkSync(tempComparisonPath); } catch {}
+    }
 
     if (pdfExit !== 0 || !fs.existsSync(tempPdfPath)) {
       console.error('Error generando PDF en POST:', pdfStderr);
@@ -102,6 +128,7 @@ export async function GET(request: Request) {
     const layout = searchParams.get('layout') || 'standard_portrait'; // 'standard_portrait' | 'compact_landscape' | 'onepage_portrait'
     const targetUrl = searchParams.get('targetUrl');
     const force = searchParams.get('force') === 'true';
+    const compareSnapshotId = searchParams.get('compareSnapshotId') || 'latest_monday';
 
     const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
     let salesJsonPath = cachePath;
@@ -240,6 +267,21 @@ export async function GET(request: Request) {
       pdfArgs.push('--target-url', targetUrl);
     }
 
+    let tempComparisonPath: string | null = null;
+    if (compareSnapshotId && compareSnapshotId !== 'none' && fs.existsSync(salesJsonPath)) {
+      try {
+        const c = JSON.parse(fs.readFileSync(salesJsonPath, 'utf-8'));
+        const comparison = getComparison(c.salesData || [], compareSnapshotId);
+        if (comparison) {
+          tempComparisonPath = path.join(process.cwd(), 'scratch', `temp_comparison_get_${Date.now()}.json`);
+          fs.writeFileSync(tempComparisonPath, JSON.stringify(comparison, null, 2), 'utf-8');
+          pdfArgs.push('--comparison-json', tempComparisonPath);
+        }
+      } catch (errComp) {
+        console.warn('No se pudo calcular comparativo para PDF GET:', errComp);
+      }
+    }
+
     const pythonPdf = spawn('python', pdfArgs, {
       cwd: process.cwd(),
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
@@ -251,6 +293,10 @@ export async function GET(request: Request) {
     const pdfExit = await new Promise<number>((resolve) => {
       pythonPdf.on('close', resolve);
     });
+
+    if (tempComparisonPath && fs.existsSync(tempComparisonPath)) {
+      try { fs.unlinkSync(tempComparisonPath); } catch {}
+    }
 
     if (pdfExit !== 0 || !fs.existsSync(tempPdfPath)) {
       console.error('Error generando PDF:', pdfStderr);

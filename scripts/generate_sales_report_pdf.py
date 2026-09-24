@@ -709,7 +709,7 @@ def render_comparison_box(comp_info):
                 <span class="comp-baseline">Base: {baseline_label}</span>
             </div>
             <div class="comp-right">
-                <span class="comp-stat"><strong>{delta_str}</strong> boletos vendidos esta semana</span>
+                <span class="comp-stat"><strong>{delta_str}</strong> boletos vendidos</span>
                 <span class="comp-sub">(Base: {format_num(anterior)} &rarr; Actual: {format_num(actual)})</span>
             </div>
         </div>
@@ -854,7 +854,7 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
             <div class="ticker-item"><span class="ticker-label">Cover Service:</span> <span class="ticker-val service">{format_cop(grand_recaudo_servicio)}</span></div>
             <div class="ticker-item"><span class="ticker-label">Gran Total:</span> <span class="ticker-val highlight" style="color: #60a5fa;">{format_cop(grand_total_cop)}</span></div>
             {f'<div class="ticker-item"><span class="ticker-label" style="color: #d97706;">Entrega Empresario:</span> <span class="ticker-val" style="color: #d97706;">{format_cop(grand_entrega_empresario)}</span></div>' if grand_entrega_empresario > 0 else ''}
-            {f'<div class="ticker-item"><span class="ticker-label" style="color: #4ade80;">Crecimiento Semanal:</span> <span class="ticker-val highlight">+{format_num(comparison_data.get("totalDeltaGlobal", 0))}</span></div>' if comparison_data and comparison_data.get("totalDeltaGlobal") is not None else ''}
+            {f'<div class="ticker-item"><span class="ticker-label" style="color: #4ade80;">Crecimiento:</span> <span class="ticker-val highlight">+{format_num(comparison_data.get("totalDeltaGlobal", 0))}</span></div>' if comparison_data and comparison_data.get("totalDeltaGlobal") is not None else ''}
         </div>
         """
 
@@ -1289,7 +1289,7 @@ def generate_pdf_report(sales_data, output_pdf, mode="general", report_type="gen
         ''' if grand_entrega_empresario > 0 else ''}
         {f'''
         <div style="margin-top: -6px; margin-bottom: 14px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; page-break-inside: avoid;">
-            <span style="font-size: 9.5px; font-weight: 700; color: #166534; text-transform: uppercase;">📊 Crecimiento Neto en la Semana ({comparison_data.get("baseline", {}).get("label", "Semana")}):</span>
+            <span style="font-size: 9.5px; font-weight: 700; color: #166534; text-transform: uppercase;">📊 Crecimiento Neto ({comparison_data.get("baseline", {}).get("label", "Base")}):</span>
             <span style="font-size: 12px; font-weight: 800; color: #15803d; font-family: ui-monospace, monospace;">+{format_num(comparison_data.get("totalDeltaGlobal", 0))} boletos vendidos</span>
         </div>
         ''' if comparison_data and comparison_data.get("totalDeltaGlobal") is not None else ''}

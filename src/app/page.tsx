@@ -862,7 +862,30 @@ export default function Home() {
                           <span>{isDetectingChrome ? 'Detectando...' : 'Detectar en Chrome'}</span>
                         </button>
 
-                        {/* 5. Botón Google Sheet */}
+                        {/* 5. Botón Ver Eventos Archivados */}
+                        <button
+                          onClick={() => {
+                            setIsActionsMenuOpen(false);
+                            setSelectedTab('archivados');
+                            setIsArchiveExpanded(true);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer ${
+                            selectedTab === 'archivados' ? 'bg-slate-800 text-white font-bold ring-1 ring-slate-700' : ''
+                          }`}
+                          title="Ver eventos archivados, pasados o que nunca salieron a venta"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Archive className="w-4 h-4 text-slate-400" />
+                            <span>Eventos Archivados</span>
+                          </div>
+                          {passedEvents.length > 0 && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-950 text-slate-400 border border-slate-800">
+                              {passedEvents.length}
+                            </span>
+                          )}
+                        </button>
+
+                        {/* 6. Botón Google Sheet */}
                         {isSheetsMode && (
                           <>
                             <div className="my-1 border-t border-slate-800" />
@@ -918,16 +941,16 @@ export default function Home() {
                     <span>Configuración ({inConfigEvents.length})</span>
                   </button>
 
-                  {passedEvents.length > 0 && (
+                  {/* Indicador activo solo cuando se filtra por Archivados desde el Menú */}
+                  {selectedTab === 'archivados' && (
                     <button
-                      onClick={() => setSelectedTab('archivados')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${selectedTab === 'archivados'
-                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-bold'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
-                        }`}
+                      onClick={() => setSelectedTab('todos')}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-bold border border-slate-700 animate-in fade-in duration-150"
+                      title="Filtrando por archivados. Clic para volver a Todos"
                     >
-                      <Archive className="w-3.5 h-3.5" />
+                      <Archive className="w-3.5 h-3.5 text-slate-400" />
                       <span>Archivados ({passedEvents.length})</span>
+                      <span className="text-[10px] ml-0.5 opacity-60 hover:opacity-100 font-normal">✕</span>
                     </button>
                   )}
                 </div>

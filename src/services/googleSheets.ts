@@ -229,15 +229,22 @@ export async function fetchEventosFromSheets(): Promise<Evento[]> {
       }
     }
 
-    let estadoVentaRaw = row[12] || '';
+    let estadoVentaRaw = (row[12] || '').toString().trim();
     let espectaculoVal = row[13] || '';
     let sitioVal = row[14] || '';
 
     let enVenta = false;
-    if (estadoVentaRaw.toUpperCase().includes('VENTA')) {
-      enVenta = true;
-    } else if (estadoVentaRaw.toUpperCase().includes('CONFIGURACION') || estadoVentaRaw.toUpperCase().includes('BORRADOR')) {
+    let archivado = false;
+    const estadoUpper = estadoVentaRaw.toUpperCase();
+    if (estadoUpper.includes('ARCHIV')) {
+      archivado = true;
       enVenta = false;
+    } else if (estadoUpper.includes('VENTA')) {
+      enVenta = true;
+      archivado = false;
+    } else if (estadoUpper.includes('CONFIGURACION') || estadoUpper.includes('BORRADOR')) {
+      enVenta = false;
+      archivado = false;
     } else {
       // Fallback para filas legacy: si tiene enlace público con /event/, está a la venta
       enVenta = Boolean(enlaceVal && enlaceVal.includes('qrboletos.com/event'));
@@ -258,6 +265,7 @@ export async function fetchEventosFromSheets(): Promise<Evento[]> {
       imageUrl: imageVal,
       enlace: enlaceVal,
       enVenta,
+      archivado,
       espectaculo: espectaculoVal,
       sitio: sitioVal,
     });
@@ -292,7 +300,7 @@ export async function addEventoToSheets(evento: Omit<Evento, 'rowId'>): Promise<
     evento.localidades ? JSON.stringify(evento.localidades) : '[]',
     evento.imageUrl || '',
     evento.enlace || '',
-    evento.enVenta ? 'A LA VENTA' : 'EN CONFIGURACION',
+    evento.archivado ? 'ARCHIVADO' : (evento.enVenta ? 'A LA VENTA' : 'EN CONFIGURACION'),
     evento.espectaculo || '',
     evento.sitio || '',
   ];
@@ -379,6 +387,37 @@ export async function updateEventoFavoritoInSheets(idOrRowId: string, favorito: 
     return true;
   } catch (error: any) {
     console.error('Error actualizando favorito en Sheets:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Actualiza el estado de archivado en Google Sheets para un evento (Columna M).
+ */
+export async function updateEventoArchivadoInSheets(idOrRowId: string, archivado: boolean): Promise<boolean> {
+  if (!isSheetsConfigured()) {
+    throw new Error('Google Sheets no está configurado.');
+  }
+
+  const sheets = getSheetsInstance();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID!;
+  const rowId = await resolveRowIndex(idOrRowId, sheets, spreadsheetId);
+
+  // Columna M es Estado Venta
+  const cellRange = `${SHEET_NAME}!M${rowId}`;
+
+  try {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: cellRange,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[archivado ? 'ARCHIVADO' : 'EN CONFIGURACION']],
+      },
+    });
+    return true;
+  } catch (error: any) {
+    console.error('Error actualizando archivado en Sheets:', error.message);
     return false;
   }
 }
@@ -651,14 +690,16 @@ export interface SyncCheckResult {
   hasUpdates: boolean;
   newCount: number;
   updatedCount: number;
+  archivedCount: number;
   totalRemote: number;
   newEvents: CatalogLiveEvent[];
   updatedEvents: Array<{ id: string; titulo: string; changes: string[] }>;
+  archivedEvents: Array<{ id: string; titulo: string }>;
 }
 
 /**
  * Compara los eventos de la API oficial de Catálogo con los existentes en Google Sheets
- * e identifica si hay eventos nuevos o fechas/títulos modificados.
+ * e identifica si hay eventos nuevos o fechas/títulos modificados, así como eventos a archivar.
  */
 export async function checkCatalogUpdates(): Promise<SyncCheckResult> {
   const remoteEvents = await fetchCatalogEvents();
@@ -666,6 +707,12 @@ export async function checkCatalogUpdates(): Promise<SyncCheckResult> {
 
   const newEvents: CatalogLiveEvent[] = [];
   const updatedEvents: Array<{ id: string; titulo: string; changes: string[] }> = [];
+  const archivedEvents: Array<{ id: string; titulo: string }> = [];
+
+  const remoteIdSet = new Set(remoteEvents.map((r) => String(r.id).trim()).filter(Boolean));
+  const remoteTitleSet = new Set(
+    remoteEvents.map((r) => r.titulo.replace(/[\n\r]+/g, ' ').trim().toUpperCase())
+  );
 
   for (const remote of remoteEvents) {
     const cleanRemoteTitle = remote.titulo.replace(/[\n\r]+/g, ' - ').replace(/\s+/g, ' ').trim();
@@ -694,7 +741,7 @@ export async function checkCatalogUpdates(): Promise<SyncCheckResult> {
         changes.push('Enlace actualizado');
       }
       if (!existing.enVenta) {
-        changes.push('Promovido de EN CONFIGURACIÓN a A LA VENTA');
+        changes.push('Promovido a A LA VENTA');
       }
       if (changes.length > 0) {
         updatedEvents.push({ id: remote.id, titulo: cleanRemoteTitle, changes });
@@ -702,13 +749,31 @@ export async function checkCatalogUpdates(): Promise<SyncCheckResult> {
     }
   }
 
+  // Detectar eventos que estaban a la venta o activos pero ya no vienen en la API de Catálogo
+  for (const existing of currentEvents) {
+    if (existing.enVenta && !existing.archivado) {
+      const idMatch = existing.id && remoteIdSet.has(String(existing.id).trim());
+      const cleanExisting = existing.nombre.replace(/[\n\r]+/g, ' ').trim().toUpperCase();
+      const titleMatch = remoteTitleSet.has(cleanExisting);
+
+      if (!idMatch && !titleMatch) {
+        archivedEvents.push({
+          id: existing.id || existing.rowId || '',
+          titulo: existing.nombre,
+        });
+      }
+    }
+  }
+
   return {
-    hasUpdates: newEvents.length > 0 || updatedEvents.length > 0,
+    hasUpdates: newEvents.length > 0 || updatedEvents.length > 0 || archivedEvents.length > 0,
     newCount: newEvents.length,
     updatedCount: updatedEvents.length,
+    archivedCount: archivedEvents.length,
     totalRemote: remoteEvents.length,
     newEvents,
     updatedEvents,
+    archivedEvents,
   };
 }
 
@@ -717,13 +782,14 @@ export const checkFirestoreUpdates = checkCatalogUpdates;
 /**
  * Sincroniza los eventos de la API oficial de Catálogo hacia Google Sheets.
  * Conserva los datos de configuración (Promoter ID, Event ID, Show ID, Localidades y enlaces de acción)
- * de los eventos existentes que coincidan, y preserva eventos en configuración o históricos.
+ * de los eventos existentes que coincidan, y archiva automáticamente los eventos que ya no vienen en la API.
  */
 export async function syncEventsFromCatalog(): Promise<{
   success: boolean;
   totalSynced: number;
   addedCount: number;
   updatedCount: number;
+  archivedCount: number;
   events: Evento[];
 }> {
   if (!isSheetsConfigured()) {
@@ -746,6 +812,7 @@ export async function syncEventsFromCatalog(): Promise<{
 
   let addedCount = 0;
   let updatedCount = 0;
+  let archivedCount = 0;
   const todayIso = new Date().toISOString().split('T')[0];
 
   const finalRows: any[][] = [];
@@ -798,12 +865,28 @@ export async function syncEventsFromCatalog(): Promise<{
   }
 
   // 3.1. PRESERVAR EVENTOS NO LISTADOS A VENTA:
-  // Conservar todos los eventos locales, borradores en configuración o históricos que NO están en la API activa
+  // Si un evento venía de la API (o estaba a la venta) pero ya no viene en la API activa de catálogo, ARCHIVARLO
   for (const existing of currentEvents) {
     const key = existing.id || existing.rowId || existing.nombre;
     if (existing.id && seenIds.has(existing.id)) continue;
     if (!matchedExistingKeys.has(key)) {
       if (existing.id) seenIds.add(existing.id);
+
+      let estadoVenta = 'EN CONFIGURACION';
+      if (existing.archivado) {
+        estadoVenta = 'ARCHIVADO';
+      } else if (existing.enVenta) {
+        // Estaba a la venta pero ya no viene en la API activa -> Archivarlo automáticamente
+        estadoVenta = 'ARCHIVADO';
+        archivedCount++;
+      } else if (existing.id && /^\d+$/.test(existing.id) && parseInt(existing.id, 10) > 100) {
+        // Venía de la API con ID numérico oficial pero ya no está en la API -> Archivarlo
+        estadoVenta = 'ARCHIVADO';
+        archivedCount++;
+      } else {
+        estadoVenta = 'EN CONFIGURACION';
+      }
+
       const nonRemoteRow = [
         existing.id || '',
         existing.nombre,
@@ -817,7 +900,7 @@ export async function syncEventsFromCatalog(): Promise<{
         existing.localidades ? JSON.stringify(existing.localidades) : '[]',
         (existing.imageUrl && !existing.imageUrl.includes('/banners/')) ? existing.imageUrl : (existing.id ? `https://d1bw1k6fnbki29.cloudfront.net/eventos/${existing.id}/home.jpg` : ''),
         existing.enlace || '',
-        existing.enVenta ? 'A LA VENTA' : 'EN CONFIGURACION',
+        estadoVenta,
         existing.espectaculo || '',
         existing.sitio || '',
       ];
@@ -854,6 +937,7 @@ export async function syncEventsFromCatalog(): Promise<{
     totalSynced: freshEvents.length,
     addedCount,
     updatedCount,
+    archivedCount,
     events: freshEvents,
   };
 }

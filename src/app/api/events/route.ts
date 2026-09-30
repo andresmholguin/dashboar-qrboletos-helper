@@ -4,6 +4,7 @@ import {
   fetchEventosFromSheets,
   addEventoToSheets,
   updateEventoFavoritoInSheets,
+  updateEventoArchivadoInSheets,
   deleteEventoInSheets,
   updateEventoLocalidadesInSheets,
 } from '@/services/googleSheets';
@@ -99,7 +100,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { id, favorito, localidades } = body;
+    const { id, favorito, localidades, archivado } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -111,11 +112,13 @@ export async function PATCH(request: Request) {
     let success = false;
     if (favorito !== undefined) {
       success = await updateEventoFavoritoInSheets(id, favorito);
+    } else if (archivado !== undefined) {
+      success = await updateEventoArchivadoInSheets(id, Boolean(archivado));
     } else if (localidades !== undefined) {
       success = await updateEventoLocalidadesInSheets(id, localidades);
     } else {
       return NextResponse.json(
-        { success: false, error: 'Se debe proporcionar favorito o localidades para actualizar.' },
+        { success: false, error: 'Se debe proporcionar favorito, archivado o localidades para actualizar.' },
         { status: 400 }
       );
     }

@@ -13,6 +13,7 @@ export interface Evento {
   enlace?: string; // URL pública del evento en qrboletos.com
   localidades?: Localidad[];
   enVenta?: boolean; // true si está a la venta en QRBoletos/Firestore, false si está en configuración/borrador
+  archivado?: boolean; // true si el evento está archivado (ej: ya no viene en la API activa o fue finalizado)
   espectaculo?: string; // Nombre del espectáculo o función (ej: "31 OCTUBRE 2026")
   sitio?: string; // Recinto o sitio donde se realiza el evento
   pulep?: string; // Código PULEP del evento

@@ -1,13 +1,13 @@
 {
-  "id": "snapshot_2026-09-22_0631",
-  "filename": "snapshot_2026-09-22_0631.json",
-  "createdAt": "2026-09-22T11:31:39.466Z",
-  "cotDate": "2026-09-22",
-  "weekKey": "2026-W39",
+  "id": "snapshot_2026-09-29_0919",
+  "filename": "snapshot_2026-09-29_0919.json",
+  "createdAt": "2026-09-29T14:19:32.955Z",
+  "cotDate": "2026-09-29",
+  "weekKey": "2026-W40",
   "isMonday": false,
-  "label": "Martes 22 Sep (06:31)",
-  "totalEvents": 13,
-  "totalBoletos": 6251,
+  "label": "Martes 29 Sep (09:19)",
+  "totalEvents": 15,
+  "totalBoletos": 7170,
   "salesData": [
     {
       "meta": {
@@ -21,57 +21,57 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "240",
-          "recaudoEntradas": "COP 24.520.000",
-          "recaudoServicio": "COP 3.678.000",
+          "vendidas": "263",
+          "recaudoEntradas": "COP 27.257.000",
+          "recaudoServicio": "COP 4.088.550",
           "cortesias": 0,
-          "boletosPagados": 240,
-          "totalBoletos": 240
+          "boletosPagados": 263,
+          "totalBoletos": 263
         },
         {
           "localidad": "VIP 1",
-          "vendidas": "33",
-          "recaudoEntradas": "COP 1.617.000",
-          "recaudoServicio": "COP 242.550",
+          "vendidas": "40",
+          "recaudoEntradas": "COP 1.960.000",
+          "recaudoServicio": "COP 294.000",
           "cortesias": 0,
-          "boletosPagados": 33,
-          "totalBoletos": 33
+          "boletosPagados": 40,
+          "totalBoletos": 40
         },
         {
           "localidad": "VIP 2",
-          "vendidas": "49",
-          "recaudoEntradas": "COP 4.151.000",
-          "recaudoServicio": "COP 622.650",
+          "vendidas": "52",
+          "recaudoEntradas": "COP 4.448.000",
+          "recaudoServicio": "COP 667.200",
           "cortesias": 0,
-          "boletosPagados": 49,
-          "totalBoletos": 49
+          "boletosPagados": 52,
+          "totalBoletos": 52
         },
         {
           "localidad": "VIP 3",
-          "vendidas": "61",
-          "recaudoEntradas": "COP 5.141.000",
-          "recaudoServicio": "COP 771.150",
+          "vendidas": "66",
+          "recaudoEntradas": "COP 5.636.000",
+          "recaudoServicio": "COP 845.400",
           "cortesias": 2,
-          "boletosPagados": 59,
-          "totalBoletos": 61
+          "boletosPagados": 64,
+          "totalBoletos": 66
         },
         {
           "localidad": "VIP 4",
-          "vendidas": "29",
-          "recaudoEntradas": "COP 2.291.000",
-          "recaudoServicio": "COP 343.650",
+          "vendidas": "31",
+          "recaudoEntradas": "COP 2.449.000",
+          "recaudoServicio": "COP 367.350",
           "cortesias": 0,
-          "boletosPagados": 29,
-          "totalBoletos": 29
+          "boletosPagados": 31,
+          "totalBoletos": 31
         },
         {
           "localidad": "VIP 5",
-          "vendidas": "77",
-          "recaudoEntradas": "COP 2.303.000",
-          "recaudoServicio": "COP 345.450",
+          "vendidas": "79",
+          "recaudoEntradas": "COP 2.401.000",
+          "recaudoServicio": "COP 360.150",
           "cortesias": 30,
-          "boletosPagados": 47,
-          "totalBoletos": 77
+          "boletosPagados": 49,
+          "totalBoletos": 79
         }
       ],
       "detalleCanales": [
@@ -107,11 +107,11 @@
           "referencia": "PLATEA PRE",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "38",
+          "cantidad": "61",
           "valorEntrada": "COP 119.000",
-          "totalEntradas": "COP 4.522.000",
+          "totalEntradas": "COP 7.259.000",
           "valorServicio": "COP 17.850",
-          "totalServicio": "COP 678.300",
+          "totalServicio": "COP 1.088.850",
           "isCortesia": false
         },
         {
@@ -133,11 +133,11 @@
           "referencia": "VIP 1 LANZ",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "31",
+          "cantidad": "38",
           "valorEntrada": "COP 49.000",
-          "totalEntradas": "COP 1.519.000",
+          "totalEntradas": "COP 1.862.000",
           "valorServicio": "COP 7.350",
-          "totalServicio": "COP 227.850",
+          "totalServicio": "COP 279.300",
           "isCortesia": false
         },
         {
@@ -211,11 +211,11 @@
           "referencia": "VIP 2 PRE",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "14",
+          "cantidad": "17",
           "valorEntrada": "COP 99.000",
-          "totalEntradas": "COP 1.386.000",
+          "totalEntradas": "COP 1.683.000",
           "valorServicio": "COP 14.850",
-          "totalServicio": "COP 207.900",
+          "totalServicio": "COP 252.450",
           "isCortesia": false
         },
         {
@@ -276,11 +276,11 @@
           "referencia": "VIP 3 PRE",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "21",
+          "cantidad": "26",
           "valorEntrada": "COP 99.000",
-          "totalEntradas": "COP 2.079.000",
+          "totalEntradas": "COP 2.574.000",
           "valorServicio": "COP 14.850",
-          "totalServicio": "COP 311.850",
+          "totalServicio": "COP 386.100",
           "isCortesia": false
         },
         {
@@ -302,11 +302,11 @@
           "referencia": "VIP 4 LANZ",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "29",
+          "cantidad": "31",
           "valorEntrada": "COP 79.000",
-          "totalEntradas": "COP 2.291.000",
+          "totalEntradas": "COP 2.449.000",
           "valorServicio": "COP 11.850",
-          "totalServicio": "COP 343.650",
+          "totalServicio": "COP 367.350",
           "isCortesia": false
         },
         {
@@ -367,11 +367,11 @@
           "referencia": "VIP 5 LANZ",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "40",
+          "cantidad": "42",
           "valorEntrada": "COP 49.000",
-          "totalEntradas": "COP 1.960.000",
+          "totalEntradas": "COP 2.058.000",
           "valorServicio": "COP 7.350",
-          "totalServicio": "COP 294.000",
+          "totalServicio": "COP 308.700",
           "isCortesia": false
         },
         {
@@ -430,15 +430,15 @@
         },
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 6.876.150"
+          "totalStr": "COP 7.397.400"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 26.287.800"
+          "totalStr": "COP 30.132.500"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
-          "totalStr": "COP 10.979.400"
+          "totalStr": "COP 11.500.650"
         },
         {
           "metodo": "Pago por datáfono (68)",
@@ -459,12 +459,12 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "531",
-          "recaudoEntradas": "COP 82.305.000",
-          "recaudoServicio": "COP 12.345.750",
+          "vendidas": "527",
+          "recaudoEntradas": "COP 81.685.000",
+          "recaudoServicio": "COP 12.252.750",
           "cortesias": 0,
-          "boletosPagados": 531,
-          "totalBoletos": 531
+          "boletosPagados": 527,
+          "totalBoletos": 527
         },
         {
           "localidad": "PREFERENCIAL 1",
@@ -495,12 +495,12 @@
         },
         {
           "localidad": "PREFERENCIAL 4",
-          "vendidas": "97",
-          "recaudoEntradas": "COP 9.700.000",
-          "recaudoServicio": "COP 1.455.000",
+          "vendidas": "95",
+          "recaudoEntradas": "COP 9.500.000",
+          "recaudoServicio": "COP 1.425.000",
           "cortesias": 0,
-          "boletosPagados": 97,
-          "totalBoletos": 97
+          "boletosPagados": 95,
+          "totalBoletos": 95
         },
         {
           "localidad": "PREFERENCIAL 5",
@@ -513,12 +513,12 @@
         },
         {
           "localidad": "VIP 1",
-          "vendidas": "201",
-          "recaudoEntradas": "COP 26.130.000",
-          "recaudoServicio": "COP 3.919.500",
+          "vendidas": "200",
+          "recaudoEntradas": "COP 26.000.000",
+          "recaudoServicio": "COP 3.900.000",
           "cortesias": 0,
-          "boletosPagados": 201,
-          "totalBoletos": 201
+          "boletosPagados": 200,
+          "totalBoletos": 200
         },
         {
           "localidad": "VIP 2",
@@ -531,12 +531,12 @@
         },
         {
           "localidad": "VIP 3",
-          "vendidas": "90",
-          "recaudoEntradas": "COP 11.700.000",
-          "recaudoServicio": "COP 1.755.000",
+          "vendidas": "84",
+          "recaudoEntradas": "COP 10.920.000",
+          "recaudoServicio": "COP 1.638.000",
           "cortesias": 0,
-          "boletosPagados": 90,
-          "totalBoletos": 90
+          "boletosPagados": 84,
+          "totalBoletos": 84
         },
         {
           "localidad": "VIP 4",
@@ -549,12 +549,12 @@
         },
         {
           "localidad": "VIP 5",
-          "vendidas": "214",
-          "recaudoEntradas": "COP 27.820.000",
-          "recaudoServicio": "COP 4.173.000",
+          "vendidas": "206",
+          "recaudoEntradas": "COP 26.780.000",
+          "recaudoServicio": "COP 4.017.000",
           "cortesias": 0,
-          "boletosPagados": 214,
-          "totalBoletos": 214
+          "boletosPagados": 206,
+          "totalBoletos": 206
         }
       ],
       "detalleCanales": [
@@ -564,11 +564,11 @@
           "referencia": "PLATEA",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "485",
+          "cantidad": "481",
           "valorEntrada": "COP 155.000",
-          "totalEntradas": "COP 75.175.000",
+          "totalEntradas": "COP 74.555.000",
           "valorServicio": "COP 23.250",
-          "totalServicio": "COP 11.276.250",
+          "totalServicio": "COP 11.183.250",
           "isCortesia": false
         },
         {
@@ -668,11 +668,11 @@
           "referencia": "PREFERENCIAL 4",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "97",
+          "cantidad": "95",
           "valorEntrada": "COP 100.000",
-          "totalEntradas": "COP 9.700.000",
+          "totalEntradas": "COP 9.500.000",
           "valorServicio": "COP 15.000",
-          "totalServicio": "COP 1.455.000",
+          "totalServicio": "COP 1.425.000",
           "isCortesia": false
         },
         {
@@ -720,11 +720,11 @@
           "referencia": "VIP 1",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "201",
+          "cantidad": "200",
           "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 26.130.000",
+          "totalEntradas": "COP 26.000.000",
           "valorServicio": "COP 19.500",
-          "totalServicio": "COP 3.919.500",
+          "totalServicio": "COP 3.900.000",
           "isCortesia": false
         },
         {
@@ -772,43 +772,17 @@
           "referencia": "VIP 3",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "77",
+          "cantidad": "75",
           "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 10.010.000",
+          "totalEntradas": "COP 9.750.000",
           "valorServicio": "COP 19.500",
-          "totalServicio": "COP 1.501.500",
+          "totalServicio": "COP 1.462.500",
           "isCortesia": false
         },
         {
           "localidad": "VIP 3",
           "etapa": "FULL",
           "referencia": "VIP 3",
-          "canal": "Punto de venta",
-          "cupon": "N/A",
-          "cantidad": "13",
-          "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 1.690.000",
-          "valorServicio": "COP 19.500",
-          "totalServicio": "COP 253.500",
-          "isCortesia": false
-        },
-        {
-          "localidad": "VIP 4",
-          "etapa": "FULL",
-          "referencia": "VIP 4",
-          "canal": "Sitio web",
-          "cupon": "N/A",
-          "cantidad": "61",
-          "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 7.930.000",
-          "valorServicio": "COP 19.500",
-          "totalServicio": "COP 1.189.500",
-          "isCortesia": false
-        },
-        {
-          "localidad": "VIP 4",
-          "etapa": "FULL",
-          "referencia": "VIP 4",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "9",
@@ -819,16 +793,42 @@
           "isCortesia": false
         },
         {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "56",
+          "valorEntrada": "COP 130.000",
+          "totalEntradas": "COP 7.280.000",
+          "valorServicio": "COP 19.500",
+          "totalServicio": "COP 1.092.000",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "14",
+          "valorEntrada": "COP 130.000",
+          "totalEntradas": "COP 1.820.000",
+          "valorServicio": "COP 19.500",
+          "totalServicio": "COP 273.000",
+          "isCortesia": false
+        },
+        {
           "localidad": "VIP 5",
           "etapa": "FULL",
           "referencia": "VIP 5",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "212",
+          "cantidad": "204",
           "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 27.560.000",
+          "totalEntradas": "COP 26.520.000",
           "valorServicio": "COP 19.500",
-          "totalServicio": "COP 4.134.000",
+          "totalServicio": "COP 3.978.000",
           "isCortesia": false
         },
         {
@@ -861,15 +861,15 @@
         },
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 54.859.500"
+          "totalStr": "COP 56.373.500"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 164.672.250"
+          "totalStr": "COP 166.972.750"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
-          "totalStr": "COP 63.060.000"
+          "totalStr": "COP 65.139.500"
         },
         {
           "metodo": "Pago por datáfono (68)",
@@ -894,12 +894,12 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "323",
-          "recaudoEntradas": "COP 48.039.000",
-          "recaudoServicio": "COP 8.647.020",
+          "vendidas": "325",
+          "recaudoEntradas": "COP 48.399.000",
+          "recaudoServicio": "COP 8.711.820",
           "cortesias": 0,
-          "boletosPagados": 323,
-          "totalBoletos": 323
+          "boletosPagados": 325,
+          "totalBoletos": 325
         },
         {
           "localidad": "PREFERENCIAL 1",
@@ -912,21 +912,21 @@
         },
         {
           "localidad": "PREFERENCIAL 2",
-          "vendidas": "9",
-          "recaudoEntradas": "COP 900.000",
-          "recaudoServicio": "COP 162.000",
+          "vendidas": "11",
+          "recaudoEntradas": "COP 1.170.000",
+          "recaudoServicio": "COP 210.600",
           "cortesias": 0,
-          "boletosPagados": 9,
-          "totalBoletos": 9
+          "boletosPagados": 11,
+          "totalBoletos": 11
         },
         {
           "localidad": "PREFERENCIAL 3",
-          "vendidas": "44",
-          "recaudoEntradas": "COP 5.055.000",
-          "recaudoServicio": "COP 909.900",
+          "vendidas": "49",
+          "recaudoEntradas": "COP 5.730.000",
+          "recaudoServicio": "COP 1.031.400",
           "cortesias": 0,
-          "boletosPagados": 44,
-          "totalBoletos": 44
+          "boletosPagados": 49,
+          "totalBoletos": 49
         },
         {
           "localidad": "PREFERENCIAL 4",
@@ -939,30 +939,30 @@
         },
         {
           "localidad": "PREFERENCIAL 5",
-          "vendidas": "38",
-          "recaudoEntradas": "COP 3.480.000",
-          "recaudoServicio": "COP 626.400",
+          "vendidas": "39",
+          "recaudoEntradas": "COP 3.590.000",
+          "recaudoServicio": "COP 646.200",
           "cortesias": 0,
-          "boletosPagados": 38,
-          "totalBoletos": 38
+          "boletosPagados": 39,
+          "totalBoletos": 39
         },
         {
           "localidad": "VIP 1",
-          "vendidas": "32",
-          "recaudoEntradas": "COP 3.880.000",
-          "recaudoServicio": "COP 698.400",
+          "vendidas": "37",
+          "recaudoEntradas": "COP 4.555.000",
+          "recaudoServicio": "COP 819.900",
           "cortesias": 0,
-          "boletosPagados": 32,
-          "totalBoletos": 32
+          "boletosPagados": 37,
+          "totalBoletos": 37
         },
         {
           "localidad": "VIP 2",
-          "vendidas": "128",
-          "recaudoEntradas": "COP 16.444.000",
-          "recaudoServicio": "COP 2.959.920",
+          "vendidas": "137",
+          "recaudoEntradas": "COP 17.857.000",
+          "recaudoServicio": "COP 3.214.260",
           "cortesias": 0,
-          "boletosPagados": 128,
-          "totalBoletos": 128
+          "boletosPagados": 137,
+          "totalBoletos": 137
         },
         {
           "localidad": "VIP 3",
@@ -975,21 +975,21 @@
         },
         {
           "localidad": "VIP 4",
-          "vendidas": "61",
-          "recaudoEntradas": "COP 7.406.000",
-          "recaudoServicio": "COP 1.333.080",
+          "vendidas": "65",
+          "recaudoEntradas": "COP 8.034.000",
+          "recaudoServicio": "COP 1.446.120",
           "cortesias": 0,
-          "boletosPagados": 61,
-          "totalBoletos": 61
+          "boletosPagados": 65,
+          "totalBoletos": 65
         },
         {
           "localidad": "VIP 5",
-          "vendidas": "43",
-          "recaudoEntradas": "COP 4.455.000",
-          "recaudoServicio": "COP 801.900",
+          "vendidas": "49",
+          "recaudoEntradas": "COP 5.265.000",
+          "recaudoServicio": "COP 947.700",
           "cortesias": 0,
-          "boletosPagados": 43,
-          "totalBoletos": 43
+          "boletosPagados": 49,
+          "totalBoletos": 49
         }
       ],
       "detalleCanales": [
@@ -1077,11 +1077,11 @@
           "referencia": "PLATEA FULL",
           "canal": "Sitio web",
           "cupon": "SELECTA10(10.00000%)",
-          "cantidad": "0",
+          "cantidad": "2",
           "valorEntrada": "COP 180.000",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 360.000",
           "valorServicio": "COP 32.400",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 64.800",
           "isCortesia": false
         },
         {
@@ -1337,11 +1337,11 @@
           "referencia": "PREFERENCIAL 2 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "2",
+          "cantidad": "4",
           "valorEntrada": "COP 135.000",
-          "totalEntradas": "COP 270.000",
+          "totalEntradas": "COP 540.000",
           "valorServicio": "COP 24.300",
-          "totalServicio": "COP 48.600",
+          "totalServicio": "COP 97.200",
           "isCortesia": false
         },
         {
@@ -1415,11 +1415,11 @@
           "referencia": "PREFERENCIAL 3 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "15",
+          "cantidad": "20",
           "valorEntrada": "COP 135.000",
-          "totalEntradas": "COP 2.025.000",
+          "totalEntradas": "COP 2.700.000",
           "valorServicio": "COP 24.300",
-          "totalServicio": "COP 364.500",
+          "totalServicio": "COP 486.000",
           "isCortesia": false
         },
         {
@@ -1649,11 +1649,11 @@
           "referencia": "PREFERENCIAL 5 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "12",
+          "cantidad": "13",
           "valorEntrada": "COP 110.000",
-          "totalEntradas": "COP 1.320.000",
+          "totalEntradas": "COP 1.430.000",
           "valorServicio": "COP 19.800",
-          "totalServicio": "COP 237.600",
+          "totalServicio": "COP 257.400",
           "isCortesia": false
         },
         {
@@ -1753,11 +1753,11 @@
           "referencia": "VIP 1 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "16",
+          "cantidad": "21",
           "valorEntrada": "COP 135.000",
-          "totalEntradas": "COP 2.160.000",
+          "totalEntradas": "COP 2.835.000",
           "valorServicio": "COP 24.300",
-          "totalServicio": "COP 388.800",
+          "totalServicio": "COP 510.300",
           "isCortesia": false
         },
         {
@@ -1831,11 +1831,11 @@
           "referencia": "VIP 2 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "42",
+          "cantidad": "51",
           "valorEntrada": "COP 157.000",
-          "totalEntradas": "COP 6.594.000",
+          "totalEntradas": "COP 8.007.000",
           "valorServicio": "COP 28.260",
-          "totalServicio": "COP 1.186.920",
+          "totalServicio": "COP 1.441.260",
           "isCortesia": false
         },
         {
@@ -2052,11 +2052,11 @@
           "referencia": "VIP 4 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "6",
+          "cantidad": "10",
           "valorEntrada": "COP 157.000",
-          "totalEntradas": "COP 942.000",
+          "totalEntradas": "COP 1.570.000",
           "valorServicio": "COP 28.260",
-          "totalServicio": "COP 169.560",
+          "totalServicio": "COP 282.600",
           "isCortesia": false
         },
         {
@@ -2182,11 +2182,11 @@
           "referencia": "VIP 5 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "9",
+          "cantidad": "15",
           "valorEntrada": "COP 135.000",
-          "totalEntradas": "COP 1.215.000",
+          "totalEntradas": "COP 2.025.000",
           "valorServicio": "COP 24.300",
-          "totalServicio": "COP 218.700",
+          "totalServicio": "COP 364.500",
           "isCortesia": false
         },
         {
@@ -2249,15 +2249,15 @@
         },
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 21.914.640"
+          "totalStr": "COP 22.591.800"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 66.132.540"
+          "totalStr": "COP 69.621.000"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
-          "totalStr": "COP 20.756.200"
+          "totalStr": "COP 22.532.960"
         },
         {
           "metodo": "Pago por datáfono (68)",
@@ -2311,57 +2311,57 @@
         },
         {
           "localidad": "PREFERENCIAL 2",
-          "vendidas": "22",
-          "recaudoEntradas": "COP 2.760.000",
-          "recaudoServicio": "COP 690.000",
+          "vendidas": "26",
+          "recaudoEntradas": "COP 3.280.000",
+          "recaudoServicio": "COP 820.000",
           "cortesias": 0,
-          "boletosPagados": 22,
-          "totalBoletos": 22
+          "boletosPagados": 26,
+          "totalBoletos": 26
         },
         {
           "localidad": "PREFERENCIAL 3",
-          "vendidas": "69",
-          "recaudoEntradas": "COP 7.509.000",
-          "recaudoServicio": "COP 1.877.250",
+          "vendidas": "75",
+          "recaudoEntradas": "COP 8.289.000",
+          "recaudoServicio": "COP 2.072.250",
           "cortesias": 0,
-          "boletosPagados": 69,
-          "totalBoletos": 69
+          "boletosPagados": 75,
+          "totalBoletos": 75
         },
         {
           "localidad": "PREFERENCIAL 4",
-          "vendidas": "21",
-          "recaudoEntradas": "COP 2.480.000",
-          "recaudoServicio": "COP 620.000",
+          "vendidas": "32",
+          "recaudoEntradas": "COP 3.910.000",
+          "recaudoServicio": "COP 977.500",
           "cortesias": 0,
-          "boletosPagados": 21,
-          "totalBoletos": 21
+          "boletosPagados": 32,
+          "totalBoletos": 32
         },
         {
           "localidad": "PREFERENCIAL 5",
-          "vendidas": "39",
-          "recaudoEntradas": "COP 3.780.000",
-          "recaudoServicio": "COP 945.000",
+          "vendidas": "45",
+          "recaudoEntradas": "COP 4.380.000",
+          "recaudoServicio": "COP 1.095.000",
           "cortesias": 0,
-          "boletosPagados": 39,
-          "totalBoletos": 39
+          "boletosPagados": 45,
+          "totalBoletos": 45
         },
         {
           "localidad": "VIP 1",
-          "vendidas": "96",
-          "recaudoEntradas": "COP 11.815.000",
-          "recaudoServicio": "COP 2.953.750",
+          "vendidas": "123",
+          "recaudoEntradas": "COP 15.433.000",
+          "recaudoServicio": "COP 3.858.250",
           "cortesias": 0,
-          "boletosPagados": 96,
-          "totalBoletos": 96
+          "boletosPagados": 123,
+          "totalBoletos": 123
         },
         {
           "localidad": "VIP 2",
-          "vendidas": "206",
-          "recaudoEntradas": "COP 29.405.000",
-          "recaudoServicio": "COP 7.351.250",
+          "vendidas": "209",
+          "recaudoEntradas": "COP 29.876.000",
+          "recaudoServicio": "COP 7.469.000",
           "cortesias": 0,
-          "boletosPagados": 206,
-          "totalBoletos": 206
+          "boletosPagados": 209,
+          "totalBoletos": 209
         },
         {
           "localidad": "VIP 3",
@@ -2383,12 +2383,12 @@
         },
         {
           "localidad": "VIP 5",
-          "vendidas": "110",
-          "recaudoEntradas": "COP 13.255.000",
-          "recaudoServicio": "COP 3.313.750",
+          "vendidas": "125",
+          "recaudoEntradas": "COP 15.280.000",
+          "recaudoServicio": "COP 3.820.000",
           "cortesias": 0,
-          "boletosPagados": 110,
-          "totalBoletos": 110
+          "boletosPagados": 125,
+          "totalBoletos": 125
         }
       ],
       "detalleCanales": [
@@ -2467,58 +2467,6 @@
           "valorEntrada": "COP 75.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 18.750",
-          "totalServicio": "COP 0",
-          "isCortesia": false
-        },
-        {
-          "localidad": "PLATEA",
-          "etapa": "PREVENTA",
-          "referencia": "PLATEA PRE",
-          "canal": "Sitio web",
-          "cupon": "N/A",
-          "cantidad": "73",
-          "valorEntrada": "COP 125.000",
-          "totalEntradas": "COP 9.125.000",
-          "valorServicio": "COP 31.250",
-          "totalServicio": "COP 2.281.250",
-          "isCortesia": false
-        },
-        {
-          "localidad": "PLATEA",
-          "etapa": "PREVENTA",
-          "referencia": "PLATEA PRE",
-          "canal": "Sitio web",
-          "cupon": "PCD(25.00000%)",
-          "cantidad": "0",
-          "valorEntrada": "COP 93.750",
-          "totalEntradas": "COP 0",
-          "valorServicio": "COP 23.438",
-          "totalServicio": "COP 0",
-          "isCortesia": false
-        },
-        {
-          "localidad": "PLATEA",
-          "etapa": "PREVENTA",
-          "referencia": "PLATEA PRE",
-          "canal": "Punto de venta",
-          "cupon": "N/A",
-          "cantidad": "3",
-          "valorEntrada": "COP 125.000",
-          "totalEntradas": "COP 375.000",
-          "valorServicio": "COP 31.250",
-          "totalServicio": "COP 93.750",
-          "isCortesia": false
-        },
-        {
-          "localidad": "PLATEA",
-          "etapa": "PREVENTA",
-          "referencia": "PLATEA PRE",
-          "canal": "Punto de venta",
-          "cupon": "PCD(25.00000%)",
-          "cantidad": "0",
-          "valorEntrada": "COP 93.750",
-          "totalEntradas": "COP 0",
-          "valorServicio": "COP 23.438",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -2792,6 +2740,58 @@
           "valorEntrada": "COP 141.300",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 35.325",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "71",
+          "valorEntrada": "COP 125.000",
+          "totalEntradas": "COP 8.875.000",
+          "valorServicio": "COP 31.250",
+          "totalServicio": "COP 2.218.750",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA PRE",
+          "canal": "Sitio web",
+          "cupon": "PCD(25.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 93.750",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 23.438",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "5",
+          "valorEntrada": "COP 125.000",
+          "totalEntradas": "COP 625.000",
+          "valorServicio": "COP 31.250",
+          "totalServicio": "COP 156.250",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA PRE",
+          "canal": "Punto de venta",
+          "cupon": "PCD(25.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 93.750",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 23.438",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -3555,11 +3555,11 @@
           "referencia": "PREFERENCIAL 2 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "18",
+          "cantidad": "22",
           "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 2.340.000",
+          "totalEntradas": "COP 2.860.000",
           "valorServicio": "COP 32.500",
-          "totalServicio": "COP 585.000",
+          "totalServicio": "COP 715.000",
           "isCortesia": false
         },
         {
@@ -4049,11 +4049,11 @@
           "referencia": "PREFERENCIAL 3 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "21",
+          "cantidad": "27",
           "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 2.730.000",
+          "totalEntradas": "COP 3.510.000",
           "valorServicio": "COP 32.500",
-          "totalServicio": "COP 682.500",
+          "totalServicio": "COP 877.500",
           "isCortesia": false
         },
         {
@@ -4543,11 +4543,11 @@
           "referencia": "PREFERENCIAL 4 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "11",
+          "cantidad": "22",
           "valorEntrada": "COP 130.000",
-          "totalEntradas": "COP 1.430.000",
+          "totalEntradas": "COP 2.860.000",
           "valorServicio": "COP 32.500",
-          "totalServicio": "COP 357.500",
+          "totalServicio": "COP 715.000",
           "isCortesia": false
         },
         {
@@ -5037,11 +5037,11 @@
           "referencia": "PREFERENCIAL 5 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "27",
+          "cantidad": "33",
           "valorEntrada": "COP 100.000",
-          "totalEntradas": "COP 2.700.000",
+          "totalEntradas": "COP 3.300.000",
           "valorServicio": "COP 25.000",
-          "totalServicio": "COP 675.000",
+          "totalServicio": "COP 825.000",
           "isCortesia": false
         },
         {
@@ -5531,11 +5531,11 @@
           "referencia": "VIP 1 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "55",
+          "cantidad": "80",
           "valorEntrada": "COP 135.000",
-          "totalEntradas": "COP 7.425.000",
+          "totalEntradas": "COP 10.800.000",
           "valorServicio": "COP 33.750",
-          "totalServicio": "COP 1.856.250",
+          "totalServicio": "COP 2.700.000",
           "isCortesia": false
         },
         {
@@ -5570,11 +5570,11 @@
           "referencia": "VIP 1 FULL",
           "canal": "Sitio web",
           "cupon": "IMBANACO10(10.00000%)",
-          "cantidad": "0",
+          "cantidad": "2",
           "valorEntrada": "COP 121.500",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 243.000",
           "valorServicio": "COP 30.375",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 60.750",
           "isCortesia": false
         },
         {
@@ -6025,11 +6025,11 @@
           "referencia": "VIP 2 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "135",
+          "cantidad": "138",
           "valorEntrada": "COP 157.000",
-          "totalEntradas": "COP 21.195.000",
+          "totalEntradas": "COP 21.666.000",
           "valorServicio": "COP 39.250",
-          "totalServicio": "COP 5.298.750",
+          "totalServicio": "COP 5.416.500",
           "isCortesia": false
         },
         {
@@ -7507,11 +7507,11 @@
           "referencia": "VIP 5 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "50",
+          "cantidad": "65",
           "valorEntrada": "COP 135.000",
-          "totalEntradas": "COP 6.750.000",
+          "totalEntradas": "COP 8.775.000",
           "valorServicio": "COP 33.750",
-          "totalServicio": "COP 1.687.500",
+          "totalServicio": "COP 2.193.750",
           "isCortesia": false
         },
         {
@@ -7752,15 +7752,15 @@
         },
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 39.838.000"
+          "totalStr": "COP 40.987.750"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 119.247.750"
+          "totalStr": "COP 128.030.250"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
-          "totalStr": "COP 47.196.750"
+          "totalStr": "COP 49.300.500"
         },
         {
           "metodo": "Pago por datáfono (68)",
@@ -7817,12 +7817,12 @@
         },
         {
           "localidad": "PREFERENCIAL 3",
-          "vendidas": "11",
-          "recaudoEntradas": "COP 1.375.000",
-          "recaudoServicio": "COP 206.250",
+          "vendidas": "14",
+          "recaudoEntradas": "COP 1.825.000",
+          "recaudoServicio": "COP 273.750",
           "cortesias": 0,
-          "boletosPagados": 11,
-          "totalBoletos": 11
+          "boletosPagados": 14,
+          "totalBoletos": 14
         },
         {
           "localidad": "PREFERENCIAL 4",
@@ -7844,12 +7844,12 @@
         },
         {
           "localidad": "VIP 1",
-          "vendidas": "4",
-          "recaudoEntradas": "COP 564.000",
-          "recaudoServicio": "COP 84.600",
+          "vendidas": "7",
+          "recaudoEntradas": "COP 1.035.000",
+          "recaudoServicio": "COP 155.250",
           "cortesias": 0,
-          "boletosPagados": 4,
-          "totalBoletos": 4
+          "boletosPagados": 7,
+          "totalBoletos": 7
         },
         {
           "localidad": "VIP 2",
@@ -7862,12 +7862,12 @@
         },
         {
           "localidad": "VIP 3",
-          "vendidas": "43",
-          "recaudoEntradas": "COP 6.292.200",
-          "recaudoServicio": "COP 943.830",
+          "vendidas": "51",
+          "recaudoEntradas": "COP 7.764.800",
+          "recaudoServicio": "COP 1.164.720",
           "cortesias": 0,
-          "boletosPagados": 43,
-          "totalBoletos": 43
+          "boletosPagados": 51,
+          "totalBoletos": 51
         },
         {
           "localidad": "VIP 4",
@@ -7959,6 +7959,32 @@
           "etapa": "FULL",
           "referencia": "GOLD FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 225.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "EXPERIENCIA GOLD",
+          "etapa": "FULL",
+          "referencia": "GOLD FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 225.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "EXPERIENCIA GOLD",
+          "etapa": "FULL",
+          "referencia": "GOLD FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 225.000",
@@ -7984,12 +8010,51 @@
           "localidad": "EXPERIENCIA GOLD",
           "etapa": "FULL",
           "referencia": "GOLD FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 225.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "EXPERIENCIA GOLD",
+          "etapa": "FULL",
+          "referencia": "GOLD FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 250.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 250.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "EXPERIENCIA GOLD",
+          "etapa": "FULL",
+          "referencia": "GOLD FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 225.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "EXPERIENCIA GOLD",
+          "etapa": "FULL",
+          "referencia": "GOLD FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 225.000",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -8012,6 +8077,19 @@
           "referencia": "GOLD FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 225.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "EXPERIENCIA GOLD",
+          "etapa": "FULL",
+          "referencia": "GOLD FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 225.000",
           "totalEntradas": "COP 0",
@@ -8141,6 +8219,32 @@
           "etapa": "FULL",
           "referencia": "PLATEA FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 33.750",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 33.750",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 225.000",
@@ -8166,12 +8270,51 @@
           "localidad": "PLATEA",
           "etapa": "FULL",
           "referencia": "PLATEA FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 33.750",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 250.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 37.500",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 33.750",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 33.750",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -8194,6 +8337,19 @@
           "referencia": "PLATEA FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 225.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 33.750",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 225.000",
           "totalEntradas": "COP 0",
@@ -8323,6 +8479,32 @@
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 1 FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 108.000",
@@ -8348,12 +8530,51 @@
           "localidad": "PREFERENCIAL 1",
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 120.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 18.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -8376,6 +8597,19 @@
           "referencia": "PREFERENCIAL 1 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 108.000",
           "totalEntradas": "COP 0",
@@ -8505,6 +8739,32 @@
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 2 FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 135.000",
@@ -8530,12 +8790,51 @@
           "localidad": "PREFERENCIAL 2",
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 150.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 22.500",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -8558,6 +8857,19 @@
           "referencia": "PREFERENCIAL 2 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 135.000",
           "totalEntradas": "COP 0",
@@ -8675,10 +8987,36 @@
           "referencia": "PREFERENCIAL 3 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "0",
+          "cantidad": "3",
           "valorEntrada": "COP 150.000",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 450.000",
           "valorServicio": "COP 22.500",
+          "totalServicio": "COP 67.500",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -8701,6 +9039,19 @@
           "referencia": "PREFERENCIAL 3 FULL",
           "canal": "Sitio web",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 135.000",
           "totalEntradas": "COP 0",
@@ -8726,6 +9077,32 @@
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 3 FULL",
           "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Punto de venta",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 135.000",
@@ -8740,6 +9117,19 @@
           "referencia": "PREFERENCIAL 3 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 135.000",
           "totalEntradas": "COP 0",
@@ -8869,6 +9259,32 @@
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 4 FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 135.000",
@@ -8894,12 +9310,51 @@
           "localidad": "PREFERENCIAL 4",
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 150.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 22.500",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -8922,6 +9377,19 @@
           "referencia": "PREFERENCIAL 4 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 135.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.250",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 135.000",
           "totalEntradas": "COP 0",
@@ -9051,6 +9519,32 @@
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 5 FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 108.000",
@@ -9076,12 +9570,51 @@
           "localidad": "PREFERENCIAL 5",
           "etapa": "FULL",
           "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 120.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 18.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -9104,6 +9637,19 @@
           "referencia": "PREFERENCIAL 5 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 108.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 16.200",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 108.000",
           "totalEntradas": "COP 0",
@@ -9221,11 +9767,37 @@
           "referencia": "VIP 1 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "2",
+          "cantidad": "5",
           "valorEntrada": "COP 157.000",
-          "totalEntradas": "COP 314.000",
+          "totalEntradas": "COP 785.000",
           "valorServicio": "COP 23.550",
-          "totalServicio": "COP 47.100",
+          "totalServicio": "COP 117.750",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
           "isCortesia": false
         },
         {
@@ -9247,6 +9819,19 @@
           "referencia": "VIP 1 FULL",
           "canal": "Sitio web",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 141.300",
           "totalEntradas": "COP 0",
@@ -9272,6 +9857,32 @@
           "etapa": "FULL",
           "referencia": "VIP 1 FULL",
           "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Punto de venta",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 141.300",
@@ -9286,6 +9897,19 @@
           "referencia": "VIP 1 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 141.300",
           "totalEntradas": "COP 0",
@@ -9415,6 +10039,32 @@
           "etapa": "FULL",
           "referencia": "VIP 2 FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
@@ -9440,12 +10090,51 @@
           "localidad": "VIP 2",
           "etapa": "FULL",
           "referencia": "VIP 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 199.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 29.850",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -9468,6 +10157,19 @@
           "referencia": "VIP 2 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
           "totalEntradas": "COP 0",
@@ -9585,11 +10287,11 @@
           "referencia": "VIP 3 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "2",
+          "cantidad": "4",
           "valorEntrada": "COP 199.000",
-          "totalEntradas": "COP 398.000",
+          "totalEntradas": "COP 796.000",
           "valorServicio": "COP 29.850",
-          "totalServicio": "COP 59.700",
+          "totalServicio": "COP 119.400",
           "isCortesia": false
         },
         {
@@ -9597,7 +10299,7 @@
           "etapa": "FULL",
           "referencia": "VIP 3 FULL",
           "canal": "Sitio web",
-          "cupon": "FLASHBACK(10.00000%)",
+          "cupon": "BUGAPLAZA(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
           "totalEntradas": "COP 0",
@@ -9610,7 +10312,46 @@
           "etapa": "FULL",
           "referencia": "VIP 3 FULL",
           "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "FLASHBACK(10.00000%)",
+          "cantidad": "6",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 1.074.600",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 161.190",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Sitio web",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
           "totalEntradas": "COP 0",
@@ -9636,6 +10377,32 @@
           "etapa": "FULL",
           "referencia": "VIP 3 FULL",
           "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Punto de venta",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
@@ -9650,6 +10417,19 @@
           "referencia": "VIP 3 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
           "totalEntradas": "COP 0",
@@ -9779,6 +10559,32 @@
           "etapa": "FULL",
           "referencia": "VIP 4 FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
@@ -9804,12 +10610,51 @@
           "localidad": "VIP 4",
           "etapa": "FULL",
           "referencia": "VIP 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 199.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 29.850",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -9832,6 +10677,19 @@
           "referencia": "VIP 4 FULL",
           "canal": "Punto de venta",
           "cupon": "KARENSPIZZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 179.100",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 26.865",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 179.100",
           "totalEntradas": "COP 0",
@@ -9974,6 +10832,32 @@
           "etapa": "FULL",
           "referencia": "VIP 5 FULL",
           "canal": "Sitio web",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Sitio web",
           "cupon": "FLASHBACK(10.00000%)",
           "cantidad": "0",
           "valorEntrada": "COP 141.300",
@@ -9999,12 +10883,51 @@
           "localidad": "VIP 5",
           "etapa": "FULL",
           "referencia": "VIP 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
           "canal": "Punto de venta",
           "cupon": "N/A",
           "cantidad": "0",
           "valorEntrada": "COP 157.000",
           "totalEntradas": "COP 0",
           "valorServicio": "COP 23.550",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "BUGAPLAZA(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "COLPENSIONES10(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
           "totalServicio": "COP 0",
           "isCortesia": false
         },
@@ -10033,6 +10956,19 @@
           "valorServicio": "COP 21.195",
           "totalServicio": "COP 0",
           "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "SANTIAGUINOS(10.00000%)",
+          "cantidad": "0",
+          "valorEntrada": "COP 141.300",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 21.195",
+          "totalServicio": "COP 0",
+          "isCortesia": false
         }
       ],
       "url": "https://dashboard.qrboletos.com/promoters/VWF1UDRqTTBucnRHN2UxbCtCdVE1dz09/events/Y2hvNmViWDNLZ21HTGl5SjdnZzFlUT09/shows/ckxYTWtMdDFNL1ltSE0wRzR0SlFvdz09/reports/sales/summary.aspx",
@@ -10051,15 +10987,15 @@
         },
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 4.378.100"
+          "totalStr": "COP 4.842.800"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 27.678.200"
+          "totalStr": "COP 29.469.640"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
-          "totalStr": "COP 6.267.030"
+          "totalStr": "COP 6.798.530"
         },
         {
           "metodo": "Pago por datáfono (68)",
@@ -10143,12 +11079,12 @@
         },
         {
           "localidad": "VIP 2",
-          "vendidas": "0",
-          "recaudoEntradas": "COP 0",
-          "recaudoServicio": "COP 0",
+          "vendidas": "5",
+          "recaudoEntradas": "COP 250.000",
+          "recaudoServicio": "COP 37.500",
           "cortesias": 0,
-          "boletosPagados": 0,
-          "totalBoletos": 0
+          "boletosPagados": 5,
+          "totalBoletos": 5
         },
         {
           "localidad": "VIP 3",
@@ -10640,11 +11576,11 @@
           "referencia": "VIP 2 PRE",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "0",
+          "cantidad": "5",
           "valorEntrada": "COP 50.000",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 250.000",
           "valorServicio": "COP 7.500",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 37.500",
           "isCortesia": false
         },
         {
@@ -10899,11 +11835,11 @@
       "recaudoMetodos": [
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 122.000"
+          "totalStr": "COP 186.500"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 122.000"
+          "totalStr": "COP 366.000"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
@@ -11142,7 +12078,7 @@
         },
         {
           "localidad": "PREFERENCIAL 4",
-          "etapa": "ÚNICA ETAPA",
+          "etapa": "��NICA ETAPA",
           "referencia": "PREFERENCIAL 4",
           "canal": "Punto de venta",
           "cupon": "N/A",
@@ -11335,12 +12271,12 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "142",
-          "recaudoEntradas": "COP 12.438.000",
-          "recaudoServicio": "COP 1.865.700",
+          "vendidas": "199",
+          "recaudoEntradas": "COP 17.511.000",
+          "recaudoServicio": "COP 2.626.650",
           "cortesias": 0,
-          "boletosPagados": 142,
-          "totalBoletos": 142
+          "boletosPagados": 199,
+          "totalBoletos": 199
         },
         {
           "localidad": "PREFERENCIAL 1",
@@ -11362,6 +12298,15 @@
         },
         {
           "localidad": "PREFERENCIAL 3",
+          "vendidas": "7",
+          "recaudoEntradas": "COP 413.000",
+          "recaudoServicio": "COP 61.950",
+          "cortesias": 0,
+          "boletosPagados": 7,
+          "totalBoletos": 7
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
           "vendidas": "1",
           "recaudoEntradas": "COP 59.000",
           "recaudoServicio": "COP 8.850",
@@ -11370,22 +12315,13 @@
           "totalBoletos": 1
         },
         {
-          "localidad": "PREFERENCIAL 4",
-          "vendidas": "0",
-          "recaudoEntradas": "COP 0",
-          "recaudoServicio": "COP 0",
-          "cortesias": 0,
-          "boletosPagados": 0,
-          "totalBoletos": 0
-        },
-        {
           "localidad": "PREFERENCIAL 5",
-          "vendidas": "0",
-          "recaudoEntradas": "COP 0",
-          "recaudoServicio": "COP 0",
+          "vendidas": "2",
+          "recaudoEntradas": "COP 98.000",
+          "recaudoServicio": "COP 14.700",
           "cortesias": 0,
-          "boletosPagados": 0,
-          "totalBoletos": 0
+          "boletosPagados": 2,
+          "totalBoletos": 2
         },
         {
           "localidad": "VIP 1",
@@ -11398,39 +12334,39 @@
         },
         {
           "localidad": "VIP 2",
-          "vendidas": "15",
-          "recaudoEntradas": "COP 1.035.000",
-          "recaudoServicio": "COP 155.250",
+          "vendidas": "34",
+          "recaudoEntradas": "COP 2.346.000",
+          "recaudoServicio": "COP 351.900",
           "cortesias": 0,
-          "boletosPagados": 15,
-          "totalBoletos": 15
+          "boletosPagados": 34,
+          "totalBoletos": 34
         },
         {
           "localidad": "VIP 3",
-          "vendidas": "24",
-          "recaudoEntradas": "COP 1.646.000",
-          "recaudoServicio": "COP 246.900",
+          "vendidas": "38",
+          "recaudoEntradas": "COP 2.612.000",
+          "recaudoServicio": "COP 391.800",
           "cortesias": 0,
-          "boletosPagados": 24,
-          "totalBoletos": 24
+          "boletosPagados": 38,
+          "totalBoletos": 38
         },
         {
           "localidad": "VIP 4",
-          "vendidas": "4",
-          "recaudoEntradas": "COP 276.000",
-          "recaudoServicio": "COP 41.400",
+          "vendidas": "10",
+          "recaudoEntradas": "COP 690.000",
+          "recaudoServicio": "COP 103.500",
           "cortesias": 0,
-          "boletosPagados": 4,
-          "totalBoletos": 4
+          "boletosPagados": 10,
+          "totalBoletos": 10
         },
         {
           "localidad": "VIP 5",
-          "vendidas": "7",
-          "recaudoEntradas": "COP 413.000",
-          "recaudoServicio": "COP 61.950",
+          "vendidas": "18",
+          "recaudoEntradas": "COP 1.062.000",
+          "recaudoServicio": "COP 159.300",
           "cortesias": 0,
-          "boletosPagados": 7,
-          "totalBoletos": 7
+          "boletosPagados": 18,
+          "totalBoletos": 18
         }
       ],
       "detalleCanales": [
@@ -11466,11 +12402,11 @@
           "referencia": "PLATEA FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "130",
+          "cantidad": "187",
           "valorEntrada": "COP 89.000",
-          "totalEntradas": "COP 11.570.000",
+          "totalEntradas": "COP 16.643.000",
           "valorServicio": "COP 13.350",
-          "totalServicio": "COP 1.735.500",
+          "totalServicio": "COP 2.496.450",
           "isCortesia": false
         },
         {
@@ -11622,11 +12558,11 @@
           "referencia": "PREFERENCIAL 3 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "1",
+          "cantidad": "7",
           "valorEntrada": "COP 59.000",
-          "totalEntradas": "COP 59.000",
+          "totalEntradas": "COP 413.000",
           "valorServicio": "COP 8.850",
-          "totalServicio": "COP 8.850",
+          "totalServicio": "COP 61.950",
           "isCortesia": false
         },
         {
@@ -11674,11 +12610,11 @@
           "referencia": "PREFERENCIAL 4 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "0",
+          "cantidad": "1",
           "valorEntrada": "COP 59.000",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 59.000",
           "valorServicio": "COP 8.850",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 8.850",
           "isCortesia": false
         },
         {
@@ -11726,11 +12662,11 @@
           "referencia": "PREFERENCIAL 5 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "0",
+          "cantidad": "2",
           "valorEntrada": "COP 49.000",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 98.000",
           "valorServicio": "COP 7.350",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 14.700",
           "isCortesia": false
         },
         {
@@ -11830,11 +12766,11 @@
           "referencia": "VIP 2 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "15",
+          "cantidad": "34",
           "valorEntrada": "COP 69.000",
-          "totalEntradas": "COP 1.035.000",
+          "totalEntradas": "COP 2.346.000",
           "valorServicio": "COP 10.350",
-          "totalServicio": "COP 155.250",
+          "totalServicio": "COP 351.900",
           "isCortesia": false
         },
         {
@@ -11882,11 +12818,11 @@
           "referencia": "VIP 3 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "23",
+          "cantidad": "37",
           "valorEntrada": "COP 69.000",
-          "totalEntradas": "COP 1.587.000",
+          "totalEntradas": "COP 2.553.000",
           "valorServicio": "COP 10.350",
-          "totalServicio": "COP 238.050",
+          "totalServicio": "COP 382.950",
           "isCortesia": false
         },
         {
@@ -11934,11 +12870,11 @@
           "referencia": "VIP 4 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "4",
+          "cantidad": "10",
           "valorEntrada": "COP 69.000",
-          "totalEntradas": "COP 276.000",
+          "totalEntradas": "COP 690.000",
           "valorServicio": "COP 10.350",
-          "totalServicio": "COP 41.400",
+          "totalServicio": "COP 103.500",
           "isCortesia": false
         },
         {
@@ -11986,11 +12922,11 @@
           "referencia": "VIP 5 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "7",
+          "cantidad": "18",
           "valorEntrada": "COP 59.000",
-          "totalEntradas": "COP 413.000",
+          "totalEntradas": "COP 1.062.000",
           "valorServicio": "COP 8.850",
-          "totalServicio": "COP 61.950",
+          "totalServicio": "COP 159.300",
           "isCortesia": false
         },
         {
@@ -12011,15 +12947,15 @@
       "recaudoMetodos": [
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 5.230.200"
+          "totalStr": "COP 7.275.900"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 9.222.250"
+          "totalStr": "COP 15.793.300"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
-          "totalStr": "COP 4.459.600"
+          "totalStr": "COP 6.483.450"
         }
       ],
       "entregaEmpresario": null
@@ -18461,12 +19397,12 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "380",
-          "recaudoEntradas": "COP 28.330.000",
-          "recaudoServicio": "COP 4.249.500",
+          "vendidas": "387",
+          "recaudoEntradas": "COP 28.890.000",
+          "recaudoServicio": "COP 4.333.500",
           "cortesias": 0,
-          "boletosPagados": 380,
-          "totalBoletos": 380
+          "boletosPagados": 387,
+          "totalBoletos": 387
         },
         {
           "localidad": "PREFERENCIAL 1",
@@ -18524,12 +19460,12 @@
         },
         {
           "localidad": "PREFERENCIAL 5",
-          "vendidas": "42",
-          "recaudoEntradas": "COP 1.395.000",
-          "recaudoServicio": "COP 209.250",
+          "vendidas": "43",
+          "recaudoEntradas": "COP 1.440.000",
+          "recaudoServicio": "COP 216.000",
           "cortesias": 0,
-          "boletosPagados": 42,
-          "totalBoletos": 42
+          "boletosPagados": 43,
+          "totalBoletos": 43
         },
         {
           "localidad": "VIP 1",
@@ -18542,12 +19478,12 @@
         },
         {
           "localidad": "VIP 2",
-          "vendidas": "80",
-          "recaudoEntradas": "COP 4.860.000",
-          "recaudoServicio": "COP 729.000",
+          "vendidas": "82",
+          "recaudoEntradas": "COP 5.000.000",
+          "recaudoServicio": "COP 750.000",
           "cortesias": 0,
-          "boletosPagados": 80,
-          "totalBoletos": 80
+          "boletosPagados": 82,
+          "totalBoletos": 82
         },
         {
           "localidad": "VIP 2 DUO",
@@ -18680,11 +19616,11 @@
           "referencia": "PLATEA FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "132",
+          "cantidad": "139",
           "valorEntrada": "COP 80.000",
-          "totalEntradas": "COP 10.560.000",
+          "totalEntradas": "COP 11.120.000",
           "valorServicio": "COP 12.000",
-          "totalServicio": "COP 1.584.000",
+          "totalServicio": "COP 1.668.000",
           "isCortesia": false
         },
         {
@@ -19252,11 +20188,11 @@
           "referencia": "PREFERENCIAL 5 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "10",
+          "cantidad": "11",
           "valorEntrada": "COP 45.000",
-          "totalEntradas": "COP 450.000",
+          "totalEntradas": "COP 495.000",
           "valorServicio": "COP 6.750",
-          "totalServicio": "COP 67.500",
+          "totalServicio": "COP 74.250",
           "isCortesia": false
         },
         {
@@ -19460,11 +20396,11 @@
           "referencia": "VIP 3 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "21",
+          "cantidad": "23",
           "valorEntrada": "COP 70.000",
-          "totalEntradas": "COP 1.470.000",
+          "totalEntradas": "COP 1.610.000",
           "valorServicio": "COP 10.500",
-          "totalServicio": "COP 220.500",
+          "totalServicio": "COP 241.500",
           "isCortesia": false
         },
         {
@@ -19857,7 +20793,7 @@
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 42.753.500"
+          "totalStr": "COP 43.638.250"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
@@ -19882,21 +20818,21 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "187",
-          "recaudoEntradas": "COP 9.620.000",
-          "recaudoServicio": "COP 1.443.000",
+          "vendidas": "193",
+          "recaudoEntradas": "COP 10.100.000",
+          "recaudoServicio": "COP 1.515.000",
           "cortesias": 0,
-          "boletosPagados": 187,
-          "totalBoletos": 187
+          "boletosPagados": 193,
+          "totalBoletos": 193
         },
         {
           "localidad": "PREFERENCIAL 1",
-          "vendidas": "5",
-          "recaudoEntradas": "COP 205.000",
-          "recaudoServicio": "COP 30.750",
+          "vendidas": "7",
+          "recaudoEntradas": "COP 295.000",
+          "recaudoServicio": "COP 44.250",
           "cortesias": 0,
-          "boletosPagados": 5,
-          "totalBoletos": 5
+          "boletosPagados": 7,
+          "totalBoletos": 7
         },
         {
           "localidad": "PREFERENCIAL 2",
@@ -19963,12 +20899,12 @@
         },
         {
           "localidad": "VIP 4",
-          "vendidas": "15",
-          "recaudoEntradas": "COP 730.000",
-          "recaudoServicio": "COP 109.500",
+          "vendidas": "17",
+          "recaudoEntradas": "COP 870.000",
+          "recaudoServicio": "COP 130.500",
           "cortesias": 0,
-          "boletosPagados": 15,
-          "totalBoletos": 15
+          "boletosPagados": 17,
+          "totalBoletos": 17
         },
         {
           "localidad": "VIP 5",
@@ -20078,11 +21014,11 @@
           "referencia": "PLATEA FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "28",
+          "cantidad": "34",
           "valorEntrada": "COP 80.000",
-          "totalEntradas": "COP 2.240.000",
+          "totalEntradas": "COP 2.720.000",
           "valorServicio": "COP 12.000",
-          "totalServicio": "COP 336.000",
+          "totalServicio": "COP 408.000",
           "isCortesia": false
         },
         {
@@ -20182,11 +21118,11 @@
           "referencia": "PREFERENCIAL 1 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "4",
+          "cantidad": "6",
           "valorEntrada": "COP 45.000",
-          "totalEntradas": "COP 180.000",
+          "totalEntradas": "COP 270.000",
           "valorServicio": "COP 6.750",
-          "totalServicio": "COP 27.000",
+          "totalServicio": "COP 40.500",
           "isCortesia": false
         },
         {
@@ -20962,11 +21898,11 @@
           "referencia": "VIP 4 FULL",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "5",
+          "cantidad": "7",
           "valorEntrada": "COP 70.000",
-          "totalEntradas": "COP 350.000",
+          "totalEntradas": "COP 490.000",
           "valorServicio": "COP 10.500",
-          "totalServicio": "COP 52.500",
+          "totalServicio": "COP 73.500",
           "isCortesia": false
         },
         {
@@ -21099,15 +22035,15 @@
         },
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 2.354.500"
+          "totalStr": "COP 2.545.500"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 14.854.000"
+          "totalStr": "COP 14.964.500"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",
-          "totalStr": "COP 2.475.250"
+          "totalStr": "COP 3.025.250"
         },
         {
           "metodo": "Pago por datáfono (68)",
@@ -21128,12 +22064,12 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "13",
-          "recaudoEntradas": "COP 2.682.500",
-          "recaudoServicio": "COP 325.500",
+          "vendidas": "25",
+          "recaudoEntradas": "COP 5.037.500",
+          "recaudoServicio": "COP 608.100",
           "cortesias": 0,
-          "boletosPagados": 13,
-          "totalBoletos": 13
+          "boletosPagados": 25,
+          "totalBoletos": 25
         },
         {
           "localidad": "PREFERENCIAL 1",
@@ -21191,21 +22127,21 @@
         },
         {
           "localidad": "VIP 2",
-          "vendidas": "0",
-          "recaudoEntradas": "COP 0",
-          "recaudoServicio": "COP 0",
+          "vendidas": "2",
+          "recaudoEntradas": "COP 244.000",
+          "recaudoServicio": "COP 37.500",
           "cortesias": 0,
-          "boletosPagados": 0,
-          "totalBoletos": 0
+          "boletosPagados": 2,
+          "totalBoletos": 2
         },
         {
           "localidad": "VIP 3",
-          "vendidas": "0",
-          "recaudoEntradas": "COP 0",
-          "recaudoServicio": "COP 0",
+          "vendidas": "9",
+          "recaudoEntradas": "COP 1.098.000",
+          "recaudoServicio": "COP 168.750",
           "cortesias": 0,
-          "boletosPagados": 0,
-          "totalBoletos": 0
+          "boletosPagados": 9,
+          "totalBoletos": 9
         },
         {
           "localidad": "VIP 4",
@@ -21218,12 +22154,12 @@
         },
         {
           "localidad": "VIP 5",
-          "vendidas": "0",
-          "recaudoEntradas": "COP 0",
-          "recaudoServicio": "COP 0",
+          "vendidas": "4",
+          "recaudoEntradas": "COP 450.000",
+          "recaudoServicio": "COP 54.000",
           "cortesias": 0,
-          "boletosPagados": 0,
-          "totalBoletos": 0
+          "boletosPagados": 4,
+          "totalBoletos": 4
         }
       ],
       "detalleCanales": [
@@ -21233,11 +22169,11 @@
           "referencia": "PLATEA LANZ",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "10",
+          "cantidad": "22",
           "valorEntrada": "COP 196.250",
-          "totalEntradas": "COP 1.962.500",
+          "totalEntradas": "COP 4.317.500",
           "valorServicio": "COP 23.550",
-          "totalServicio": "COP 235.500",
+          "totalServicio": "COP 518.100",
           "isCortesia": false
         },
         {
@@ -21779,11 +22715,11 @@
           "referencia": "VIP 2 LANZ",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "0",
+          "cantidad": "2",
           "valorEntrada": "COP 122.000",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 244.000",
           "valorServicio": "COP 18.750",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 37.500",
           "isCortesia": false
         },
         {
@@ -21857,11 +22793,11 @@
           "referencia": "VIP 3 LANZ",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "0",
+          "cantidad": "9",
           "valorEntrada": "COP 122.000",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 1.098.000",
           "valorServicio": "COP 18.750",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 168.750",
           "isCortesia": false
         },
         {
@@ -22013,11 +22949,11 @@
           "referencia": "VIP 5 LANZ",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "0",
+          "cantidad": "4",
           "valorEntrada": "COP 112.500",
-          "totalEntradas": "COP 0",
+          "totalEntradas": "COP 450.000",
           "valorServicio": "COP 13.500",
-          "totalServicio": "COP 0",
+          "totalServicio": "COP 54.000",
           "isCortesia": false
         },
         {
@@ -22090,11 +23026,1425 @@
       "recaudoMetodos": [
         {
           "metodo": "Openpay (Medio de pago sin identificar) (49)",
-          "totalStr": "COP 446.600"
+          "totalStr": "COP 1.758.700"
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 2.589.400"
+          "totalStr": "COP 5.783.650"
+        },
+        {
+          "metodo": "Openpay (Tarjeta de Crédito) (47)",
+          "totalStr": "COP 288.500"
+        }
+      ],
+      "entregaEmpresario": null
+    },
+    {
+      "meta": {
+        "evento": "MUJERES A LA PLANCHA 10 AÑOS",
+        "pulep": "No aplica",
+        "espectaculo": "28 NOVIEMBRE 2026 8:00PM PULEP:",
+        "sitio": "ARENA USC",
+        "fechaInicio": "Sábado 28 de Noviembre de 2026 a las 8:00 PM",
+        "fechaFin": "Sábado 28 de Noviembre de 2026 a las 11:00 PM"
+      },
+      "resumenLocalidades": [
+        {
+          "localidad": "PLATEA",
+          "vendidas": "60",
+          "recaudoEntradas": "COP 7.800.000",
+          "recaudoServicio": "COP 1.800.000",
+          "cortesias": 0,
+          "boletosPagados": 60,
+          "totalBoletos": 60
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "vendidas": "9",
+          "recaudoEntradas": "COP 675.000",
+          "recaudoServicio": "COP 180.000",
+          "cortesias": 0,
+          "boletosPagados": 9,
+          "totalBoletos": 9
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        },
+        {
+          "localidad": "VIP 1",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        },
+        {
+          "localidad": "VIP 2",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        },
+        {
+          "localidad": "VIP 3",
+          "vendidas": "4",
+          "recaudoEntradas": "COP 480.000",
+          "recaudoServicio": "COP 120.000",
+          "cortesias": 0,
+          "boletosPagados": 4,
+          "totalBoletos": 4
+        },
+        {
+          "localidad": "VIP 4",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        },
+        {
+          "localidad": "VIP 5",
+          "vendidas": "0",
+          "recaudoEntradas": "COP 0",
+          "recaudoServicio": "COP 0",
+          "cortesias": 0,
+          "boletosPagados": 0,
+          "totalBoletos": 0
+        }
+      ],
+      "detalleCanales": [
+        {
+          "localidad": "PLATEA",
+          "etapa": "PREVENTA",
+          "referencia": "PLATEA PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "60",
+          "valorEntrada": "COP 130.000",
+          "totalEntradas": "COP 7.800.000",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 1.800.000",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "PREVENTA",
+          "referencia": "PLATEA PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 130.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 42.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 42.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 1 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 1 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 2 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 2 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 3 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "9",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 675.000",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 180.000",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 3 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 4 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 4 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 5 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "PREVENTA",
+          "referencia": "PREFERENCIAL 5 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 75.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 95.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 20.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 1 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 1 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 2 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 2 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 3 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "4",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 480.000",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 120.000",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 3 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 4 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 4 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 5 PRE",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "PREVENTA",
+          "referencia": "VIP 5 PRE",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 120.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 140.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 30.000",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        }
+      ],
+      "url": "https://dashboard.qrboletos.com/promoters/VWF1UDRqTTBucnRHN2UxbCtCdVE1dz09/events/Z1lsSnpxSG5IbmFlMS9PTkxHMGZOdz09/shows/K044SFRWYlpTcGpzdXd2ZzR2TnM1QT09/reports/sales/summary.aspx",
+      "recaudoMetodos": [
+        {
+          "metodo": "Openpay (Medio de pago sin identificar) (49)",
+          "totalStr": "COP 1.921.000"
+        },
+        {
+          "metodo": "Openpay (PSE) (48)",
+          "totalStr": "COP 5.390.000"
+        },
+        {
+          "metodo": "Openpay (Tarjeta de Crédito) (47)",
+          "totalStr": "COP 3.926.000"
+        }
+      ],
+      "entregaEmpresario": null
+    },
+    {
+      "meta": {
+        "evento": "ANDRES CEPEDA BIG BAND 2",
+        "pulep": "No aplica",
+        "espectaculo": "5 DICIEMBRE 2026 8:00PM PULEP: ZEA837",
+        "sitio": "ARENA USC",
+        "fechaInicio": "Sábado 5 de Diciembre de 2026 a las 8:00 PM",
+        "fechaFin": "Sábado 5 de Diciembre de 2026 a las 11:59 PM"
+      },
+      "resumenLocalidades": [
+        {
+          "localidad": "PLATEA",
+          "vendidas": "145",
+          "recaudoEntradas": "COP 50.750.000",
+          "recaudoServicio": "COP 7.612.500",
+          "cortesias": 0,
+          "boletosPagados": 145,
+          "totalBoletos": 145
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "vendidas": "3",
+          "recaudoEntradas": "COP 471.000",
+          "recaudoServicio": "COP 70.650",
+          "cortesias": 0,
+          "boletosPagados": 3,
+          "totalBoletos": 3
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "vendidas": "48",
+          "recaudoEntradas": "COP 7.536.000",
+          "recaudoServicio": "COP 1.130.400",
+          "cortesias": 0,
+          "boletosPagados": 48,
+          "totalBoletos": 48
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "vendidas": "65",
+          "recaudoEntradas": "COP 10.205.000",
+          "recaudoServicio": "COP 1.530.750",
+          "cortesias": 0,
+          "boletosPagados": 65,
+          "totalBoletos": 65
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "vendidas": "48",
+          "recaudoEntradas": "COP 7.536.000",
+          "recaudoServicio": "COP 1.130.400",
+          "cortesias": 0,
+          "boletosPagados": 48,
+          "totalBoletos": 48
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "vendidas": "25",
+          "recaudoEntradas": "COP 3.925.000",
+          "recaudoServicio": "COP 588.750",
+          "cortesias": 0,
+          "boletosPagados": 25,
+          "totalBoletos": 25
+        },
+        {
+          "localidad": "VIP 1",
+          "vendidas": "22",
+          "recaudoEntradas": "COP 5.500.000",
+          "recaudoServicio": "COP 825.000",
+          "cortesias": 0,
+          "boletosPagados": 22,
+          "totalBoletos": 22
+        },
+        {
+          "localidad": "VIP 2",
+          "vendidas": "85",
+          "recaudoEntradas": "COP 21.250.000",
+          "recaudoServicio": "COP 3.187.500",
+          "cortesias": 0,
+          "boletosPagados": 85,
+          "totalBoletos": 85
+        },
+        {
+          "localidad": "VIP 3",
+          "vendidas": "46",
+          "recaudoEntradas": "COP 11.500.000",
+          "recaudoServicio": "COP 1.725.000",
+          "cortesias": 0,
+          "boletosPagados": 46,
+          "totalBoletos": 46
+        },
+        {
+          "localidad": "VIP 4",
+          "vendidas": "13",
+          "recaudoEntradas": "COP 3.250.000",
+          "recaudoServicio": "COP 487.500",
+          "cortesias": 0,
+          "boletosPagados": 13,
+          "totalBoletos": 13
+        },
+        {
+          "localidad": "VIP 5",
+          "vendidas": "38",
+          "recaudoEntradas": "COP 9.500.000",
+          "recaudoServicio": "COP 1.425.000",
+          "cortesias": 0,
+          "boletosPagados": 38,
+          "totalBoletos": 38
+        }
+      ],
+      "detalleCanales": [
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "143",
+          "valorEntrada": "COP 350.000",
+          "totalEntradas": "COP 50.050.000",
+          "valorServicio": "COP 52.500",
+          "totalServicio": "COP 7.507.500",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PLATEA",
+          "etapa": "FULL",
+          "referencia": "PLATEA FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "2",
+          "valorEntrada": "COP 350.000",
+          "totalEntradas": "COP 700.000",
+          "valorServicio": "COP 52.500",
+          "totalServicio": "COP 105.000",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "3",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 471.000",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 70.650",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 1",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "48",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 7.536.000",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 1.130.400",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 2",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "65",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 10.205.000",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 1.530.750",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 3",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "48",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 7.536.000",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 1.130.400",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 4",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "25",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 3.925.000",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 588.750",
+          "isCortesia": false
+        },
+        {
+          "localidad": "PREFERENCIAL 5",
+          "etapa": "FULL",
+          "referencia": "PREFERENCIAL 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 157.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 23.550",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "22",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 5.500.000",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 825.000",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 1",
+          "etapa": "FULL",
+          "referencia": "VIP 1 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "85",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 21.250.000",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 3.187.500",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 2",
+          "etapa": "FULL",
+          "referencia": "VIP 2 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "43",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 10.750.000",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 1.612.500",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 3",
+          "etapa": "FULL",
+          "referencia": "VIP 3 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "3",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 750.000",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 112.500",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "13",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 3.250.000",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 487.500",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 4",
+          "etapa": "FULL",
+          "referencia": "VIP 4 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "CORTESIAS",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 0",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 0",
+          "totalServicio": "COP 0",
+          "isCortesia": true
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Sitio web",
+          "cupon": "N/A",
+          "cantidad": "38",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 9.500.000",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 1.425.000",
+          "isCortesia": false
+        },
+        {
+          "localidad": "VIP 5",
+          "etapa": "FULL",
+          "referencia": "VIP 5 FULL",
+          "canal": "Punto de venta",
+          "cupon": "N/A",
+          "cantidad": "0",
+          "valorEntrada": "COP 250.000",
+          "totalEntradas": "COP 0",
+          "valorServicio": "COP 37.500",
+          "totalServicio": "COP 0",
+          "isCortesia": false
+        }
+      ],
+      "url": "https://dashboard.qrboletos.com/promoters/VWF1UDRqTTBucnRHN2UxbCtCdVE1dz09/events/QUpVbnpGdElqNkxSeUw5TnUxZGY3UT09/shows/dDFHMkVuSlU3Rmp5TWlJZVZjWmFvUT09/reports/sales/summary.aspx",
+      "recaudoMetodos": [
+        {
+          "metodo": "Efectivo (1)",
+          "totalStr": "COP 862.500"
+        },
+        {
+          "metodo": "OPENPAY (80)",
+          "totalStr": "COP 812.000"
+        },
+        {
+          "metodo": "Openpay (Medio de pago sin identificar) (49)",
+          "totalStr": "COP 40.440.600"
+        },
+        {
+          "metodo": "Openpay (PSE) (48)",
+          "totalStr": "COP 49.200.600"
+        },
+        {
+          "metodo": "Openpay (Tarjeta de Crédito) (47)",
+          "totalStr": "COP 61.577.750"
         }
       ],
       "entregaEmpresario": null
@@ -22111,12 +24461,12 @@
       "resumenLocalidades": [
         {
           "localidad": "PLATEA",
-          "vendidas": "55",
-          "recaudoEntradas": "COP 5.290.000",
-          "recaudoServicio": "COP 793.500",
+          "vendidas": "54",
+          "recaudoEntradas": "COP 5.190.000",
+          "recaudoServicio": "COP 778.500",
           "cortesias": 0,
-          "boletosPagados": 55,
-          "totalBoletos": 55
+          "boletosPagados": 54,
+          "totalBoletos": 54
         },
         {
           "localidad": "VIP 2",
@@ -22153,11 +24503,11 @@
           "referencia": "PLATEA PRE",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "26",
+          "cantidad": "25",
           "valorEntrada": "COP 100.000",
-          "totalEntradas": "COP 2.600.000",
+          "totalEntradas": "COP 2.500.000",
           "valorServicio": "COP 15.000",
-          "totalServicio": "COP 390.000",
+          "totalServicio": "COP 375.000",
           "isCortesia": false
         },
         {
@@ -24444,7 +26794,7 @@
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 5.282.500"
+          "totalStr": "COP 5.160.500"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",

@@ -82,12 +82,15 @@ export default function EventCard({
     rawImg = `https://d1bw1k6fnbki29.cloudfront.net/eventos/${evento.id}/home.jpg`;
   }
   const imageSrc = rawImg;
-  const isOnSale = evento.enVenta !== false;
+  const isArchived = Boolean(evento.archivado);
+  const isOnSale = !isArchived && evento.enVenta !== false;
   const localitiesCount = evento.localidades?.length || 0;
 
   return (
     <article
-      className={`group relative bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between focus-within:ring-2 focus-within:ring-emerald-500/80 ${!isOnSale
+      className={`group relative bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between focus-within:ring-2 focus-within:ring-emerald-500/80 ${isArchived
+        ? 'border-slate-800/80 bg-slate-950/70 hover:border-slate-700'
+        : !isOnSale
         ? 'border-amber-500/30 hover:border-amber-500/60 bg-gradient-to-b from-slate-900 via-slate-900 to-amber-950/15'
         : 'border-slate-800 hover:border-slate-700/80 hover:shadow-emerald-950/10'
         }`}
@@ -121,15 +124,22 @@ export default function EventCard({
                 #{evento.id}
               </span>
             )}
-            <span
-              className={`backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 ${isOnSale
-                ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50'
-                : 'bg-amber-950/90 text-amber-300 border border-amber-500/50'
-                }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${isOnSale ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
-              <span>{isOnSale ? 'EN VENTA' : 'CONFIGURACIÓN'}</span>
-            </span>
+            {isArchived ? (
+              <span className="backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 bg-slate-950/90 text-slate-400 border border-slate-700/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                <span>ARCHIVADO</span>
+              </span>
+            ) : (
+              <span
+                className={`backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 ${isOnSale
+                  ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50'
+                  : 'bg-amber-950/90 text-amber-300 border border-amber-500/50'
+                  }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnSale ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
+                <span>{isOnSale ? 'EN VENTA' : 'CONFIGURACIÓN'}</span>
+              </span>
+            )}
           </div>
 
           {/* Acciones Rápidas en Esquina Superior Derecha: Favorito y Menú de Opciones */}

@@ -213,7 +213,7 @@ export default function Home() {
     }
   };
 
-  // Sincronizar eventos desde la API de Firestore
+  // Sincronizar eventos desde la API de Catálogo
   const handleSyncFromApi = async () => {
     setIsSyncing(true);
     setSyncToast('Consultando y sincronizando con la API de QRBoletos...');
@@ -221,7 +221,12 @@ export default function Home() {
       const res = await fetch('/api/sync', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        setSyncToast(`¡Sincronización exitosa! ${data.result.totalSynced} eventos cargados desde la API.`);
+        const parts: string[] = [];
+        if (data.result.addedCount > 0) parts.push(`${data.result.addedCount} nuevos`);
+        if (data.result.updatedCount > 0) parts.push(`${data.result.updatedCount} actualizados`);
+        if (data.result.archivedCount > 0) parts.push(`${data.result.archivedCount} archivados`);
+        const details = parts.length > 0 ? ` (${parts.join(', ')})` : '';
+        setSyncToast(`¡Sincronización exitosa! ${data.result.totalSynced} eventos en total${details}.`);
         await Promise.all([fetchEventos(), fetchCatalogSummary()]);
       } else {
         setSyncToast(`Error: ${data.error || 'No se pudo sincronizar'}`);
@@ -230,7 +235,7 @@ export default function Home() {
       setSyncToast(`Error de conexión: ${e.message}`);
     } finally {
       setIsSyncing(false);
-      setTimeout(() => setSyncToast(null), 4000);
+      setTimeout(() => setSyncToast(null), 5000);
     }
   };
 
@@ -514,11 +519,18 @@ export default function Home() {
 
   const todayStart = getTodayStartTimestamp();
 
-  // Dividir en activos (hoy y futuros) y pasados (archivados)
-  const activeEvents = sortedEvents.filter((e) => getEventTimestamp(e.fecha) >= todayStart);
+  // Función para determinar si un evento está archivado:
+  // - Marcado explícitamente como archivado (e.archivado === true)
+  // - O su fecha ya pasó con respecto a hoy (< todayStart)
+  const isEventArchived = (e: Evento) =>
+    Boolean(e.archivado) || (Boolean(e.fecha) && getEventTimestamp(e.fecha) < todayStart);
+
+  // Dividir en archivados (pasados o archivados desde API/Sheets) y activos
   const passedEvents = sortedEvents
-    .filter((e) => getEventTimestamp(e.fecha) < todayStart)
-    .reverse(); // El más reciente pasado primero
+    .filter((e) => isEventArchived(e))
+    .reverse(); // El más reciente pasado/archivado primero
+
+  const activeEvents = sortedEvents.filter((e) => !isEventArchived(e));
 
   // Separar en eventos a la venta vs eventos en preparación/configuración (no a la venta aún)
   const onSaleEvents = activeEvents.filter((e) => e.enVenta !== false);

@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 import { Evento, Localidad } from '../types';
-import { parseSpanishDateToISO } from '../utils/dateFormatter';
+import { parseSpanishDateToISO, getEventTimestamp } from '../utils/dateFormatter';
 import { QrboletosApiClient, flattenCatalogItems } from '../lib/qrboletosApi';
 
 // Rango para la consulta y escritura en Sheets
@@ -233,10 +233,15 @@ export async function fetchEventosFromSheets(): Promise<Evento[]> {
     let espectaculoVal = row[13] || '';
     let sitioVal = row[14] || '';
 
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const eventTime = fechaVal ? getEventTimestamp(fechaVal) : Infinity;
+    const isDatePast = eventTime !== Infinity && eventTime < todayStart;
+
     let enVenta = false;
     let archivado = false;
     const estadoUpper = estadoVentaRaw.toUpperCase();
-    if (estadoUpper.includes('ARCHIV')) {
+    if (estadoUpper.includes('ARCHIV') || isDatePast) {
       archivado = true;
       enVenta = false;
     } else if (estadoUpper.includes('VENTA')) {
@@ -843,6 +848,11 @@ export async function syncEventsFromCatalog(): Promise<{
       addedCount++;
     }
 
+    const todayStartTimestamp = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+    const remoteTime = (isoDate || existing?.fecha) ? getEventTimestamp(isoDate || existing?.fecha || '') : Infinity;
+    const isRemotePast = remoteTime !== Infinity && remoteTime < todayStartTimestamp;
+    const remoteEstado = isRemotePast ? 'ARCHIVADO' : 'A LA VENTA';
+
     const row = [
       remote.id, // Columna A: ID oficial QRBoletos
       cleanTitle, // Columna B: Nombre del evento
@@ -856,7 +866,7 @@ export async function syncEventsFromCatalog(): Promise<{
       existing?.localidades ? JSON.stringify(existing.localidades) : '[]', // Columna J: Localidades JSON con enlaces preservados
       remote.imagen || existing?.imageUrl || '', // Columna K: Afiche CloudFront o preservado
       remote.enlace || existing?.enlace || '', // Columna L: Enlace público
-      'A LA VENTA', // Columna M: Estado Venta (automáticamente promovido)
+      remoteEstado, // Columna M: A LA VENTA (o ARCHIVADO si ya pasó su fecha)
       remote.espectaculo || existing?.espectaculo || '', // Columna N: Espectáculo
       remote.sitio || existing?.sitio || '', // Columna O: Sitio
     ];
@@ -865,18 +875,27 @@ export async function syncEventsFromCatalog(): Promise<{
   }
 
   // 3.1. PRESERVAR EVENTOS NO LISTADOS A VENTA:
-  // Si un evento venía de la API (o estaba a la venta) pero ya no viene en la API activa de catálogo, ARCHIVARLO
+  // - Si ya pasó su fecha de evento o nunca salieron a venta -> ARCHIVADO
+  // - Si vinieron de la API pero ya no están -> ARCHIVADO
+  // - Si están en montaje / detectados por Chrome con fecha futura -> EN CONFIGURACION
+  const todayStartTimestamp = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+
   for (const existing of currentEvents) {
     const key = existing.id || existing.rowId || existing.nombre;
     if (existing.id && seenIds.has(existing.id)) continue;
     if (!matchedExistingKeys.has(key)) {
       if (existing.id) seenIds.add(existing.id);
 
+      const existingTime = existing.fecha ? getEventTimestamp(existing.fecha) : Infinity;
+      const isPastDate = existingTime !== Infinity && existingTime < todayStartTimestamp;
+
       let estadoVenta = 'EN CONFIGURACION';
-      if (existing.archivado) {
+      if (existing.archivado || isPastDate) {
+        // Ya archivado, o ya pasó su fecha (nunca salió a venta o ya caducó)
         estadoVenta = 'ARCHIVADO';
+        if (!existing.archivado) archivedCount++;
       } else if (existing.enVenta) {
-        // Estaba a la venta pero ya no viene en la API activa -> Archivarlo automáticamente
+        // Estaba a la venta pero ya no viene en la API activa de catálogo -> Archivarlo
         estadoVenta = 'ARCHIVADO';
         archivedCount++;
       } else if (existing.id && /^\d+$/.test(existing.id) && parseInt(existing.id, 10) > 100) {
@@ -884,6 +903,7 @@ export async function syncEventsFromCatalog(): Promise<{
         estadoVenta = 'ARCHIVADO';
         archivedCount++;
       } else {
+        // Evento en montaje detectado por Chrome que nunca ha salido a la venta (fecha futura)
         estadoVenta = 'EN CONFIGURACION';
       }
 

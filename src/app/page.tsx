@@ -468,6 +468,36 @@ export default function Home() {
     }
   };
 
+  // Archivar o restaurar evento
+  const handleArchiveEvent = async (id: string, nuevoEstado: boolean) => {
+    if (isSheetsMode) {
+      try {
+        const res = await fetch('/api/events', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, archivado: nuevoEstado }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          alert('Error al actualizar el estado de archivado en Sheets.');
+          return;
+        }
+      } catch (err: any) {
+        alert(`Error al archivar evento: ${err.message}`);
+        return;
+      }
+    }
+    setEventos((prev) =>
+      prev.map((e) =>
+        e.id === id || e.rowId === id
+          ? { ...e, archivado: nuevoEstado, enVenta: nuevoEstado ? false : e.enVenta }
+          : e
+      )
+    );
+    setSyncToast(nuevoEstado ? 'Evento movido a Archivados' : 'Evento restaurado a Configuración');
+    setTimeout(() => setSyncToast(null), 4000);
+  };
+
   // Guardar/Actualizar localidades de un evento
   const handleSaveLocalities = async (id: string, localidades: Localidad[]) => {
     if (isSheetsMode) {
@@ -885,7 +915,7 @@ export default function Home() {
                       }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    <span>En Configuración ({inConfigEvents.length})</span>
+                    <span>Configuración ({inConfigEvents.length})</span>
                   </button>
 
                   {passedEvents.length > 0 && (
@@ -950,10 +980,10 @@ export default function Home() {
                           </div>
                           <div>
                             <h3 className="text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wide">
-                              Eventos en Configuración / No a la Venta ({inConfigEvents.length})
+                              Eventos en Configuración ({inConfigEvents.length})
                             </h3>
                             <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                              Guardados en Google Sheets. Se sincronizarán automáticamente con Firebase cuando se publiquen en QRBoletos.
+                              Eventos que se están montando (detectados por Google Chrome o en borrador). Pasarán a venta cuando se publiquen en la API.
                             </p>
                           </div>
                         </div>
@@ -971,6 +1001,7 @@ export default function Home() {
                             isAvailabilityLoading={isCatalogLoading}
                             onToggleFavorite={handleToggleFavorite}
                             onDeleteEvent={handleDeleteEvent}
+                            onArchiveEvent={handleArchiveEvent}
                             onOpenLocalities={setSelectedEvento}
                             onOpenArtworks={setArtworksEvento}
                             onConfigureSettings={setSettingsEvento}
@@ -1000,6 +1031,7 @@ export default function Home() {
                             isAvailabilityLoading={isCatalogLoading}
                             onToggleFavorite={handleToggleFavorite}
                             onDeleteEvent={handleDeleteEvent}
+                            onArchiveEvent={handleArchiveEvent}
                             onOpenLocalities={setSelectedEvento}
                             onOpenArtworks={setArtworksEvento}
                             onConfigureSettings={setSettingsEvento}
@@ -1032,6 +1064,7 @@ export default function Home() {
                               isAvailabilityLoading={isCatalogLoading}
                               onToggleFavorite={handleToggleFavorite}
                               onDeleteEvent={handleDeleteEvent}
+                              onArchiveEvent={handleArchiveEvent}
                               onOpenLocalities={setSelectedEvento}
                               onOpenArtworks={setArtworksEvento}
                               onConfigureSettings={setSettingsEvento}
@@ -1054,11 +1087,16 @@ export default function Home() {
                         onClick={() => setIsArchiveExpanded(!isArchiveExpanded)}
                         className="w-full flex items-center justify-between text-left text-slate-400 hover:text-slate-200 transition-all py-2.5 px-4 bg-slate-950/20 hover:bg-slate-950/50 rounded-2xl border border-slate-900 cursor-pointer group active:scale-[0.99]"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <Archive className="w-4 h-4 text-slate-500 group-hover:text-slate-400 transition-colors" />
-                          <span className="text-xs font-bold uppercase tracking-wider">
-                            Eventos Archivados / Pasados ({passedEvents.length})
-                          </span>
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-wider block text-slate-300">
+                              Eventos Archivados ({passedEvents.length})
+                            </span>
+                            <span className="text-[11px] text-slate-500 font-normal">
+                              Eventos que existieron en la API, cuya fecha ya pasó o que nunca salieron a venta.
+                            </span>
+                          </div>
                         </div>
                         <div className="text-slate-500 group-hover:text-slate-300 transition-colors">
                           {isArchiveExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1069,7 +1107,7 @@ export default function Home() {
                       {(isArchiveExpanded || selectedTab === 'archivados') && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 animate-fade-in">
                           {passedEvents.map((evento) => (
-                            <div key={evento.id} className="opacity-60 hover:opacity-100 transition-opacity duration-200">
+                            <div key={evento.id} className="opacity-75 hover:opacity-100 transition-opacity duration-200">
                               <EventCard
                                 key={evento.id}
                                 evento={evento}
@@ -1077,6 +1115,7 @@ export default function Home() {
                                 isAvailabilityLoading={isCatalogLoading}
                                 onToggleFavorite={handleToggleFavorite}
                                 onDeleteEvent={handleDeleteEvent}
+                                onArchiveEvent={handleArchiveEvent}
                                 onOpenLocalities={setSelectedEvento}
                                 onOpenArtworks={setArtworksEvento}
                                 onConfigureSettings={setSettingsEvento}

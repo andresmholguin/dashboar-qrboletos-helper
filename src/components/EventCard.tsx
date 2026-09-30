@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Evento, EventAvailabilitySummary } from '@/types';
-import { formatDateString } from '@/utils/dateFormatter';
+import { formatDateString, getEventTimestamp } from '@/utils/dateFormatter';
 import {
   Layers,
   Trash2,
@@ -16,7 +16,8 @@ import {
   Calendar,
   MapPin,
   Users,
-  Ticket
+  Ticket,
+  Archive,
 } from 'lucide-react';
 
 interface EventCardProps {
@@ -29,6 +30,7 @@ interface EventCardProps {
   onOpenArtworks?: (evento: Evento) => void;
   onConfigureSettings?: (evento: Evento) => void;
   onCheckAvailability?: (evento: Evento) => void;
+  onArchiveEvent?: (id: string, archivado: boolean) => void;
 }
 
 export default function EventCard({
@@ -41,6 +43,7 @@ export default function EventCard({
   onOpenArtworks,
   onConfigureSettings,
   onCheckAvailability,
+  onArchiveEvent,
 }: EventCardProps) {
   const [imgError, setImgError] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -82,7 +85,10 @@ export default function EventCard({
     rawImg = `https://d1bw1k6fnbki29.cloudfront.net/eventos/${evento.id}/home.jpg`;
   }
   const imageSrc = rawImg;
-  const isArchived = Boolean(evento.archivado);
+  const todayStartTimestamp = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+  const eventTime = evento.fecha ? getEventTimestamp(evento.fecha) : Infinity;
+  const isPastDate = eventTime !== Infinity && eventTime < todayStartTimestamp;
+  const isArchived = Boolean(evento.archivado) || isPastDate;
   const isOnSale = !isArchived && evento.enVenta !== false;
   const localitiesCount = evento.localidades?.length || 0;
 
@@ -129,15 +135,15 @@ export default function EventCard({
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
                 <span>ARCHIVADO</span>
               </span>
+            ) : isOnSale ? (
+              <span className="backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 bg-emerald-950/90 text-emerald-300 border border-emerald-500/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>A LA VENTA</span>
+              </span>
             ) : (
-              <span
-                className={`backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 ${isOnSale
-                  ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50'
-                  : 'bg-amber-950/90 text-amber-300 border border-amber-500/50'
-                  }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isOnSale ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
-                <span>{isOnSale ? 'EN VENTA' : 'CONFIGURACIÓN'}</span>
+              <span className="backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 bg-amber-950/90 text-amber-300 border border-amber-500/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>CONFIGURACIÓN</span>
               </span>
             )}
           </div>
@@ -223,6 +229,19 @@ export default function EventCard({
                     >
                       <Ticket className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       <span>Aforo y Cupos en Vivo</span>
+                    </button>
+                  )}
+                  {onArchiveEvent && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        onArchiveEvent(evento.id || evento.rowId || '', !isArchived);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Archive className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{isArchived ? 'Mover a Configuración' : 'Archivar Evento'}</span>
                     </button>
                   )}
                   <div className="my-1 border-t border-slate-800" />

@@ -907,58 +907,92 @@ export default function LocalitiesView({
                     </div>
                   ) : null}
 
-                  {/* Botones de acción - Compactos y distribuidos */}
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {/* Botón de Configuración */}
-                    <a
-                      href={makeAbsoluteUrl(configLink)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-slate-900 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                      title="Configuración"
-                    >
-                      <Settings className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate w-full text-center">Config</span>
-                    </a>
+                  {/* Botones de acción - Compactos y distribuidos (Config, Precios, Asientos, Descuentos) */}
+                  {(() => {
+                    const locCoupons = discountCoupons.filter(
+                      c => (loc.id && c.secId === loc.id) || cleanStr(c.secName) === cleanStr(loc.nombre)
+                    );
 
-                    {/* Botón de Precios */}
-                    {pricesLink ? (
-                      <a
-                        href={makeAbsoluteUrl(pricesLink)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                        title="Precios"
-                      >
-                        <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500 shrink-0" />
-                        <span className="truncate w-full text-center">Precios</span>
-                      </a>
-                    ) : (
-                      <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
-                        <DollarSign className="w-3.5 h-3.5 shrink-0" />
-                        <span>Precios</span>
-                      </div>
-                    )}
+                    return (
+                      <div className="grid grid-cols-4 gap-1">
+                        {/* Botón de Configuración */}
+                        <a
+                          href={makeAbsoluteUrl(configLink)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-slate-900 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                          title="Configuración"
+                        >
+                          <Settings className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate w-full text-center">Config</span>
+                        </a>
 
-                    {/* Botón de Acomodación */}
-                    {seatsLink ? (
-                      <a
-                        href={makeAbsoluteUrl(seatsLink)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-slate-900 border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                        title="Acomodación"
-                      >
-                        <Armchair className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                        <span className="truncate w-full text-center">Asientos</span>
-                      </a>
-                    ) : (
-                      <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
-                        <Armchair className="w-3.5 h-3.5 shrink-0" />
-                        <span>Asientos</span>
+                        {/* Botón de Precios */}
+                        {pricesLink ? (
+                          <a
+                            href={makeAbsoluteUrl(pricesLink)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                            title="Precios"
+                          >
+                            <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500 shrink-0" />
+                            <span className="truncate w-full text-center">Precios</span>
+                          </a>
+                        ) : (
+                          <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
+                            <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                            <span>Precios</span>
+                          </div>
+                        )}
+
+                        {/* Botón de Acomodación */}
+                        {seatsLink ? (
+                          <a
+                            href={makeAbsoluteUrl(seatsLink)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-slate-900 border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                            title="Acomodación"
+                          >
+                            <Armchair className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span className="truncate w-full text-center">Asientos</span>
+                          </a>
+                        ) : (
+                          <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
+                            <Armchair className="w-3.5 h-3.5 shrink-0" />
+                            <span>Asientos</span>
+                          </div>
+                        )}
+
+                        {/* Botón de Descuentos para esta localidad (puede tener 1 o más precios) */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (locCoupons.length > 0) {
+                              locCoupons.forEach((c, i) => {
+                                setTimeout(() => window.open(c.couponsUrl, '_blank'), i * 80);
+                              });
+                            } else {
+                              handleOpenAllDiscounts(true);
+                            }
+                          }}
+                          disabled={isExtractingDiscounts}
+                          className="bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-slate-300 hover:text-purple-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                          title={
+                            locCoupons.length > 0
+                              ? `Abrir ${locCoupons.length} ${locCoupons.length === 1 ? 'precio de descuento' : 'precios de descuentos'} para ${loc.nombre}`
+                              : `Consultar y abrir descuentos para ${loc.nombre}`
+                          }
+                        >
+                          <Tag className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          <span className="truncate w-full text-center">
+                            {locCoupons.length > 0 ? `Desc (${locCoupons.length})` : 'Desc'}
+                          </span>
+                        </button>
                       </div>
-                    )}
-                  </div>
+                    );
+                  })()}
                 </div>
               );
             })}
@@ -1086,10 +1120,10 @@ export default function LocalitiesView({
               </div>
             )}
 
-            {/* Listado scrolleable de Precios y URLs */}
-            <div className="p-4 overflow-y-auto space-y-2 flex-1 max-h-[50vh]">
-              {discountCoupons
-                .filter((item) => {
+            {/* Listado scrolleable de Precios y URLs Agrupado por Localidad */}
+            <div className="p-4 overflow-y-auto space-y-4 flex-1 max-h-[50vh]">
+              {(() => {
+                const filtered = discountCoupons.filter((item) => {
                   if (!discountSearch.trim()) return true;
                   const q = discountSearch.toLowerCase();
                   return (
@@ -1097,37 +1131,90 @@ export default function LocalitiesView({
                     (item.priceName || '').toLowerCase().includes(q) ||
                     (item.etapa || '').toLowerCase().includes(q)
                   );
-                })
-                .map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 bg-slate-950/70 border border-slate-800/80 hover:border-purple-500/40 rounded-xl flex items-center justify-between gap-3 text-xs transition-colors"
-                  >
-                    <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-extrabold text-slate-200 uppercase tracking-wide">
-                        {item.secName}
-                      </span>
-                      <span className="text-slate-400 font-medium">·</span>
-                      <span className="text-slate-300 font-semibold truncate">
-                        {item.priceName}
-                      </span>
-                      {item.etapa && (
-                        <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-purple-300 font-mono">
-                          {item.etapa}
-                        </span>
-                      )}
+                });
+
+                // Agrupar por localidad
+                const groups: { [key: string]: typeof discountCoupons } = {};
+                for (const item of filtered) {
+                  const key = item.secName || 'Sin Localidad';
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(item);
+                }
+
+                const groupKeys = Object.keys(groups);
+                if (groupKeys.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-slate-500 text-xs">
+                      No se encontraron precios que coincidan con la búsqueda.
                     </div>
-                    <a
-                      href={item.couponsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
-                    >
-                      <span>Abrir</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                ))}
+                  );
+                }
+
+                return groupKeys.map((secName, gIdx) => {
+                  const items = groups[secName];
+                  return (
+                    <div key={gIdx} className="bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                      {/* Cabecera de la Localidad con contador de precios */}
+                      <div className="px-3.5 py-2.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                          <span className="font-extrabold text-xs text-slate-100 uppercase tracking-wide">
+                            {secName}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px] font-bold">
+                            {items.length} {items.length === 1 ? 'precio' : 'precios'}
+                          </span>
+                        </div>
+                        {items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              items.forEach((item, i) => {
+                                setTimeout(() => window.open(item.couponsUrl, '_blank'), i * 80);
+                              });
+                            }}
+                            className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer transition-colors"
+                            title={`Abrir pestañas de los ${items.length} precios de ${secName}`}
+                          >
+                            <span>Abrir los {items.length}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Filas de precios de esta localidad */}
+                      <div className="p-2 space-y-1.5">
+                        {items.map((item, pIdx) => (
+                          <div
+                            key={pIdx}
+                            className="p-2 bg-slate-900/40 hover:bg-slate-900/80 border border-slate-800/60 hover:border-purple-500/30 rounded-lg flex items-center justify-between gap-3 text-xs transition-colors"
+                          >
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
+                              <span className="text-slate-200 font-semibold truncate">
+                                {item.priceName}
+                              </span>
+                              {item.etapa && (
+                                <span className="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-[10px] text-purple-300 font-mono">
+                                  {item.etapa}
+                                </span>
+                              )}
+                            </div>
+                            <a
+                              href={item.couponsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-300 hover:text-white rounded-md text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors"
+                            >
+                              <span>Abrir</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             {/* Footer */}

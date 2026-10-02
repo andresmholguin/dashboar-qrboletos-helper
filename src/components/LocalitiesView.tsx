@@ -20,7 +20,8 @@ import {
   Sparkles,
   Zap,
   Palette,
-  Ticket
+  Ticket,
+  Tag
 } from 'lucide-react';
 import TarifarioUploaderModal from './TarifarioUploaderModal';
 
@@ -379,6 +380,56 @@ export default function LocalitiesView({
   const handleOpenAllPrices = () => openUrlsInTabs(priceTargets, 'Precios');
   const handleOpenAllSeats = () => openUrlsInTabs(seatTargets, 'Asientos');
 
+  const [isExtractingDiscounts, setIsExtractingDiscounts] = useState(false);
+  const [discountUrls, setDiscountUrls] = useState<string[]>([]);
+
+  const handleOpenAllDiscounts = async () => {
+    if (discountUrls.length > 0) {
+      openUrlsInTabs(discountUrls, 'Descuentos');
+      return;
+    }
+
+    if (!evento.urlBase) {
+      setError('El evento no tiene configurada una URL base válida.');
+      return;
+    }
+
+    setIsExtractingDiscounts(true);
+    setBulkOpeningMsg('Consultando precios en Google Chrome para generar URLs de descuentos...');
+    try {
+      const res = await fetch('/api/chrome/extract-coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          showUrl: evento.urlBase,
+          sections: filteredLocalidades.map(l => ({ id: l.id, nombre: l.nombre })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (data.code === 'CHROME_OFFLINE') {
+          throw new Error('Google Chrome no está abierto en modo depuración (puerto 9222). Ejecuta "Iniciar_Chrome_Boleteria.bat".');
+        }
+        throw new Error(data.error || 'No se pudieron extraer las URLs de descuentos.');
+      }
+
+      const urls: string[] = data.urls || [];
+      if (urls.length === 0) {
+        setBulkOpeningMsg('No se encontraron precios para configurar descuentos (o todos son cortesías).');
+        setTimeout(() => setBulkOpeningMsg(null), 4000);
+        return;
+      }
+
+      setDiscountUrls(urls);
+      openUrlsInTabs(urls, 'Descuentos');
+    } catch (err: any) {
+      setError(`Error al abrir descuentos: ${err.message}`);
+      setBulkOpeningMsg(null);
+    } finally {
+      setIsExtractingDiscounts(false);
+    }
+  };
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
       {/* Cabecera del panel */}
@@ -649,6 +700,27 @@ export default function LocalitiesView({
                   <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
                     {seatTargets.length}
                   </span>
+                </button>
+
+                {/* Abrir Descuentos de todas (Precios no cortesías) */}
+                <button
+                  type="button"
+                  onClick={handleOpenAllDiscounts}
+                  disabled={isExtractingDiscounts || filteredLocalidades.length === 0}
+                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-purple-950/50 text-slate-300 hover:text-purple-300 border border-slate-700/80 hover:border-purple-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Abrir pestaña de Descuentos (coupons.aspx) para cada precio del evento (excluyendo cortesías)"
+                >
+                  <Tag className={`w-3.5 h-3.5 text-purple-400 shrink-0 ${isExtractingDiscounts ? 'animate-spin' : ''}`} />
+                  <span>{isExtractingDiscounts ? 'Obteniendo...' : 'Descuentos'}</span>
+                  {discountUrls.length > 0 ? (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 bg-purple-950/70 border border-purple-700/50 rounded-md text-purple-300 font-bold">
+                      {discountUrls.length}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-400">
+                      %
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

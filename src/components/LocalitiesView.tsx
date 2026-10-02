@@ -21,7 +21,11 @@ import {
   Zap,
   Palette,
   Ticket,
-  Tag
+  Tag,
+  ListFilter,
+  Copy,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import TarifarioUploaderModal from './TarifarioUploaderModal';
 
@@ -361,17 +365,28 @@ export default function LocalitiesView({
     .filter((url): url is string => Boolean(url));
 
   const [bulkOpeningMsg, setBulkOpeningMsg] = useState<string | null>(null);
+  const [popupBlockedNotice, setPopupBlockedNotice] = useState(false);
 
   const openUrlsInTabs = (targets: string[], typeLabel: string) => {
     const absoluteUrls = targets.map(makeAbsoluteUrl).filter(Boolean);
     if (absoluteUrls.length === 0) return;
 
     setBulkOpeningMsg(`Abriendo ${absoluteUrls.length} pestañas de ${typeLabel}...`);
-    setTimeout(() => setBulkOpeningMsg(null), 5000);
+    setTimeout(() => setBulkOpeningMsg(null), 6000);
 
+    let hadBlocked = false;
     absoluteUrls.forEach((url, idx) => {
       setTimeout(() => {
-        window.open(url, '_blank');
+        try {
+          const w = window.open(url, '_blank');
+          if (!w || w.closed || typeof w.closed === 'undefined') {
+            hadBlocked = true;
+            setPopupBlockedNotice(true);
+          }
+        } catch {
+          hadBlocked = true;
+          setPopupBlockedNotice(true);
+        }
       }, idx * 100);
     });
   };
@@ -382,20 +397,19 @@ export default function LocalitiesView({
 
   const [isExtractingDiscounts, setIsExtractingDiscounts] = useState(false);
   const [discountUrls, setDiscountUrls] = useState<string[]>([]);
+  const [discountCoupons, setDiscountCoupons] = useState<any[]>([]);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [copiedDiscounts, setCopiedDiscounts] = useState(false);
+  const [discountSearch, setDiscountSearch] = useState('');
 
-  const handleOpenAllDiscounts = async () => {
-    if (discountUrls.length > 0) {
-      openUrlsInTabs(discountUrls, 'Descuentos');
-      return;
-    }
-
+  const handleOpenAllDiscounts = async (forceOpenInChrome = true) => {
     if (!evento.urlBase) {
       setError('El evento no tiene configurada una URL base válida.');
       return;
     }
 
     setIsExtractingDiscounts(true);
-    setBulkOpeningMsg('Consultando precios en Google Chrome para generar URLs de descuentos...');
+    setBulkOpeningMsg('Consultando precios en Google Chrome y abriendo descuentos...');
     try {
       const res = await fetch('/api/chrome/extract-coupons', {
         method: 'POST',
@@ -403,25 +417,36 @@ export default function LocalitiesView({
         body: JSON.stringify({
           showUrl: evento.urlBase,
           sections: filteredLocalidades.map(l => ({ id: l.id, nombre: l.nombre })),
+          openInChrome: forceOpenInChrome,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
         if (data.code === 'CHROME_OFFLINE') {
-          throw new Error('Google Chrome no está abierto en modo depuración (puerto 9222). Ejecuta "Iniciar_Chrome_Boleteria.bat".');
+          throw new Error('Google Chrome no está abierto en modo depuración (puerto 9222). Inicia "Iniciar_Chrome_Boleteria.bat".');
         }
         throw new Error(data.error || 'No se pudieron extraer las URLs de descuentos.');
       }
 
       const urls: string[] = data.urls || [];
+      const coupons: any[] = data.coupons || [];
+      setDiscountUrls(urls);
+      setDiscountCoupons(coupons);
+
       if (urls.length === 0) {
         setBulkOpeningMsg('No se encontraron precios para configurar descuentos (o todos son cortesías).');
         setTimeout(() => setBulkOpeningMsg(null), 4000);
         return;
       }
 
-      setDiscountUrls(urls);
-      openUrlsInTabs(urls, 'Descuentos');
+      if (data.openedInChrome) {
+        setSuccess(`¡Se abrieron con éxito ${data.openedCount || urls.length} pestañas de Descuentos directamente en Google Chrome!`);
+        setBulkOpeningMsg(`¡${data.openedCount || urls.length} pestañas abiertas en Google Chrome!`);
+        setTimeout(() => setBulkOpeningMsg(null), 5000);
+      } else {
+        setShowDiscountModal(true);
+        openUrlsInTabs(urls, 'Descuentos');
+      }
     } catch (err: any) {
       setError(`Error al abrir descuentos: ${err.message}`);
       setBulkOpeningMsg(null);
@@ -703,25 +728,37 @@ export default function LocalitiesView({
                 </button>
 
                 {/* Abrir Descuentos de todas (Precios no cortesías) */}
-                <button
-                  type="button"
-                  onClick={handleOpenAllDiscounts}
-                  disabled={isExtractingDiscounts || filteredLocalidades.length === 0}
-                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-purple-950/50 text-slate-300 hover:text-purple-300 border border-slate-700/80 hover:border-purple-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Abrir pestaña de Descuentos (coupons.aspx) para cada precio del evento (excluyendo cortesías)"
-                >
-                  <Tag className={`w-3.5 h-3.5 text-purple-400 shrink-0 ${isExtractingDiscounts ? 'animate-spin' : ''}`} />
-                  <span>{isExtractingDiscounts ? 'Obteniendo...' : 'Descuentos'}</span>
-                  {discountUrls.length > 0 ? (
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 bg-purple-950/70 border border-purple-700/50 rounded-md text-purple-300 font-bold">
-                      {discountUrls.length}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-400">
-                      %
-                    </span>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAllDiscounts(true)}
+                    disabled={isExtractingDiscounts || filteredLocalidades.length === 0}
+                    className={`h-7 px-2.5 bg-slate-800/90 hover:bg-purple-950/50 text-slate-300 hover:text-purple-300 border border-slate-700/80 hover:border-purple-500/50 ${discountUrls.length > 0 ? 'rounded-l-lg border-r-0' : 'rounded-lg'} text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed`}
+                    title="Abrir automáticamente pestaña de Descuentos (coupons.aspx) para cada precio del evento en Google Chrome (excluyendo cortesías)"
+                  >
+                    <Tag className={`w-3.5 h-3.5 text-purple-400 shrink-0 ${isExtractingDiscounts ? 'animate-spin' : ''}`} />
+                    <span>{isExtractingDiscounts ? 'Abriendo en Chrome...' : 'Descuentos'}</span>
+                    {discountUrls.length > 0 ? (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 bg-purple-950/70 border border-purple-700/50 rounded-md text-purple-300 font-bold">
+                        {discountUrls.length}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-400">
+                        %
+                      </span>
+                    )}
+                  </button>
+                  {discountUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDiscountModal(true)}
+                      className="h-7 px-1.5 bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-300 hover:text-white rounded-r-lg text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
+                      title="Ver y gestionar lista de URLs de descuentos"
+                    >
+                      <ListFilter className="w-3.5 h-3.5" />
+                    </button>
                   )}
-                </button>
+                </div>
               </div>
             </div>
             
@@ -737,6 +774,24 @@ export default function LocalitiesView({
               />
             </div>
           </div>
+
+          {popupBlockedNotice && (
+            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>Ventanas emergentes bloqueadas:</strong> Tu navegador no permitió abrir todas las pestañas simultáneamente. Haz clic en el ícono de ventana emergente bloqueada en la barra de direcciones de Chrome y selecciona &quot;Permitir siempre pop-ups&quot;.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPopupBlockedNotice(false)}
+                className="text-amber-400 hover:text-white p-1 rounded-lg hover:bg-amber-500/20 shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {bulkOpeningMsg && (
             <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3.5 py-2.5 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-200">
@@ -920,6 +975,175 @@ export default function LocalitiesView({
           // Si el usuario actualiza localidades
         }}
       />
+
+      {/* Modal para Gestión y Lista Detallada de URLs de Descuentos */}
+      {showDiscountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Cabecera */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    Descuentos por Precio
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono">
+                      {discountUrls.length} {discountUrls.length === 1 ? 'precio' : 'precios'}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    URLs de coupons.aspx generadas para cada precio comercial (no cortesías).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDiscountModal(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Barra de Acciones Rápidas */}
+            <div className="p-4 border-b border-slate-800/80 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenAllDiscounts(true)}
+                  disabled={isExtractingDiscounts}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="Abrir todas directamente en pestañas de Google Chrome via CDP"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>{isExtractingDiscounts ? 'Abriendo en Chrome...' : 'Re-abrir todas en Google Chrome'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(discountUrls.join('\n'));
+                    setCopiedDiscounts(true);
+                    setTimeout(() => setCopiedDiscounts(false), 2500);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                >
+                  {copiedDiscounts ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">¡Copiadas al portapapeles!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copiar todas las URLs</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Buscador interno */}
+              <div className="relative w-full sm:w-56">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filtrar por localidad/etapa..."
+                  value={discountSearch}
+                  onChange={(e) => setDiscountSearch(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Apertura en Bloques de 10 si hay muchas */}
+            {discountUrls.length > 10 && (
+              <div className="px-4 py-2 bg-slate-950/40 border-b border-slate-800/60 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-slate-400 text-[11px] font-semibold flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  Abrir en el navegador por bloques (evita bloqueo de pop-ups):
+                </span>
+                {Array.from({ length: Math.ceil(discountUrls.length / 10) }).map((_, bIdx) => {
+                  const start = bIdx * 10;
+                  const end = Math.min(start + 10, discountUrls.length);
+                  return (
+                    <button
+                      key={bIdx}
+                      type="button"
+                      onClick={() => {
+                        const batch = discountUrls.slice(start, end);
+                        batch.forEach((url, i) => {
+                          setTimeout(() => window.open(url, '_blank'), i * 80);
+                        });
+                      }}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-purple-900/60 text-slate-300 hover:text-purple-300 border border-slate-700/80 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer"
+                    >
+                      {start + 1}-{end}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Listado scrolleable de Precios y URLs */}
+            <div className="p-4 overflow-y-auto space-y-2 flex-1 max-h-[50vh]">
+              {discountCoupons
+                .filter((item) => {
+                  if (!discountSearch.trim()) return true;
+                  const q = discountSearch.toLowerCase();
+                  return (
+                    (item.secName || '').toLowerCase().includes(q) ||
+                    (item.priceName || '').toLowerCase().includes(q) ||
+                    (item.etapa || '').toLowerCase().includes(q)
+                  );
+                })
+                .map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 bg-slate-950/70 border border-slate-800/80 hover:border-purple-500/40 rounded-xl flex items-center justify-between gap-3 text-xs transition-colors"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <span className="font-extrabold text-slate-200 uppercase tracking-wide">
+                        {item.secName}
+                      </span>
+                      <span className="text-slate-400 font-medium">·</span>
+                      <span className="text-slate-300 font-semibold truncate">
+                        {item.priceName}
+                      </span>
+                      {item.etapa && (
+                        <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-purple-300 font-mono">
+                          {item.etapa}
+                        </span>
+                      )}
+                    </div>
+                    <a
+                      href={item.couponsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
+                    >
+                      <span>Abrir</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                ))}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950/50 flex justify-between items-center text-xs text-slate-400">
+              <span>{discountUrls.length} URLs de cupones listas</span>
+              <button
+                type="button"
+                onClick={() => setShowDiscountModal(false)}
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

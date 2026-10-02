@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { showUrl, sections } = body;
+    const { showUrl, sections, openInChrome = true } = body;
 
     if (!showUrl) {
       return NextResponse.json(
@@ -24,6 +24,10 @@ export async function POST(request: Request) {
 
     const scriptPath = path.join(process.cwd(), 'scripts', 'extract_coupon_urls_chrome.py');
     const args = [scriptPath, '--show-url', showUrl];
+
+    if (openInChrome) {
+      args.push('--open-in-chrome');
+    }
 
     if (sections && Array.isArray(sections) && sections.length > 0) {
       args.push('--sections-json', JSON.stringify(sections));

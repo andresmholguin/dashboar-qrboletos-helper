@@ -20,6 +20,7 @@ def main():
     parser.add_argument("--show-url", required=True, help="URL base del show (ej: https://dashboard.qrboletos.com/.../shows/...)")
     parser.add_argument("--sections-json", default=None, help="JSON con lista de secciones [{ id, nombre }]")
     parser.add_argument("--cdp-url", default="http://localhost:9222", help="URL de depuracion Chrome CDP")
+    parser.add_argument("--open-in-chrome", action="store_true", default=False, help="Abrir cada URL directamente como una pestaña en Google Chrome")
     args = parser.parse_args()
 
     clean_show_url = args.show_url.split("?")[0].rstrip("/")
@@ -73,56 +74,65 @@ def main():
 
             js_code = """async ({ showUrl, inputSections }) => {
                 const parser = new DOMParser();
-                let sections = [];
+                const seenSecIds = new Set();
+                const sections = [];
 
-                if (Array.isArray(inputSections) && inputSections.length > 0) {
-                    sections = inputSections.map(s => ({
-                        secId: s.id || s.secId,
-                        name: s.nombre || s.name
-                    })).filter(s => Boolean(s.secId));
-                }
-
-                // Si no se pasaron secciones, extraerlas de sections.aspx
-                if (sections.length === 0) {
+                // 1. Siempre consultar sections.aspx para tener la totalidad de secciones reales del evento
+                try {
                     const secResp = await fetch(`${showUrl}/sections.aspx`);
-                    const secHtml = await secResp.text();
-                    const secDoc = parser.parseFromString(secHtml, 'text/html');
-                    
-                    const cards = Array.from(secDoc.querySelectorAll('div.card, .section-item'))
-                        .filter(c => !c.querySelector('div.card') && !c.querySelector('#sections-box'));
-                    const seenSecIds = new Set();
-                    
-                    for (const card of cards) {
-                        let secId = card.querySelector('[data-id]')?.getAttribute('data-id') || 
-                                    card.querySelector('.card-footer-loader')?.id?.replace('card-section-', '')?.replace('-loader', '') || '';
-                        if (!secId) {
-                            const link = card.querySelector('a[href*="/sections/"]');
-                            if (link) {
-                                const m = link.getAttribute('href').match(/\\/sections\\/([^\\/?#]+?)(?:\\.aspx|\\/|$)/);
-                                if (m && !['editor', 'settings', 'sections', 'list', 'new', 'matrix'].includes(m[1].toLowerCase())) {
-                                    secId = m[1];
+                    if (secResp.ok) {
+                        const secHtml = await secResp.text();
+                        const secDoc = parser.parseFromString(secHtml, 'text/html');
+                        
+                        const cards = Array.from(secDoc.querySelectorAll('div.card, .section-item'))
+                            .filter(c => !c.querySelector('div.card') && !c.querySelector('#sections-box'));
+                        
+                        for (const card of cards) {
+                            let secId = card.querySelector('[data-id]')?.getAttribute('data-id') || 
+                                        card.querySelector('.card-footer-loader')?.id?.replace('card-section-', '')?.replace('-loader', '') || '';
+                            if (!secId) {
+                                const link = card.querySelector('a[href*="/sections/"]');
+                                if (link) {
+                                    const m = link.getAttribute('href').match(/\\/sections\\/([^\\/?#]+?)(?:\\.aspx|\\/|$)/);
+                                    if (m && !['editor', 'settings', 'sections', 'list', 'new', 'matrix'].includes(m[1].toLowerCase())) {
+                                        secId = m[1];
+                                    }
                                 }
                             }
-                        }
-                        let name = '';
-                        const tds = Array.from(card.querySelectorAll('td'));
-                        for (let i = 0; i < tds.length; i++) {
-                            if (tds[i].innerText.toLowerCase().includes('localidad') && tds[i+1]) {
-                                name = tds[i+1].innerText.replace(/\\s+/g, ' ').trim();
-                                break;
+                            let name = '';
+                            const tds = Array.from(card.querySelectorAll('td'));
+                            for (let i = 0; i < tds.length; i++) {
+                                if (tds[i].innerText.toLowerCase().includes('localidad') && tds[i+1]) {
+                                    name = tds[i+1].innerText.replace(/\\s+/g, ' ').trim();
+                                    break;
+                                }
+                            }
+                            if (!name) {
+                                name = card.querySelector('.card-title, h4, h5, strong')?.innerText.trim() || '';
+                            }
+                            if (secId && !seenSecIds.has(secId) && name && !name.toUpperCase().includes('AGREGAR')) {
+                                seenSecIds.add(secId);
+                                sections.push({ secId, name });
                             }
                         }
-                        if (!name) {
-                            name = card.querySelector('.card-title, h4, h5, strong')?.innerText.trim() || '';
-                        }
-                        if (secId && !seenSecIds.has(secId) && name && !name.toUpperCase().includes('AGREGAR')) {
+                    }
+                } catch (e) {
+                    console.error('Error cargando sections.aspx:', e);
+                }
+
+                // 2. Si se pasaron inputSections, agregar cualquier sección complementaria no detectada
+                if (Array.isArray(inputSections) && inputSections.length > 0) {
+                    for (const s of inputSections) {
+                        const secId = s.id || s.secId;
+                        const name = s.nombre || s.name || '';
+                        if (secId && !seenSecIds.has(secId)) {
                             seenSecIds.add(secId);
                             sections.push({ secId, name });
                         }
                     }
                 }
 
-                // Extraer los precios de cada sección en paralelo
+                // 3. Extraer todos los precios comerciales (no cortesías) de cada sección en paralelo
                 const couponItems = [];
                 const allUrls = [];
 
@@ -133,12 +143,13 @@ def main():
                         if (!resp.ok) return;
                         const html = await resp.text();
                         const doc = parser.parseFromString(html, 'text/html');
-                        const rows = Array.from(doc.querySelectorAll('table tbody tr'));
+                        const rows = Array.from(doc.querySelectorAll('table tbody tr, table tr'));
                         const seenPriceIds = new Set();
                         
                         for (const tr of rows) {
-                            const priceLink = tr.querySelector('a[href*="/prices/sales/"]');
-                            if (!priceLink) continue;
+                            const priceLinks = Array.from(tr.querySelectorAll('a[href*="/prices/sales/"]'));
+                            if (priceLinks.length === 0) continue;
+                            const priceLink = priceLinks[0];
                             const href = priceLink.getAttribute('href') || '';
                             const m = href.match(/\\/prices\\/sales\\/([^\\/?#.]+)/);
                             if (!m) continue;
@@ -191,13 +202,32 @@ def main():
                 "inputSections": sections_data
             })
 
+            all_urls = res.get("allUrls", [])
+            opened_in_chrome = False
+            opened_count = 0
+
+            # Si se solicitó abrir en Chrome y hay URLs, crearlas mediante sesión CDP directa
+            if args.open_in_chrome and len(all_urls) > 0:
+                try:
+                    cdp_client = context.new_cdp_session(qr_page)
+                    for url in all_urls:
+                        cdp_client.send("Target.createTarget", {"url": url})
+                        time.sleep(0.04) # intervalo seguro de 40ms entre pestañas
+                    opened_in_chrome = True
+                    opened_count = len(all_urls)
+                    log(f"Abiertas exitosamente {opened_count} pestañas en Google Chrome via CDP")
+                except Exception as e_cdp_open:
+                    log(f"Aviso al abrir pestañas vía CDP: {e_cdp_open}")
+
             print(json.dumps({
                 "success": True,
                 "showUrl": clean_show_url,
                 "sectionsCount": res.get("sectionsCount", 0),
                 "total": res.get("total", 0),
+                "openedInChrome": opened_in_chrome,
+                "openedCount": opened_count,
                 "coupons": res.get("couponItems", []),
-                "urls": res.get("allUrls", [])
+                "urls": all_urls
             }, ensure_ascii=False))
 
     except Exception as e:

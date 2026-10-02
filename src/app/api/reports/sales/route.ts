@@ -3,7 +3,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fetchEventosFromSheets } from '@/services/googleSheets';
-import { getComparison, getSnapshotConfig, getColombiaWeekKey, saveSnapshot } from '@/services/snapshots';
+import { getComparison, getSnapshotConfig, getColombiaWeekKey, saveSnapshot, getTodaySavedSnapshot } from '@/services/snapshots';
 import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 import { verifyChromeSession } from '@/services/chromeSession';
 
@@ -11,35 +11,55 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const forceRefresh = searchParams.get('forceRefresh') === 'true';
+  const targetUrl = searchParams.get('targetUrl');
+
   if (isRunningInCloud()) {
+    // En la nube: si no es refresco forzado ni evento individual, verificar si el snapshot guardado de hoy está disponible
+    if (!forceRefresh && !targetUrl) {
+      const todaySnapshot = getTodaySavedSnapshot();
+      if (todaySnapshot && todaySnapshot.salesData && todaySnapshot.salesData.length > 0) {
+        const comparison = getComparison(todaySnapshot.salesData);
+        const ageMinutes = Math.round((Date.now() - new Date(todaySnapshot.createdAt).getTime()) / (1000 * 60));
+        return NextResponse.json({
+          success: true,
+          cached: true,
+          isTodaySnapshot: true,
+          snapshotId: todaySnapshot.id,
+          snapshotLabel: todaySnapshot.label,
+          snapshotCreatedAt: todaySnapshot.createdAt,
+          cacheAgeMinutes: Math.max(0, ageMinutes),
+          totalEvents: todaySnapshot.totalEvents || todaySnapshot.salesData.length,
+          salesData: todaySnapshot.salesData,
+          comparison,
+        });
+      }
+    }
     return forwardToLocalTunnel(request, '/api/reports/sales');
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const forceRefresh = searchParams.get('forceRefresh') === 'true';
-    const targetUrl = searchParams.get('targetUrl');
-
     const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
 
-    // Si no es refresco forzado y existe caché fresco (< 30 min), devolverlo
-    if (!forceRefresh && !targetUrl && fs.existsSync(cachePath)) {
-      try {
-        const stats = fs.statSync(cachePath);
-        const ageMinutes = (Date.now() - stats.mtimeMs) / (1000 * 60);
-        if (ageMinutes < 30) {
-          const cached = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
-          const comparison = getComparison(cached.salesData || []);
-          return NextResponse.json({
-            success: true,
-            cached: true,
-            cacheAgeMinutes: Math.round(ageMinutes),
-            comparison,
-            ...cached,
-          });
-        }
-      } catch (cacheErr) {
-        console.warn('Error leyendo caché de ventas:', cacheErr);
+    // 1. Si no es refresco forzado y no es evento individual, cargar información guardada del día actual
+    if (!forceRefresh && !targetUrl) {
+      const todaySnapshot = getTodaySavedSnapshot();
+      if (todaySnapshot && todaySnapshot.salesData && todaySnapshot.salesData.length > 0) {
+        const comparison = getComparison(todaySnapshot.salesData);
+        const ageMinutes = Math.round((Date.now() - new Date(todaySnapshot.createdAt).getTime()) / (1000 * 60));
+        return NextResponse.json({
+          success: true,
+          cached: true,
+          isTodaySnapshot: true,
+          snapshotId: todaySnapshot.id,
+          snapshotLabel: todaySnapshot.label,
+          snapshotCreatedAt: todaySnapshot.createdAt,
+          cacheAgeMinutes: Math.max(0, ageMinutes),
+          totalEvents: todaySnapshot.totalEvents || todaySnapshot.salesData.length,
+          salesData: todaySnapshot.salesData,
+          comparison,
+        });
       }
     }
 
@@ -155,20 +175,16 @@ export async function GET(request: Request) {
       );
     }
 
-    // Guardar en caché
+    // Guardar en caché y persistir snapshot del día automáticamente si no es consulta de evento individual
+    let savedSnapshotMeta = null;
     try {
       fs.writeFileSync(cachePath, JSON.stringify(parsed, null, 2), 'utf-8');
 
-      // Comprobar auto snapshot si aplica
-      const config = getSnapshotConfig();
-      if (config.autoSnapshotEnabled && parsed.salesData && parsed.salesData.length > 0) {
-        const { weekKey, isMonday, cotDateStr } = getColombiaWeekKey();
-        if (isMonday && config.lastAutoSnapshotWeek !== weekKey) {
-          saveSnapshot(parsed.salesData, `Snapshot Automático Lunes ${cotDateStr}`);
-        }
+      if (parsed.salesData && parsed.salesData.length > 0 && !targetUrl) {
+        savedSnapshotMeta = saveSnapshot(parsed.salesData);
       }
     } catch (cacheErr) {
-      console.warn('Aviso guardando caché o auto-snapshot:', cacheErr);
+      console.warn('Aviso guardando caché o snapshot diario:', cacheErr);
     }
 
     const comparison = getComparison(parsed.salesData || []);
@@ -176,6 +192,9 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       cached: false,
+      isTodaySnapshot: false,
+      snapshotLabel: savedSnapshotMeta?.label,
+      snapshotId: savedSnapshotMeta?.id,
       comparison,
       ...parsed,
     });

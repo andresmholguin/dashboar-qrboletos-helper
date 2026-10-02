@@ -101,6 +101,8 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [isCached, setIsCached] = useState<boolean>(false);
   const [cacheAge, setCacheAge] = useState<number>(0);
+  const [isTodaySnapshot, setIsTodaySnapshot] = useState<boolean>(false);
+  const [snapshotLabel, setSnapshotLabel] = useState<string>('');
   const [expandedEvents, setExpandedEvents] = useState<Record<number, boolean>>({});
   const [searchFilter, setSearchFilter] = useState<string>('');
 
@@ -195,8 +197,10 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       setSalesData(data.salesData || []);
       setIsCached(!!data.cached);
       setCacheAge(data.cacheAgeMinutes || 0);
+      setIsTodaySnapshot(!!data.isTodaySnapshot);
+      setSnapshotLabel(data.snapshotLabel || '');
 
-      if (data.salesData && data.salesData.length > 0) {
+      if (!data.isTodaySnapshot && data.salesData && data.salesData.length > 0) {
         checkAndSaveTodaySnapshot(data.salesData);
       }
     } catch (err: any) {
@@ -482,16 +486,47 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
 
 
 
-      {/* Alerta de Caché */}
-      {isCached && !isLoading && (
-        <div className="bg-slate-900/60 border border-slate-800 text-slate-600 dark:text-slate-400 text-xs px-4 py-2.5 rounded-xl flex items-center justify-between">
-          <span>Mostrando datos de ventas en caché (hace {cacheAge} min).</span>
-          <button
-            onClick={() => fetchSales(true)}
-            className="text-amber-600 dark:text-amber-400 hover:underline font-bold ml-2 cursor-pointer"
-          >
-            Refrescar ahora con Chrome &rarr;
-          </button>
+      {/* Estado del Informe Diario / En Vivo */}
+      {!isLoading && salesData.length > 0 && (
+        <div className="bg-slate-900/80 border border-slate-800 text-xs px-4 py-2.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-2.5 text-slate-300 flex-wrap">
+            {isTodaySnapshot ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-bold text-[11px]">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Informe Guardado del Día
+              </span>
+            ) : isCached ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/25 font-bold text-[11px]">
+                <TrendingUp className="w-3.5 h-3.5" />
+                En Caché
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 font-bold text-[11px]">
+                <RefreshCw className="w-3.5 h-3.5" />
+                Ventas en Vivo
+              </span>
+            )}
+
+            <span className="text-slate-400 text-xs">
+              {isTodaySnapshot
+                ? `Mostrando información guardada de hoy (${snapshotLabel || 'Día actual'}).`
+                : isCached
+                ? `Mostrando datos en caché (hace ${cacheAge} min).`
+                : 'Ventas extraídas en vivo desde Google Chrome.'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              onClick={() => fetchSales(true)}
+              disabled={isLoading}
+              className="text-amber-400 hover:text-amber-300 hover:underline font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+              title="Consultar Google Chrome para actualizar las ventas en tiempo real"
+            >
+              <span>Consultar en vivo con Chrome</span>
+              &rarr;
+            </button>
+          </div>
         </div>
       )}
 

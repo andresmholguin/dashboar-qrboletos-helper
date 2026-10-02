@@ -12,7 +12,14 @@ import { isRunningInCloud, forwardToLocalTunnel } from '@/services/tunnelProxy';
 
 export async function GET(request: Request) {
   if (isRunningInCloud()) {
-    return forwardToLocalTunnel(request, '/api/reports/snapshots');
+    try {
+      const forwarded = await forwardToLocalTunnel(request, '/api/reports/snapshots');
+      if (forwarded.ok) {
+        return forwarded;
+      }
+    } catch {
+      // Túnel no disponible, continuar con snapshots locales de Vercel
+    }
   }
 
   try {

@@ -18,6 +18,19 @@ export interface SnapshotMetadata {
   totalBoletos: number;
 }
 
+export interface FullSnapshotData {
+  id: string;
+  filename: string;
+  createdAt: string;
+  cotDate?: string;
+  weekKey?: string;
+  isMonday: boolean;
+  label: string;
+  totalEvents: number;
+  totalBoletos: number;
+  salesData: any[];
+}
+
 const LOCAL_SNAPSHOTS_DIR = path.join(process.cwd(), 'data', 'snapshots');
 const SEED_SNAPSHOTS_DIR = path.join(process.cwd(), 'data', 'snapshots');
 const SNAPSHOTS_DIR = isRunningInCloud()
@@ -132,7 +145,7 @@ export function purgeOldSnapshots(maxDays = 7): number {
   }
 }
 
-function formatSnapshotLabel(date: Date, isMonday: boolean): string {
+export function formatSnapshotLabel(date: Date, isMonday: boolean): string {
   const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   
@@ -232,6 +245,91 @@ export function listSnapshots(): SnapshotMetadata[] {
   } catch (err) {
     console.error('Error listando snapshots:', err);
     return [];
+  }
+}
+
+/**
+ * Obtiene la información guardada más reciente del día actual (en hora Colombia COT).
+ * Si existe un snapshot para hoy, lo retorna directamente con su lista de salesData.
+ * De lo contrario, verifica si el caché local tiene datos generados hoy y los persiste.
+ */
+export function getTodaySavedSnapshot(): FullSnapshotData | null {
+  ensureDir();
+  try {
+    const { cotDateStr } = getColombiaWeekKey();
+    const files = fs.readdirSync(SNAPSHOTS_DIR);
+    const todaySnapshots: FullSnapshotData[] = [];
+
+    for (const f of files) {
+      if (f.endsWith('.json') && f !== 'config.json') {
+        try {
+          const raw = fs.readFileSync(path.join(SNAPSHOTS_DIR, f), 'utf-8');
+          const data = JSON.parse(raw);
+          const fileCotDate = data.cotDate || (data.createdAt ? getColombiaWeekKey(new Date(data.createdAt)).cotDateStr : '');
+          if (fileCotDate === cotDateStr && Array.isArray(data.salesData) && data.salesData.length > 0) {
+            todaySnapshots.push(data);
+          }
+        } catch {
+          // Ignorar archivo corrupto
+        }
+      }
+    }
+
+    if (todaySnapshots.length === 0) {
+      // Fallback: verificar si scratch/latest_sales_cache.json fue generado hoy y tiene salesData
+      const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
+      if (fs.existsSync(cachePath)) {
+        try {
+          const stats = fs.statSync(cachePath);
+          const cacheCotDate = getColombiaWeekKey(new Date(stats.mtimeMs)).cotDateStr;
+          if (cacheCotDate === cotDateStr) {
+            const cached = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+            if (Array.isArray(cached.salesData) && cached.salesData.length > 0) {
+              const meta = saveSnapshot(cached.salesData, formatSnapshotLabel(new Date(stats.mtimeMs), false));
+              const fresh = getSnapshotById(meta.id);
+              if (fresh) return fresh;
+            }
+          }
+        } catch {}
+      }
+      return null;
+    }
+
+    // Ordenar descendente para retornar el snapshot más reciente del día
+    todaySnapshots.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return todaySnapshots[0];
+  } catch (err) {
+    console.error('Error obteniendo snapshot del día actual:', err);
+    return null;
+  }
+}
+
+/**
+ * Busca y retorna un snapshot completo por id o nombre de archivo.
+ */
+export function getSnapshotById(idOrFilename: string): FullSnapshotData | null {
+  ensureDir();
+  try {
+    const filename = idOrFilename.endsWith('.json') ? idOrFilename : `${idOrFilename}.json`;
+    const filePath = path.join(SNAPSHOTS_DIR, filename);
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(raw);
+    }
+    const files = fs.readdirSync(SNAPSHOTS_DIR);
+    for (const f of files) {
+      if (f.endsWith('.json') && f !== 'config.json') {
+        try {
+          const raw = fs.readFileSync(path.join(SNAPSHOTS_DIR, f), 'utf-8');
+          const data = JSON.parse(raw);
+          if (data.id === idOrFilename) return data;
+        } catch {}
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error('Error buscando snapshot por id:', err);
+    return null;
   }
 }
 

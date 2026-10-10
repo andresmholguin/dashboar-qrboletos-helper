@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       replaceImages = false,
       archiveOldPrices = true,
       noConfigurePrices = false,
+      workers = 3,
     } = body;
 
     const pId = promoterId || (urlBase ? urlBase.match(/promoters\/([^/]+)/)?.[1] : null);
@@ -143,6 +144,7 @@ export async function POST(request: Request) {
         if (dryRun) {
           args.push('--dry-run');
         }
+        args.push('--workers', String(workers || 3));
 
         controller.enqueue(
           encoder.encode(

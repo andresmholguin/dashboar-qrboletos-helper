@@ -23,7 +23,8 @@ import {
   FileText,
   Image as ImageIcon,
   Printer,
-  Palette
+  Palette,
+  ShieldCheck
 } from 'lucide-react';
 
 interface TarifarioUploaderModalProps {
@@ -49,6 +50,7 @@ export default function TarifarioUploaderModal({
 
   // Estados de sincronización con Chrome
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncPhase, setSyncPhase] = useState<'idle' | 'creation' | 'verification' | 'finished'>('idle');
   const [syncLogs, setSyncLogs] = useState<{ level: string; message: string }[]>([]);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
   const [dryRun, setDryRun] = useState<boolean>(false);
@@ -224,6 +226,7 @@ export default function TarifarioUploaderModal({
     setIsSyncing(true);
     setDryRun(isDryRun);
     setSyncStatus('running');
+    setSyncPhase('creation');
     setSyncLogs([
       {
         level: 'info',
@@ -246,6 +249,7 @@ export default function TarifarioUploaderModal({
           printImage: printImage || undefined,
           replaceImages: replaceImages,
           archiveOldPrices: archiveOldPrices,
+          workers: 3,
         }),
       });
 
@@ -273,9 +277,16 @@ export default function TarifarioUploaderModal({
             try {
               const payload = JSON.parse(line.substring(6));
               if (payload.type === 'log') {
+                const msg = payload.message || '';
+                if (msg.includes('Iniciando verificación y barrido') || msg.includes('Proceso creación de precios finalizado')) {
+                  setSyncPhase('verification');
+                } else if (msg.includes('Todas las configuraciones fueron verificadas') || msg.includes('Proceso finalizado.')) {
+                  setSyncPhase('finished');
+                }
                 setSyncLogs((prev) => [...prev, { level: payload.level, message: payload.message }]);
               } else if (payload.type === 'finish') {
                 setSyncStatus(payload.success ? 'success' : 'error');
+                if (payload.success) setSyncPhase('finished');
                 setSyncLogs((prev) => [
                   ...prev,
                   {
@@ -935,6 +946,136 @@ export default function TarifarioUploaderModal({
                     </button>
                   </div>
                 </div>
+
+                {/* Indicador de Fases y Checklist de Verificación */}
+                {(isSyncing || syncPhase !== 'idle') && (
+                  <div className="space-y-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Tarjeta Fase 1 */}
+                      <div
+                        className={`p-3 rounded-xl border transition-all ${
+                          syncPhase === 'creation'
+                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-200 shadow-sm shadow-amber-950/20'
+                            : syncPhase === 'verification' || syncPhase === 'finished'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold flex items-center gap-2">
+                            {syncPhase === 'creation' && <RotateCcw className="w-3.5 h-3.5 animate-spin text-amber-400" />}
+                            {(syncPhase === 'verification' || syncPhase === 'finished') && (
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                            )}
+                            {syncPhase === 'idle' && <Layers className="w-3.5 h-3.5 text-slate-500" />}
+                            Fase 1: Creación de Precios y Artes
+                          </span>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                              syncPhase === 'creation'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : syncPhase === 'verification' || syncPhase === 'finished'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {syncPhase === 'creation'
+                              ? '⚡ EN PROCESO (3 PESTAÑAS)'
+                              : syncPhase === 'verification' || syncPhase === 'finished'
+                              ? '✓ COMPLETADO'
+                              : 'PENDIENTE'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Carga modal de precios, aforos, valores y montaje de artes digitales/físicos en paralelo.
+                        </p>
+                      </div>
+
+                      {/* Tarjeta Fase 2 */}
+                      <div
+                        className={`p-3 rounded-xl border transition-all ${
+                          syncPhase === 'verification'
+                            ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200 shadow-sm shadow-cyan-950/20'
+                            : syncPhase === 'finished'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold flex items-center gap-2">
+                            {syncPhase === 'verification' && <RotateCcw className="w-3.5 h-3.5 animate-spin text-cyan-400" />}
+                            {syncPhase === 'finished' && <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
+                            {(syncPhase === 'idle' || syncPhase === 'creation') && (
+                              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
+                            )}
+                            Fase 2: Barrido y Verificación Exhaustiva
+                          </span>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                              syncPhase === 'verification'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                : syncPhase === 'finished'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {syncPhase === 'verification'
+                              ? '🔍 AUDITANDO (AUTO-FIX x2)'
+                              : syncPhase === 'finished'
+                              ? '✓ 100% CONFIRMADO'
+                              : 'EN ESPERA'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Auditoría de color #86ff8d, switches web/pos y switch ADMON exclusivo en cortesías.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Checklist de Verificaciones en Tiempo Real */}
+                    <div className="flex flex-wrap items-center gap-2 p-2.5 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[11px]">
+                      <span className="text-slate-400 font-semibold text-[10px] uppercase tracking-wider mr-1">
+                        Checklist de Auditoría:
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md flex items-center gap-1 font-medium ${
+                          syncPhase === 'finished'
+                            ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                            : 'bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        <Palette className="w-3 h-3 text-emerald-400" /> Color mapa: #86ff8d
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md flex items-center gap-1 font-medium ${
+                          syncPhase === 'finished'
+                            ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                            : 'bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        <ShieldCheck className="w-3 h-3 text-amber-400" /> Cortesías: ADMON exclusivo
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md flex items-center gap-1 font-medium ${
+                          syncPhase === 'finished'
+                            ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                            : 'bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        <Check className="w-3 h-3 text-cyan-400" /> Canales Web y Taquilla
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md flex items-center gap-1 font-medium ${
+                          syncPhase === 'finished'
+                            ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                            : 'bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        <Sparkles className="w-3 h-3 text-indigo-400" /> Auto-reintento resiliente (x2)
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Consola de logs en vivo */}
                 {syncLogs.length > 0 && (

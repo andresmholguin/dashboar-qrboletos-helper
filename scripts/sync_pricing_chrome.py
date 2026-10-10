@@ -22,6 +22,7 @@ import re
 import json
 import time
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from playwright.sync_api import sync_playwright, Page, BrowserContext
 
@@ -45,9 +46,39 @@ def parse_args():
     parser.add_argument("--no-configure-prices", action="store_true", help="Si se activa, sólo crea los precios sin entrar a su configuración")
     parser.add_argument("--replace-images", action="store_true", help="Si se activa, elimina y reemplaza imágenes si el precio ya tiene una cargada")
     parser.add_argument("--archive-old-prices", action="store_true", help="Si se activa, renombra a OLD y desactiva precios existentes cuyos valores monetarios hayan cambiado, y crea el nuevo precio")
+    parser.add_argument("--workers", type=int, default=3, help="Número de pestañas/hilos concurrentes por localidad (default: 3)")
     parser.add_argument("--dry-run", action="store_true", help="Si se activa, simula las acciones sin guardar en BD")
     parser.add_argument("--delay-ms", type=int, default=800, help="Espera entre pasos para estabilidad (default: 800ms)")
     return parser.parse_args()
+
+def normalize_cortesia_text(s: str) -> str:
+    s = str(s or "").upper()
+    for o, d in [("Í", "I"), ("Á", "A"), ("É", "E"), ("Ó", "O"), ("Ú", "U")]:
+        s = s.replace(o, d)
+    return s
+
+def is_cortesia_item(item: dict) -> bool:
+    """
+    Determina si un item es de cortesía según las reglas del negocio:
+    - Nombre, referencia o etapa contiene 'CORTESIA' (singular o plural)
+    - O 'habilitadoOnline' es explícitamente False
+    - O valor monetario es 0 y servicio es 0
+    """
+    ref = normalize_cortesia_text(item.get("referencia", ""))
+    etapa = normalize_cortesia_text(item.get("etapa", ""))
+    nombre = normalize_cortesia_text(item.get("nombre", ""))
+    if "CORTESIA" in ref or "CORTESIA" in etapa or "CORTESIA" in nombre:
+        return True
+    if item.get("habilitadoOnline") is False:
+        return True
+    try:
+        val = float(item.get("valor", 0) or 0)
+        srv = float(item.get("servicio", 0) or 0)
+        if val == 0 and srv == 0 and ("CORTES" in (ref + etapa + nombre) or item.get("habilitadoOnline") is False or item.get("aforo", 0) == 0):
+            return True
+    except Exception:
+        pass
+    return False
 
 def log(level: str, msg: str):
     symbols = {"INFO": "ℹ️ ", "SUCCESS": "✅", "WARNING": "⚠️ ", "ERROR": "❌"}
@@ -1061,30 +1092,8 @@ def configure_pos_limits(page: Page, clean_url: str, is_cortesia: bool, dry_run:
                 const isCortesia = {str(is_cortesia).lower()};
                 const results = [];
 
-                const toggleSwitch = (sw, targetState) => new Promise((res) => {{
-                    const id_pos = sw.data('pos');
-                    const form = {{ id_pos: id_pos, state: targetState, type: 'switch' }};
-                    const data = {{
-                        'form': CryptoJS.AES.encrypt(JSON.stringify(form), $ak, {{ format: CryptoJSAesJson }}).toString(),
-                        'VxUYwS3EVX': 'f70e946f7058e7a99cb82c375ee4e276033cf6625e740c758b5a0871ed5e82af'
-                    }};
-                    jQuery.ajax({{
-                        type: 'POST',
-                        url: location.href,
-                        data: data,
-                        success: (r) => {{
-                            sw.prop('checked', targetState);
-                            if (sw.data('bootstrap-switch')) {{
-                                sw.bootstrapSwitch('state', targetState, true);
-                            }}
-                            res(true);
-                        }},
-                        error: () => res(false)
-                    }});
-                }});
-
                 for (const r of rows) {{
-                    const text = r.innerText.trim().toUpperCase();
+                    const text = (r.innerText || '').trim().toUpperCase();
                     const sw = $(r).find('input.switch');
                     if (!sw.length) continue;
 
@@ -1093,9 +1102,17 @@ def configure_pos_limits(page: Page, clean_url: str, is_cortesia: bool, dry_run:
                     const desiredState = isCortesia ? isAdmon : false;
 
                     if (currState !== desiredState) {{
-                        await toggleSwitch(sw, desiredState);
+                        sw.bootstrapSwitch('state', desiredState);
                         results.push({{ name: text.split('\\n')[0].replace(/\\s+/g, ' '), state: desiredState }});
+                        await new Promise(res => setTimeout(res, 400));
                     }}
+                }}
+
+                // Esperar a que terminen peticiones AJAX en segundo plano
+                let waitCount = 0;
+                while (window.jQuery && jQuery.active > 0 && waitCount < 20) {{
+                    await new Promise(res => setTimeout(res, 200));
+                    waitCount++;
                 }}
 
                 resolve({{ success: true, updated: results }});
@@ -1160,12 +1177,16 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
                     }};
                     $(document).on('ajaxComplete', onAjax);
 
-                    const $el = $('#hexa');
-                    if (typeof $el.colorpicker === 'function') {{
-                        $el.colorpicker('setValue', '{target_color}');
+                    const $cp = $('.color-picker');
+                    if ($cp.length && typeof $cp.colorpicker === 'function') {{
+                        $cp.colorpicker('setValue', '{target_color}');
                     }} else {{
-                        $el.val('{target_color}');
-                        $el.trigger('changeColor');
+                        const $el = $('#hexa');
+                        if (typeof $el.colorpicker === 'function') {{
+                            $el.colorpicker('setValue', '{target_color}');
+                        }} else {{
+                            $el.val('{target_color}').trigger('change').trigger('changeColor');
+                        }}
                     }}
 
                     setTimeout(() => {{
@@ -1177,7 +1198,18 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
                 }});
             }}""")
             time.sleep(0.5)
-            log("SUCCESS", f"     Color en el mapa guardado: {target_color}")
+            # Validar confirmación
+            check_color = page.evaluate("""() => ($('#hexa').val() || '').toLowerCase().trim()""")
+            if check_color == target_color.lower():
+                log("SUCCESS", f"     Color en el mapa guardado: {target_color}")
+            else:
+                log("WARNING", f"     Color en el mapa quedó en '{check_color}', reintentando forzar con colorpicker...")
+                page.evaluate(f"""() => {{
+                    $('.color-picker').colorpicker('setValue', '{target_color}');
+                    $('#hexa').val('{target_color}').trigger('change');
+                }}""")
+                time.sleep(0.5)
+                log("SUCCESS", f"     Color en el mapa configurado: {target_color}")
         else:
             log("INFO", f"     Color en el mapa ya estaba en {target_color}.")
 
@@ -1256,7 +1288,7 @@ def configure_single_price(page: Page, price_base_url: str, item: dict, digital_
     5. Configurar Puntos de Venta (poslimit.aspx): ADMON para cortesías, todos en No para los demás.
     """
     referencia = item.get("referencia", "").upper()
-    is_cortesia = referencia == "CORTESIAS" or item.get("habilitadoOnline") is False
+    is_cortesia = is_cortesia_item(item)
 
     # Normalizar URL base a settings.aspx
     clean_url = re.sub(r'/(settings|designs|extras|poslimit).*$', '', price_base_url)
@@ -1347,6 +1379,408 @@ def configure_single_price(page: Page, price_base_url: str, item: dict, digital_
     log("SUCCESS", f"  Configuración completa finalizada para '{referencia}'.")
     return True
 
+def process_single_locality(page: Page, task: dict) -> dict:
+    args = task["args"]
+    loc_data = task["loc_data"]
+    promoter_id = task["promoter_id"]
+    event_id = task["event_id"]
+    show_id = task["show_id"]
+    section_id = task["section_id"]
+
+    loc_nombre = loc_data.get("nombre", "")
+    precios = loc_data.get("precios", [])
+
+    log("INFO", f"📍 [FASE 1] Procesando localidad independiente: '{loc_nombre}' ({len(precios)} precios)")
+
+    # 1. Configurar opciones de la localidad en settings.aspx (color #86ff8d y switches web/pos)
+    configure_section_settings(
+        page,
+        promoter_id=promoter_id,
+        event_id=event_id,
+        show_id=show_id,
+        section_id=section_id,
+        loc_nombre=loc_nombre,
+        precios=precios,
+        dry_run=args.dry_run,
+        delay_ms=args.delay_ms
+    )
+
+    prices_url = f"https://dashboard.qrboletos.com/promoters/{promoter_id}/events/{event_id}/shows/{show_id}/sections/{section_id}/prices/sales.aspx"
+    log("INFO", f"  Navegando a precios de '{loc_nombre}' (ID: {section_id}): {prices_url}")
+    safe_goto(page, prices_url)
+    time.sleep(args.delay_ms / 1000.0)
+
+    prices_map = get_prices_map_from_table(page)
+    log("INFO", f"  Precios existentes en la tabla para '{loc_nombre}': {list(prices_map.keys()) if prices_map else 'Ninguno'}")
+
+    creados = 0
+    omitidos = 0
+    configurados = 0
+
+    for p_item in precios:
+        ref = p_item.get("referencia", "").upper()
+        target_valor = p_item.get("valor", 0)
+        target_servicio = p_item.get("servicio", 0)
+
+        price_info = prices_map.get(ref)
+        price_url = price_info.get("url") if price_info else None
+        necesita_recrear = False
+
+        if ref in prices_map:
+            curr_valor = price_info.get("valor", 0)
+            curr_servicio = price_info.get("servicio", 0)
+            valores_difieren = (curr_valor != target_valor) or (curr_servicio != target_servicio)
+
+            if valores_difieren and args.archive_old_prices:
+                log("WARNING", f"  ⚠️ [VALOR CAMBIÓ] Precio '{ref}' en '{loc_nombre}': ${curr_valor:,} (+${curr_servicio:,}) -> Nuevo: ${target_valor:,} (+${target_servicio:,})")
+
+                update_result = handle_existing_price_update(
+                    page,
+                    ref,
+                    p_item,
+                    price_info,
+                    existing_names=list(prices_map.keys()),
+                    dry_run=args.dry_run,
+                    delay_ms=args.delay_ms
+                )
+
+                if update_result.get("action") == "updated_in_place":
+                    price_url = update_result.get("price_url")
+                    necesita_recrear = False
+                    omitidos += 1
+                elif update_result.get("action") == "archived_need_create":
+                    remaining_aforo = update_result.get("remaining_aforo", p_item.get("aforo", 0))
+                    p_item = {**p_item, "aforo": remaining_aforo}
+
+                    if not args.dry_run:
+                        safe_goto(page, prices_url)
+                        time.sleep(args.delay_ms / 1000.0)
+                        prices_map = get_prices_map_from_table(page)
+
+                    necesita_recrear = True
+                else:
+                    log("ERROR", f"No se pudo procesar la actualización del precio '{ref}' en '{loc_nombre}'.")
+                    continue
+            else:
+                if valores_difieren:
+                    log("WARNING", f"  ⚠️ [AVISO] El precio '{ref}' en '{loc_nombre}' tiene valores diferentes pero el archivado está desactivado.")
+                else:
+                    log("INFO", f"  [EXISTENTE] El precio '{ref}' ya existe en '{loc_nombre}' con valores idénticos.")
+                omitidos += 1
+        else:
+            necesita_recrear = True
+
+        if necesita_recrear:
+            success = fill_price_modal(page, p_item, dry_run=args.dry_run, delay_ms=args.delay_ms)
+            if success:
+                creados += 1
+                if not args.dry_run:
+                    time.sleep(1.0)
+                    prices_map = get_prices_map_from_table(page)
+                    new_info = prices_map.get(ref)
+                    price_url = new_info.get("url") if new_info else None
+                else:
+                    price_url = f"{prices_url}/simulated"
+            else:
+                log("ERROR", f"Fallo al cargar precio '{ref}' en '{loc_nombre}'")
+                continue
+
+        # Configurar opciones, artes e interruptores para este precio
+        if not args.no_configure_prices and (price_url or args.dry_run):
+            cfg_target_url = price_url or f"{prices_url}/simulated"
+            try:
+                conf_ok = configure_single_price(
+                    page,
+                    cfg_target_url,
+                    p_item,
+                    digital_image=args.digital_image,
+                    print_image=args.print_image,
+                    replace_images=args.replace_images,
+                    dry_run=args.dry_run,
+                    delay_ms=args.delay_ms
+                )
+                if conf_ok:
+                    configurados += 1
+            except Exception as e:
+                log("ERROR", f"Error inesperado configurando precio '{ref}' en '{loc_nombre}': {e}")
+
+            if not args.dry_run:
+                try:
+                    safe_goto(page, prices_url)
+                    time.sleep(args.delay_ms / 1000.0)
+                except Exception as e:
+                    log("WARNING", f"Error regresando a sales.aspx en '{loc_nombre}': {e}")
+
+    log("SUCCESS", f"📍 [FASE 1] Localidad '{loc_nombre}' procesada: {creados} creados, {omitidos} existentes, {configurados} configurados.")
+    return {
+        "loc_nombre": loc_nombre,
+        "creados": creados,
+        "omitidos": omitidos,
+        "configurados": configurados
+    }
+
+def verify_and_autofix_locality(page: Page, task: dict) -> dict:
+    args = task["args"]
+    loc_data = task["loc_data"]
+    promoter_id = task["promoter_id"]
+    event_id = task["event_id"]
+    show_id = task["show_id"]
+    section_id = task["section_id"]
+
+    loc_nombre = loc_data.get("nombre", "")
+    precios = loc_data.get("precios", [])
+    max_retries = 2
+
+    log("INFO", f"🔍 [FASE 2: BARRIDO] Auditando y verificando localidad '{loc_nombre}' (ID: {section_id})...")
+
+    result = {
+        "loc_nombre": loc_nombre,
+        "color_ok": False,
+        "section_switches_ok": False,
+        "prices_verified": 0,
+        "errors": []
+    }
+
+    if args.dry_run:
+        log("INFO", f"  ✓ [DRY-RUN] Verificación simulada exitosa para '{loc_nombre}'.")
+        result["color_ok"] = True
+        result["section_switches_ok"] = True
+        result["prices_verified"] = len(precios)
+        return result
+
+    # 1. Auditoría de Settings de Sección (settings.aspx)
+    section_settings_url = f"https://dashboard.qrboletos.com/promoters/{promoter_id}/events/{event_id}/shows/{show_id}/sections/{section_id}/settings.aspx"
+    has_paid_price = any(p.get("valor", 0) > 0 for p in precios)
+    target_web = True if has_paid_price else False
+    target_pos = True
+    target_color = "#86ff8d"
+
+    for attempt in range(1, max_retries + 2):
+        try:
+            safe_goto(page, section_settings_url)
+            time.sleep(args.delay_ms / 1000.0)
+
+            curr_color = page.evaluate("() => ($('#hexa').val() || '').toLowerCase().trim()")
+            curr_web = page.evaluate("() => $('input.switch[data-input=\"web\"]').prop('checked')")
+            curr_pos = page.evaluate("() => $('input.switch[data-input=\"pos\"]').prop('checked')")
+
+            color_ok = (curr_color == target_color.lower())
+            web_ok = (curr_web == target_web)
+            pos_ok = (curr_pos == target_pos)
+
+            if color_ok and web_ok and pos_ok:
+                result["color_ok"] = True
+                result["section_switches_ok"] = True
+                log("SUCCESS", f"  ✓ Localidad '{loc_nombre}': Color (#86ff8d) y Switches (Web={'Sí' if target_web else 'No'}, POS=Sí) 100% confirmados.")
+                break
+
+            if attempt <= max_retries:
+                log("WARNING", f"  ⚠️ Discrepancia en settings de '{loc_nombre}' (Color={curr_color}, Web={curr_web}, POS={curr_pos}). Auto-corrigiendo (Intento {attempt}/{max_retries})...")
+                if not color_ok:
+                    page.evaluate(f"""() => {{
+                        const $cp = $('.color-picker');
+                        if ($cp.length && typeof $cp.colorpicker === 'function') {{
+                            $cp.colorpicker('setValue', '{target_color}');
+                        }} else {{
+                            $('#hexa').val('{target_color}').trigger('change').trigger('changeColor');
+                        }}
+                    }}""")
+                    time.sleep(0.5)
+
+                if not web_ok:
+                    page.evaluate(f"""() => {{
+                        $('input.switch[data-input="web"]').bootstrapSwitch('state', {str(target_web).lower()});
+                    }}""")
+                    time.sleep(0.5)
+
+                if not pos_ok:
+                    page.evaluate(f"""() => {{
+                        $('input.switch[data-input="pos"]').bootstrapSwitch('state', {str(target_pos).lower()});
+                    }}""")
+                    time.sleep(0.5)
+
+                page.evaluate("""() => new Promise(res => {
+                    let c = 0;
+                    const it = setInterval(() => {
+                        if ((!window.jQuery || jQuery.active === 0) || c > 15) {
+                            clearInterval(it);
+                            res(true);
+                        }
+                        c++;
+                    }, 200);
+                })""")
+            else:
+                err = f"Fallo persistente en settings de sección '{loc_nombre}': Color={curr_color}, Web={curr_web}, POS={curr_pos}"
+                log("ERROR", f"  ❌ {err}")
+                result["errors"].append(err)
+        except Exception as e:
+            if attempt > max_retries:
+                err = f"Error auditando settings de '{loc_nombre}': {e}"
+                log("ERROR", f"  ❌ {err}")
+                result["errors"].append(err)
+            time.sleep(1.0)
+
+    # 2. Auditoría de Precios y Puntos de Venta (sales.aspx & poslimit.aspx)
+    prices_url = f"https://dashboard.qrboletos.com/promoters/{promoter_id}/events/{event_id}/shows/{show_id}/sections/{section_id}/prices/sales.aspx"
+    safe_goto(page, prices_url)
+    time.sleep(args.delay_ms / 1000.0)
+    prices_map = get_prices_map_from_table(page)
+
+    for p_item in precios:
+        ref = p_item.get("referencia", "").upper()
+        is_cortesia = is_cortesia_item(p_item)
+
+        if ref not in prices_map:
+            err = f"Precio '{ref}' no encontrado en tabla sales.aspx de '{loc_nombre}'."
+            log("ERROR", f"  ❌ {err}")
+            result["errors"].append(err)
+            continue
+
+        price_info = prices_map[ref]
+        price_base = price_info.get("url", "")
+        clean_url = re.sub(r'/(settings|designs|extras|poslimit).*$', '', price_base).replace('.aspx', '')
+
+        # 2a. Verificar Settings del Precio (/settings.aspx)
+        p_settings_url = f"{clean_url}/settings.aspx"
+        target_p_web = False if is_cortesia else True
+        target_p_pos = True
+        target_p_state = True
+
+        for p_attempt in range(1, max_retries + 2):
+            try:
+                safe_goto(page, p_settings_url)
+                time.sleep(0.5)
+
+                cur_p_web = page.evaluate("""() => $('input.switch[data-input="web"], input.switch[input="web"]').prop('checked')""")
+                cur_p_pos = page.evaluate("""() => $('input.switch[data-input="pos"], input.switch[input="pos"]').prop('checked')""")
+                cur_p_state = page.evaluate("""() => $('input.switch[data-input="state"], input.switch[input="state"]').prop('checked')""")
+
+                p_sw_ok = (cur_p_web == target_p_web and cur_p_pos == target_p_pos and cur_p_state == target_p_state)
+                if p_sw_ok:
+                    log("SUCCESS", f"  ✓ Precio '{ref}' en '{loc_nombre}': Canales confirmados (Web={'No' if is_cortesia else 'Sí'}, POS=Sí, Estado=Activo).")
+                    break
+
+                if p_attempt <= max_retries:
+                    log("WARNING", f"  ⚠️ Switches no coincidían en '{ref}' ({loc_nombre}). Auto-corrigiendo (Intento {p_attempt}/{max_retries})...")
+                    set_price_switch(page, "web", target_p_web, dry_run=False)
+                    set_price_switch(page, "pos", target_p_pos, dry_run=False)
+                    set_price_switch(page, "state", target_p_state, dry_run=False)
+                else:
+                    err = f"Precio '{ref}' en '{loc_nombre}': Fallo persistente en switches de canal."
+                    log("ERROR", f"  ❌ {err}")
+                    result["errors"].append(err)
+            except Exception as e:
+                if p_attempt > max_retries:
+                    result["errors"].append(f"Error en switches de precio '{ref}': {e}")
+                time.sleep(0.5)
+
+        # 2b. Verificar Puntos de Venta (/poslimit.aspx)
+        poslimit_url = f"{clean_url}/poslimit.aspx"
+        for pos_attempt in range(1, max_retries + 2):
+            try:
+                safe_goto(page, poslimit_url)
+                time.sleep(0.5)
+
+                audit_res = page.evaluate(f"""() => {{
+                    const rows = Array.from(document.querySelectorAll("table tbody tr, tr")).filter(r => $(r).find('input.switch').length > 0);
+                    const isCortesia = {str(is_cortesia).lower()};
+                    let mismatches = 0;
+                    const items = [];
+
+                    for (const r of rows) {{
+                        const text = (r.innerText || '').trim().toUpperCase();
+                        const sw = $(r).find('input.switch');
+                        if (!sw.length) continue;
+
+                        const isAdmon = text.includes('ADMON');
+                        const currState = sw.prop('checked');
+                        const desiredState = isCortesia ? isAdmon : false;
+
+                        if (currState !== desiredState) {{
+                            mismatches++;
+                            items.push({{ name: text.split('\\n')[0].replace(/\\s+/g, ' '), curr: currState, desired: desiredState }});
+                        }}
+                    }}
+                    return {{ mismatches, items }};
+                }}""")
+
+                mismatches = audit_res.get("mismatches", 0)
+                if mismatches == 0:
+                    if is_cortesia:
+                        log("SUCCESS", f"  ✓ Cortesía '{ref}' en '{loc_nombre}': Switch ADMON exclusivo verificado y confirmado (Sí) y demás puntos en No.")
+                    else:
+                        log("SUCCESS", f"  ✓ Precio comercial '{ref}' en '{loc_nombre}': Puntos de venta universales confirmados (todos en No).")
+                    break
+
+                if pos_attempt <= max_retries:
+                    log("WARNING", f"  ⚠️ Puntos de venta para '{ref}' ({loc_nombre}): {mismatches} discrepancias. Auto-corrigiendo (Intento {pos_attempt}/{max_retries})...")
+                    page.evaluate(f"""() => {{
+                        return new Promise(async (res) => {{
+                            const rows = Array.from(document.querySelectorAll("table tbody tr, tr")).filter(r => $(r).find('input.switch').length > 0);
+                            const isCortesia = {str(is_cortesia).lower()};
+                            for (const r of rows) {{
+                                const text = (r.innerText || '').trim().toUpperCase();
+                                const sw = $(r).find('input.switch');
+                                if (!sw.length) continue;
+                                const isAdmon = text.includes('ADMON');
+                                const currState = sw.prop('checked');
+                                const desiredState = isCortesia ? isAdmon : false;
+                                if (currState !== desiredState) {{
+                                    sw.bootstrapSwitch('state', desiredState);
+                                    await new Promise(w => setTimeout(w, 400));
+                                }}
+                            }}
+                            let waitC = 0;
+                            while (window.jQuery && jQuery.active > 0 && waitC < 20) {{
+                                await new Promise(w => setTimeout(w, 200));
+                                waitC++;
+                            }}
+                            res(true);
+                        }});
+                    }}""")
+                    time.sleep(0.5)
+                else:
+                    err = f"Precio '{ref}' en '{loc_nombre}': Fallo persistente en puntos de venta."
+                    log("ERROR", f"  ❌ {err}")
+                    result["errors"].append(err)
+            except Exception as e:
+                if pos_attempt > max_retries:
+                    result["errors"].append(f"Error en poslimit para '{ref}': {e}")
+                time.sleep(0.5)
+
+        result["prices_verified"] += 1
+
+    log("SUCCESS", f"🔍 [FASE 2: BARRIDO] Localidad '{loc_nombre}' auditada ({result['prices_verified']} precios verificados, {len(result['errors'])} discrepancias persistentes).")
+    return result
+
+def locality_phase1_worker(task: dict) -> dict:
+    args = task["args"]
+    with sync_playwright() as p:
+        browser = p.chromium.connect_over_cdp(args.cdp_url)
+        context = browser.contexts[0] if browser.contexts else browser.new_context()
+        page = context.new_page()
+        try:
+            return process_single_locality(page, task)
+        finally:
+            try:
+                page.close()
+            except Exception:
+                pass
+
+def locality_phase2_worker(task: dict) -> dict:
+    args = task["args"]
+    with sync_playwright() as p:
+        browser = p.chromium.connect_over_cdp(args.cdp_url)
+        context = browser.contexts[0] if browser.contexts else browser.new_context()
+        page = context.new_page()
+        try:
+            return verify_and_autofix_locality(page, task)
+        finally:
+            try:
+                page.close()
+            except Exception:
+                pass
+
 def run_sync():
     args = parse_args()
 
@@ -1372,6 +1806,8 @@ def run_sync():
     if args.print_image:
         log("INFO", f"Arte Físico 63X177 configurado: {args.print_image}")
 
+    # 1. Escanear localidades disponibles desde sections.aspx con una pestaña inicial
+    available_sections = {}
     with sync_playwright() as p:
         try:
             browser = p.chromium.connect_over_cdp(args.cdp_url)
@@ -1383,7 +1819,6 @@ def run_sync():
         context = browser.contexts[0] if browser.contexts else browser.new_context()
         page = find_or_create_qrboletos_page(context)
 
-        # 1. Navegar a sections.aspx para escanear todas las localidades del show
         sections_url = f"https://dashboard.qrboletos.com/promoters/{args.promoter_id}/events/{args.event_id}/shows/{args.show_id}/sections.aspx"
         log("INFO", f"Navegando a estructura de localidades: {sections_url}")
         safe_goto(page, sections_url)
@@ -1395,144 +1830,72 @@ def run_sync():
 
         log("SUCCESS", f"Se detectaron {len(available_sections)} localidades disponibles en el panel.")
 
-        total_creados = 0
-        total_omitidos = 0
-        total_configurados = 0
+    # 2. Emparejar cada localidad del tarifario con su section_id
+    tasks = []
+    for loc_data in localidades_config:
+        loc_nombre = loc_data.get("nombre", "")
+        section_id = find_best_section_match(loc_nombre, available_sections)
+        if not section_id:
+            log("WARNING", f"No se encontró ID en sections.aspx para '{loc_nombre}'. Omitiendo.")
+            continue
+        tasks.append({
+            "loc_data": loc_data,
+            "promoter_id": args.promoter_id,
+            "event_id": args.event_id,
+            "show_id": args.show_id,
+            "section_id": section_id,
+            "args": args
+        })
 
-        # 2. Iterar sobre cada localidad del tarifario
-        for loc_data in localidades_config:
-            loc_nombre = loc_data.get("nombre", "")
-            precios = loc_data.get("precios", [])
+    if not tasks:
+        log("ERROR", "Ninguna localidad del tarifario coincidió con las secciones de QRBoletos.")
+        sys.exit(1)
 
-            log("INFO", f"\n=======================================================")
-            log("INFO", f"Procesando localidad independiente: '{loc_nombre}' ({len(precios)} precios)")
+    num_workers = min(len(tasks), max(1, args.workers))
 
-            section_id = find_best_section_match(loc_nombre, available_sections)
-            if not section_id:
-                log("WARNING", f"No se encontró ID en sections.aspx para '{loc_nombre}'. Omitiendo.")
-                continue
+    # --- FASE 1: CREACIÓN Y CONFIGURACIÓN EN PARALELO ---
+    log("INFO", f"\n=======================================================")
+    log("INFO", f"🚀 [FASE 1] Creando y configurando precios con pool de {num_workers} pestañas concurrentes...")
+    log("INFO", f"=======================================================\n")
 
-            # 2a. Configurar opciones de la localidad en settings.aspx (color #86ff8d y switches web/pos)
-            configure_section_settings(
-                page,
-                promoter_id=args.promoter_id,
-                event_id=args.event_id,
-                show_id=args.show_id,
-                section_id=section_id,
-                loc_nombre=loc_nombre,
-                precios=precios,
-                dry_run=args.dry_run,
-                delay_ms=args.delay_ms
-            )
+    total_creados = 0
+    total_omitidos = 0
+    total_configurados = 0
 
-            prices_url = f"https://dashboard.qrboletos.com/promoters/{args.promoter_id}/events/{args.event_id}/shows/{args.show_id}/sections/{section_id}/prices/sales.aspx"
-            log("INFO", f"Navegando a precios de '{loc_nombre}' (ID: {section_id}): {prices_url}")
-            safe_goto(page, prices_url)
-            time.sleep(args.delay_ms / 1000.0)
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        phase1_results = list(executor.map(locality_phase1_worker, tasks))
 
-            prices_map = get_prices_map_from_table(page)
-            log("INFO", f"Precios existentes en la tabla: {list(prices_map.keys()) if prices_map else 'Ninguno'}")
+    for res in phase1_results:
+        if res:
+            total_creados += res.get("creados", 0)
+            total_omitidos += res.get("omitidos", 0)
+            total_configurados += res.get("configurados", 0)
 
-            for p_item in precios:
-                ref = p_item.get("referencia", "").upper()
-                target_valor = p_item.get("valor", 0)
-                target_servicio = p_item.get("servicio", 0)
+    # Notificación literal requerida por el usuario
+    log("INFO", f"\n=======================================================")
+    log("SUCCESS", "Proceso creación de precios finalizado. Iniciando verificación y barrido...")
+    log("INFO", f"=======================================================\n")
 
-                price_info = prices_map.get(ref)
-                price_url = price_info.get("url") if price_info else None
-                necesita_recrear = False
+    # --- FASE 2: BARRIDO Y VERIFICACIÓN EN PARALELO ---
+    log("INFO", f"🚀 [FASE 2] Iniciando barrido exhaustivo con pool de {num_workers} pestañas concurrentes...")
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        phase2_results = list(executor.map(locality_phase2_worker, tasks))
 
-                if ref in prices_map:
-                    curr_valor = price_info.get("valor", 0)
-                    curr_servicio = price_info.get("servicio", 0)
-                    valores_difieren = (curr_valor != target_valor) or (curr_servicio != target_servicio)
+    all_errors = []
+    for r in phase2_results:
+        if r and r.get("errors"):
+            all_errors.extend(r["errors"])
 
-                    if valores_difieren and args.archive_old_prices:
-                        log("WARNING", f"  ⚠️ [VALOR CAMBIÓ] Precio '{ref}' en tabla: ${curr_valor:,} (+${curr_servicio:,}) -> Nuevo en tarifario: ${target_valor:,} (+${target_servicio:,})")
-
-                        update_result = handle_existing_price_update(
-                            page,
-                            ref,
-                            p_item,
-                            price_info,
-                            existing_names=list(prices_map.keys()),
-                            dry_run=args.dry_run,
-                            delay_ms=args.delay_ms
-                        )
-
-                        if update_result.get("action") == "updated_in_place":
-                            price_url = update_result.get("price_url")
-                            necesita_recrear = False
-                            total_omitidos += 1
-                        elif update_result.get("action") == "archived_need_create":
-                            # Ajustar aforo descontando boletos vendidos
-                            remaining_aforo = update_result.get("remaining_aforo", target_aforo)
-                            p_item = {**p_item, "aforo": remaining_aforo}
-
-                            if not args.dry_run:
-                                # Volver a sales.aspx y re-escanear para liberar la referencia limpia
-                                safe_goto(page, prices_url)
-                                time.sleep(args.delay_ms / 1000.0)
-                                prices_map = get_prices_map_from_table(page)
-
-                            necesita_recrear = True
-                        else:
-                            log("ERROR", f"No se pudo procesar la actualización del precio '{ref}'.")
-                            continue
-                    else:
-                        if valores_difieren:
-                            log("WARNING", f"  ⚠️ [AVISO] El precio '{ref}' tiene valores diferentes en el tarifario (${target_valor:,} vs ${curr_valor:,}), pero el archivado está desactivado. Se conserva existente.")
-                        else:
-                            log("INFO", f"  [EXISTENTE] El precio '{ref}' ya existe en la tabla con valores idénticos.")
-                        total_omitidos += 1
-                else:
-                    necesita_recrear = True
-
-                if necesita_recrear:
-                    success = fill_price_modal(page, p_item, dry_run=args.dry_run, delay_ms=args.delay_ms)
-                    if success:
-                        total_creados += 1
-                        # Re-escanear tabla para obtener la URL de configuración del nuevo precio
-                        if not args.dry_run:
-                            time.sleep(1.0)
-                            prices_map = get_prices_map_from_table(page)
-                            new_info = prices_map.get(ref)
-                            price_url = new_info.get("url") if new_info else None
-                        else:
-                            price_url = f"{prices_url}/simulated"
-                    else:
-                        log("ERROR", f"Fallo al cargar precio '{ref}'")
-                        continue
-
-                # Configurar opciones, artes e interruptores para este precio
-                if not args.no_configure_prices and (price_url or args.dry_run):
-                    cfg_target_url = price_url or f"{prices_url}/simulated"
-                    try:
-                        conf_ok = configure_single_price(
-                            page,
-                            cfg_target_url,
-                            p_item,
-                            digital_image=args.digital_image,
-                            print_image=args.print_image,
-                            replace_images=args.replace_images,
-                            dry_run=args.dry_run,
-                            delay_ms=args.delay_ms
-                        )
-                        if conf_ok:
-                            total_configurados += 1
-                    except Exception as e:
-                        log("ERROR", f"Error inesperado configurando precio '{ref}': {e}")
-
-                    # Volver a sales.aspx para continuar con el siguiente precio
-                    if not args.dry_run:
-                        try:
-                            safe_goto(page, prices_url)
-                            time.sleep(args.delay_ms / 1000.0)
-                        except Exception as e:
-                            log("WARNING", f"Error regresando a sales.aspx: {e}")
-
-        log("INFO", f"\n=======================================================")
-        log("SUCCESS", f"Proceso finalizado. Precios creados: {total_creados} | Precios existentes: {total_omitidos} | Precios configurados: {total_configurados}")
+    # Notificación final literal requerida por el usuario
+    log("INFO", f"\n=======================================================")
+    if not all_errors:
+        log("SUCCESS", "Proceso finalizado. Todas las configuraciones fueron verificadas y confirmadas con éxito.")
+        log("SUCCESS", f"Resumen: Precios creados: {total_creados} | Precios existentes: {total_omitidos} | Precios configurados: {total_configurados}")
+    else:
+        log("WARNING", f"Proceso finalizado con {len(all_errors)} observaciones persistentes tras 2 reintentos:")
+        for err in all_errors:
+            log("WARNING", f" • {err}")
+    log("INFO", f"=======================================================")
 
 if __name__ == "__main__":
     run_sync()

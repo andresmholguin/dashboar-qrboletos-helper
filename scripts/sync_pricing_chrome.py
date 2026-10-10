@@ -148,6 +148,7 @@ def find_or_create_qrboletos_page(context: BrowserContext) -> Page:
 
 def extract_sections_from_page(page: Page) -> Dict[str, str]:
     """Escanea sections.aspx para obtener { nombre_localidad: id_seccion }"""
+    sections: Dict[str, str] = {}
     try:
         page.wait_for_selector("#sections-box div.card, div.card, .section-item, table", state="attached", timeout=12000)
     except Exception:

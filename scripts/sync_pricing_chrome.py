@@ -40,7 +40,8 @@ def parse_args():
     parser.add_argument("--promoter-id", required=True, help="ID del promotor")
     parser.add_argument("--event-id", required=True, help="ID del evento")
     parser.add_argument("--show-id", required=True, help="ID del show/espectáculo")
-    parser.add_argument("--pricing-json", required=True, help="Ruta al archivo JSON con el tarifario o string JSON")
+    parser.add_argument("--pricing-json", default=None, help="Ruta al archivo JSON con el tarifario o string JSON (opcional si es --sweep-only)")
+    parser.add_argument("--sweep-only", action="store_true", help="Si se activa, ejecuta únicamente la Fase 2 (Barrido y Verificación de colores, switches y puntos de venta)")
     parser.add_argument("--digital-image", default=None, help="Ruta al archivo de imagen para el QRBoleto Digital (1465x550)")
     parser.add_argument("--print-image", default=None, help="Ruta al diseño de impresión físico 63X177 (Boca/Godex - 1134x236)")
     parser.add_argument("--no-configure-prices", action="store_true", help="Si se activa, sólo crea los precios sin entrar a su configuración")
@@ -1611,6 +1612,9 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
     time.sleep(args.delay_ms / 1000.0)
     prices_map = get_prices_map_from_table(page)
 
+    if not precios and prices_map:
+        precios = [{"referencia": k, "valor": v.get("valor", 0), "servicio": v.get("servicio", 0)} for k, v in prices_map.items()]
+
     for p_item in precios:
         ref = p_item.get("referencia", "").upper()
         is_cortesia = is_cortesia_item(p_item)
@@ -1791,20 +1795,21 @@ def locality_phase2_worker(task: dict) -> dict:
 def run_sync():
     args = parse_args()
 
-    # Cargar datos del tarifario
-    try:
-        if args.pricing_json.strip().startswith("{"):
-            pricing_data = json.loads(args.pricing_json)
-        else:
-            with open(args.pricing_json, "r", encoding="utf-8") as f:
-                pricing_data = json.load(f)
-    except Exception as e:
-        log("ERROR", f"Error cargando JSON de tarifario: {e}")
-        sys.exit(1)
-
-    localidades_config = pricing_data.get("localidades", [])
-    if not localidades_config:
-        log("ERROR", "El JSON del tarifario no contiene la lista 'localidades'.")
+    localidades_config = []
+    if args.pricing_json:
+        # Cargar datos del tarifario
+        try:
+            if args.pricing_json.strip().startswith("{"):
+                pricing_data = json.loads(args.pricing_json)
+            else:
+                with open(args.pricing_json, "r", encoding="utf-8") as f:
+                    pricing_data = json.load(f)
+            localidades_config = pricing_data.get("localidades", [])
+        except Exception as e:
+            log("ERROR", f"Error cargando JSON de tarifario: {e}")
+            sys.exit(1)
+    elif not args.sweep_only:
+        log("ERROR", "El parámetro --pricing-json es requerido para crear precios.")
         sys.exit(1)
 
     log("INFO", f"Iniciando conexión a Chrome vía CDP en {args.cdp_url}...")
@@ -1839,49 +1844,66 @@ def run_sync():
 
     # 2. Emparejar cada localidad del tarifario con su section_id
     tasks = []
-    for loc_data in localidades_config:
-        loc_nombre = loc_data.get("nombre", "")
-        section_id = find_best_section_match(loc_nombre, available_sections)
-        if not section_id:
-            log("WARNING", f"No se encontró ID en sections.aspx para '{loc_nombre}'. Omitiendo.")
-            continue
-        tasks.append({
-            "loc_data": loc_data,
-            "promoter_id": args.promoter_id,
-            "event_id": args.event_id,
-            "show_id": args.show_id,
-            "section_id": section_id,
-            "args": args
-        })
+    if localidades_config:
+        for loc_data in localidades_config:
+            loc_nombre = loc_data.get("nombre", "")
+            section_id = find_best_section_match(loc_nombre, available_sections)
+            if not section_id:
+                log("WARNING", f"No se encontró ID en sections.aspx para '{loc_nombre}'. Omitiendo.")
+                continue
+            tasks.append({
+                "loc_data": loc_data,
+                "promoter_id": args.promoter_id,
+                "event_id": args.event_id,
+                "show_id": args.show_id,
+                "section_id": section_id,
+                "args": args
+            })
+    else:
+        # Modo sweep-only sin JSON: verificar todas las secciones detectadas en sections.aspx
+        for sec_nombre, sec_id in available_sections.items():
+            tasks.append({
+                "loc_data": {"nombre": sec_nombre, "precios": []},
+                "promoter_id": args.promoter_id,
+                "event_id": args.event_id,
+                "show_id": args.show_id,
+                "section_id": sec_id,
+                "args": args
+            })
 
     if not tasks:
-        log("ERROR", "Ninguna localidad del tarifario coincidió con las secciones de QRBoletos.")
+        log("ERROR", "Ninguna localidad coincidió con las secciones de QRBoletos.")
         sys.exit(1)
 
     num_workers = min(len(tasks), max(1, args.workers))
-
-    # --- FASE 1: CREACIÓN Y CONFIGURACIÓN EN PARALELO ---
-    log("INFO", f"\n=======================================================")
-    log("INFO", f"🚀 [FASE 1] Creando y configurando precios con pool de {num_workers} pestañas concurrentes...")
-    log("INFO", f"=======================================================\n")
 
     total_creados = 0
     total_omitidos = 0
     total_configurados = 0
 
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        phase1_results = list(executor.map(locality_phase1_worker, tasks))
+    if not args.sweep_only:
+        # --- FASE 1: CREACIÓN Y CONFIGURACIÓN EN PARALELO ---
+        log("INFO", f"\n=======================================================")
+        log("INFO", f"🚀 [FASE 1] Creando y configurando precios con pool de {num_workers} pestañas concurrentes...")
+        log("INFO", f"=======================================================\n")
 
-    for res in phase1_results:
-        if res:
-            total_creados += res.get("creados", 0)
-            total_omitidos += res.get("omitidos", 0)
-            total_configurados += res.get("configurados", 0)
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            phase1_results = list(executor.map(locality_phase1_worker, tasks))
 
-    # Notificación literal requerida por el usuario
-    log("INFO", f"\n=======================================================")
-    log("SUCCESS", "Proceso creación de precios finalizado. Iniciando verificación y barrido...")
-    log("INFO", f"=======================================================\n")
+        for res in phase1_results:
+            if res:
+                total_creados += res.get("creados", 0)
+                total_omitidos += res.get("omitidos", 0)
+                total_configurados += res.get("configurados", 0)
+
+        # Notificación literal requerida por el usuario
+        log("INFO", f"\n=======================================================")
+        log("SUCCESS", "Proceso creación de precios finalizado. Iniciando verificación y barrido...")
+        log("INFO", f"=======================================================\n")
+    else:
+        log("INFO", f"\n=======================================================")
+        log("INFO", f"🚀 [MODO DIRECTO] Iniciando verificación y barrido directo sobre {len(tasks)} localidades...")
+        log("INFO", f"=======================================================\n")
 
     # --- FASE 2: BARRIDO Y VERIFICACIÓN EN PARALELO ---
     log("INFO", f"🚀 [FASE 2] Iniciando barrido exhaustivo con pool de {num_workers} pestañas concurrentes...")

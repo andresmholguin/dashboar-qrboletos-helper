@@ -25,9 +25,12 @@ import {
   ListFilter,
   Copy,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  ShieldCheck
 } from 'lucide-react';
 import TarifarioUploaderModal from './TarifarioUploaderModal';
+import CloneSeatsModal from './CloneSeatsModal';
+import VerifyPricingModal from './VerifyPricingModal';
 
 interface LocalitiesViewProps {
   evento: Evento;
@@ -55,6 +58,8 @@ export default function LocalitiesView({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showTarifarioModal, setShowTarifarioModal] = useState(false);
+  const [showCloneSeatsModal, setShowCloneSeatsModal] = useState(false);
+  const [showVerifyPricingModal, setShowVerifyPricingModal] = useState(false);
   const [isExtractingFromChrome, setIsExtractingFromChrome] = useState(false);
   const [availability, setAvailability] = useState<EventAvailabilitySummary | null>(eventoAvailability || null);
   const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
@@ -500,6 +505,26 @@ export default function LocalitiesView({
           >
             <Sparkles className="w-3.5 h-3.5 fill-current" />
             <span>Cargar Tarifario IA</span>
+          </button>
+
+          {/* Botón para Clonar Planos de Acomodación */}
+          <button
+            onClick={() => setShowCloneSeatsModal(true)}
+            className="h-9 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Clonar distribución y planos de acomodación desde ARECOL -> PLANOS -> PRUEBA para localidades sin distribución"
+          >
+            <Armchair className="w-3.5 h-3.5" />
+            <span>Clonar Planos</span>
+          </button>
+
+          {/* Botón para Barrido y Verificación de Precios */}
+          <button
+            onClick={() => setShowVerifyPricingModal(true)}
+            className="h-9 px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Auditar y auto-corregir colores de mapa (#86ff8d), switches web/pos y ADMON en cortesías"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Barrido y Verificación</span>
           </button>
 
           {/* Botón para Reemplazar / Actualizar Artes */}
@@ -1008,6 +1033,20 @@ export default function LocalitiesView({
         onSyncComplete={() => {
           // Si el usuario actualiza localidades
         }}
+      />
+
+      {/* Modal para Clonar Planos de Acomodación */}
+      <CloneSeatsModal
+        evento={{ ...evento, localidades }}
+        isOpen={showCloneSeatsModal}
+        onClose={() => setShowCloneSeatsModal(false)}
+      />
+
+      {/* Modal para Barrido y Verificación Exhaustiva de Precios */}
+      <VerifyPricingModal
+        evento={{ ...evento, localidades }}
+        isOpen={showVerifyPricingModal}
+        onClose={() => setShowVerifyPricingModal(false)}
       />
 
       {/* Modal para Gestión y Lista Detallada de URLs de Descuentos */}

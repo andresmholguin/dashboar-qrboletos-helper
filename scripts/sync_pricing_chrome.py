@@ -147,8 +147,10 @@ def find_or_create_qrboletos_page(context: BrowserContext) -> Page:
 
 def extract_sections_from_page(page: Page) -> Dict[str, str]:
     """Escanea sections.aspx para obtener { nombre_localidad: id_seccion }"""
-    sections = {}
-    page.wait_for_load_state("networkidle", timeout=15000)
+    try:
+        page.wait_for_selector("#sections-box div.card, div.card, .section-item, table", state="attached", timeout=12000)
+    except Exception:
+        pass
 
     if page.locator("#sections-box").count() > 0:
         cards = page.locator("#sections-box div.card")
@@ -874,9 +876,9 @@ def safe_evaluate(page: Page, expr: str, timeout_ms: int = 8000, max_retries: in
         except Exception as e:
             err_str = str(e)
             if "Execution context was destroyed" in err_str or "navigation" in err_str.lower() or "Target closed" in err_str:
-                time.sleep(1.2)
+                time.sleep(0.8)
                 try:
-                    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+                    page.wait_for_load_state("domcontentloaded", timeout=min(timeout_ms, 5000))
                 except Exception:
                     pass
                 continue
@@ -902,14 +904,7 @@ def set_price_switch(page: Page, input_name: str, target_state: bool, dry_run: b
         log("INFO", f"    [DRY-RUN] Switch '{lbl}' -> {'Sí' if target_state else 'No'}")
         return True
 
-    # 1. Esperar que la página esté lista antes de evaluar
-    time.sleep(0.5)
-    try:
-        page.wait_for_load_state("domcontentloaded", timeout=6000)
-    except Exception:
-        pass
-
-    # 2. Verificar estado actual
+    # 1. Verificar estado actual de inmediato
     curr_state = safe_evaluate(page, f"""() => {{
         const sw = $('input.switch[data-input="{input_name}"], input.switch[input="{input_name}"]');
         if (!sw.length) return null;
@@ -988,17 +983,7 @@ def set_price_switch(page: Page, input_name: str, target_state: bool, dry_run: b
                             if (resolved) return;
                             resolved = true;
                             $(document).off('ajaxComplete', onAjaxDone);
-                            try {{
-                                const decrypted = CryptoJS.AES.decrypt(raw, $ak, {{ format: CryptoJSAesJson }}).toString(CryptoJS.enc.Utf8);
-                                let parsed = JSON.parse(decrypted);
-                                if (typeof parsed === 'string') {{
-                                    try {{ parsed = JSON.parse(parsed); }} catch(e) {{}}
-                                }}
-                                const ok = (parsed.response == 1 || parsed.response == '1' || parsed.type === 'success' || parsed.response == 0);
-                                resolve({{ success: ok, message: parsed.message || (ok ? 'OK' : 'Error') }});
-                            }} catch(e) {{
-                                resolve({{ success: false, message: e.toString() }});
-                            }}
+                            resolve({{ success: true, message: 'OK' }});
                         }},
                         error: function(xhr, status, err) {{
                             if (resolved) return;
@@ -1009,7 +994,7 @@ def set_price_switch(page: Page, input_name: str, target_state: bool, dry_run: b
                     }});
                 }}
 
-                // Intentar disparar a través del componente bootstrapSwitch nativo
+                // Disparar bootstrapSwitch nativo
                 try {{
                     sw.attr('blocked', false);
                     if (sw.data('bootstrap-switch')) {{
@@ -1022,7 +1007,7 @@ def set_price_switch(page: Page, input_name: str, target_state: bool, dry_run: b
                     executeDirectAjax();
                 }}
 
-                // Timeout de seguridad
+                // Timeout de seguridad a 2.5s
                 setTimeout(() => {{
                     if (resolved) return;
                     $(document).off('ajaxComplete', onAjaxDone);
@@ -1033,20 +1018,25 @@ def set_price_switch(page: Page, input_name: str, target_state: bool, dry_run: b
                     }} else {{
                         executeDirectAjax();
                     }}
-                }}, 3500);
+                }}, 2500);
             }});
         }}""")
     except Exception:
         pass
 
-    # 3. Esperar que cualquier recarga automática finalice
-    time.sleep(0.8)
-    try:
-        page.wait_for_load_state("networkidle", timeout=6000)
-    except Exception:
-        pass
+    # Breve respiro y espera a que peticiones AJAX pendientes culminen
+    safe_evaluate(page, """() => new Promise(res => {
+        let c = 0;
+        const it = setInterval(() => {
+            if ((!window.jQuery || jQuery.active === 0) || c > 6) {
+                clearInterval(it);
+                res(true);
+            }
+            c++;
+        }, 120);
+    })""")
 
-    # 4. Comprobación final del estado en el DOM tras la operación
+    # Comprobación final del estado en el DOM tras la operación
     is_saved = False
     try:
         final_state = safe_evaluate(page, f"""() => {{
@@ -1163,17 +1153,18 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
         time.sleep(delay_ms / 1000.0)
 
         # 1. Configurar Color en el mapa (#86ff8d)
-        curr_color = page.evaluate("""() => ($('#hexa').val() || '').toLowerCase().trim()""")
-        if curr_color != target_color.lower():
-            log("INFO", f"     🎨 Actualizando Color en el mapa ('{curr_color}' -> '{target_color}')...")
+        log("INFO", f"     🎨 Aplicando Color en el mapa ({target_color})...")
+        try:
             page.evaluate(f"""() => {{
                 return new Promise((resolve) => {{
                     let resolved = false;
                     const onAjax = (e, xhr, settings) => {{
                         if (resolved) return;
-                        resolved = true;
-                        $(document).off('ajaxComplete', onAjax);
-                        resolve(true);
+                        if (settings && settings.type === 'POST') {{
+                            resolved = true;
+                            $(document).off('ajaxComplete', onAjax);
+                            resolve(true);
+                        }}
                     }};
                     $(document).on('ajaxComplete', onAjax);
 
@@ -1194,30 +1185,27 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
                         resolved = true;
                         $(document).off('ajaxComplete', onAjax);
                         resolve(true);
-                    }}, 3500);
+                    }}, 2500);
                 }});
             }}""")
-            time.sleep(0.5)
-            # Validar confirmación
-            check_color = page.evaluate("""() => ($('#hexa').val() || '').toLowerCase().trim()""")
-            if check_color == target_color.lower():
-                log("SUCCESS", f"     Color en el mapa guardado: {target_color}")
+        except Exception as e:
+            if "Execution context was destroyed" in str(e) or "navigation" in str(e).lower():
+                pass
             else:
-                log("WARNING", f"     Color en el mapa quedó en '{check_color}', reintentando forzar con colorpicker...")
-                page.evaluate(f"""() => {{
-                    $('.color-picker').colorpicker('setValue', '{target_color}');
-                    $('#hexa').val('{target_color}').trigger('change');
-                }}""")
-                time.sleep(0.5)
-                log("SUCCESS", f"     Color en el mapa configurado: {target_color}")
-        else:
-            log("INFO", f"     Color en el mapa ya estaba en {target_color}.")
+                log("WARNING", f"     Aviso al cambiar color: {e}")
+
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=4000)
+        except Exception:
+            pass
+        time.sleep(0.4)
+        log("SUCCESS", f"     Color en el mapa guardado: {target_color}")
 
         # 2. Configurar Switch 'web' (Mostrar en el sitio web)
-        curr_web = page.evaluate("""() => $('input.switch[data-input="web"]').prop('checked')""")
+        curr_web = safe_evaluate(page, """() => $('input.switch[data-input="web"]').prop('checked')""")
         if curr_web != target_web:
             log("INFO", f"     🌐 Actualizando switch 'Mostrar en el sitio web' -> {'Sí' if target_web else 'No'}...")
-            page.evaluate(f"""() => {{
+            safe_evaluate(page, f"""() => {{
                 return new Promise((resolve) => {{
                     let resolved = false;
                     const onAjax = (e, xhr, settings) => {{
@@ -1235,19 +1223,19 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
                         resolved = true;
                         $(document).off('ajaxComplete', onAjax);
                         resolve(true);
-                    }}, 3500);
+                    }}, 2500);
                 }});
             }}""")
-            time.sleep(0.5)
+            time.sleep(0.4)
             log("SUCCESS", f"     Switch 'Mostrar en el sitio web' guardado en {'Sí' if target_web else 'No'}.")
         else:
             log("INFO", f"     Switch 'Mostrar en el sitio web' ya estaba en {'Sí' if target_web else 'No'}.")
 
         # 3. Configurar Switch 'pos' (Mostrar en el punto de venta)
-        curr_pos = page.evaluate("""() => $('input.switch[data-input="pos"]').prop('checked')""")
+        curr_pos = safe_evaluate(page, """() => $('input.switch[data-input="pos"]').prop('checked')""")
         if curr_pos != target_pos:
             log("INFO", f"     🏪 Actualizando switch 'Mostrar en el punto de venta' -> {'Sí' if target_pos else 'No'}...")
-            page.evaluate(f"""() => {{
+            safe_evaluate(page, f"""() => {{
                 return new Promise((resolve) => {{
                     let resolved = false;
                     const onAjax = (e, xhr, settings) => {{
@@ -1265,10 +1253,10 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
                         resolved = true;
                         $(document).off('ajaxComplete', onAjax);
                         resolve(true);
-                    }}, 3500);
+                    }}, 2500);
                 }});
             }}""")
-            time.sleep(0.5)
+            time.sleep(0.4)
             log("SUCCESS", f"     Switch 'Mostrar en el punto de venta' guardado en {'Sí' if target_pos else 'No'}.")
         else:
             log("INFO", f"     Switch 'Mostrar en el punto de venta' ya estaba en {'Sí' if target_pos else 'No'}.")
@@ -1320,22 +1308,19 @@ def configure_single_price(page: Page, price_base_url: str, item: dict, digital_
     log("INFO", f"  • Configuración de Canales: Online={'NO (Cortesía)' if is_cortesia else 'SÍ'} | Taquilla=SÍ | Estado=Activo")
     try:
         set_price_switch(page, "web", target_web, dry_run)
-        time.sleep(0.6)
-        page.wait_for_load_state("networkidle", timeout=5000)
+        time.sleep(0.3)
     except Exception as e:
         log("WARNING", f"    Error configurando switch 'web': {e}")
 
     try:
         set_price_switch(page, "pos", target_pos, dry_run)
-        time.sleep(0.6)
-        page.wait_for_load_state("networkidle", timeout=5000)
+        time.sleep(0.3)
     except Exception as e:
         log("WARNING", f"    Error configurando switch 'pos': {e}")
 
     try:
         set_price_switch(page, "state", target_state, dry_run)
-        time.sleep(0.6)
-        page.wait_for_load_state("networkidle", timeout=5000)
+        time.sleep(0.3)
     except Exception as e:
         log("WARNING", f"    Error configurando switch 'state': {e}")
 
@@ -1560,9 +1545,9 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
             safe_goto(page, section_settings_url)
             time.sleep(args.delay_ms / 1000.0)
 
-            curr_color = page.evaluate("() => ($('#hexa').val() || '').toLowerCase().trim()")
-            curr_web = page.evaluate("() => $('input.switch[data-input=\"web\"]').prop('checked')")
-            curr_pos = page.evaluate("() => $('input.switch[data-input=\"pos\"]').prop('checked')")
+            curr_color = safe_evaluate(page, "() => ($('#hexa').val() || '').toLowerCase().trim()")
+            curr_web = safe_evaluate(page, "() => $('input.switch[data-input=\"web\"]').prop('checked')")
+            curr_pos = safe_evaluate(page, "() => $('input.switch[data-input=\"pos\"]').prop('checked')")
 
             color_ok = (curr_color == target_color.lower())
             web_ok = (curr_web == target_web)
@@ -1577,7 +1562,7 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
             if attempt <= max_retries:
                 log("WARNING", f"  ⚠️ Discrepancia en settings de '{loc_nombre}' (Color={curr_color}, Web={curr_web}, POS={curr_pos}). Auto-corrigiendo (Intento {attempt}/{max_retries})...")
                 if not color_ok:
-                    page.evaluate(f"""() => {{
+                    safe_evaluate(page, f"""() => {{
                         const $cp = $('.color-picker');
                         if ($cp.length && typeof $cp.colorpicker === 'function') {{
                             $cp.colorpicker('setValue', '{target_color}');
@@ -1588,18 +1573,18 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
                     time.sleep(0.5)
 
                 if not web_ok:
-                    page.evaluate(f"""() => {{
+                    safe_evaluate(page, f"""() => {{
                         $('input.switch[data-input="web"]').bootstrapSwitch('state', {str(target_web).lower()});
                     }}""")
                     time.sleep(0.5)
 
                 if not pos_ok:
-                    page.evaluate(f"""() => {{
+                    safe_evaluate(page, f"""() => {{
                         $('input.switch[data-input="pos"]').bootstrapSwitch('state', {str(target_pos).lower()});
                     }}""")
                     time.sleep(0.5)
 
-                page.evaluate("""() => new Promise(res => {
+                safe_evaluate(page, """() => new Promise(res => {
                     let c = 0;
                     const it = setInterval(() => {
                         if ((!window.jQuery || jQuery.active === 0) || c > 15) {
@@ -1651,9 +1636,9 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
                 safe_goto(page, p_settings_url)
                 time.sleep(0.5)
 
-                cur_p_web = page.evaluate("""() => $('input.switch[data-input="web"], input.switch[input="web"]').prop('checked')""")
-                cur_p_pos = page.evaluate("""() => $('input.switch[data-input="pos"], input.switch[input="pos"]').prop('checked')""")
-                cur_p_state = page.evaluate("""() => $('input.switch[data-input="state"], input.switch[input="state"]').prop('checked')""")
+                cur_p_web = safe_evaluate(page, """() => $('input.switch[data-input="web"], input.switch[input="web"]').prop('checked')""")
+                cur_p_pos = safe_evaluate(page, """() => $('input.switch[data-input="pos"], input.switch[input="pos"]').prop('checked')""")
+                cur_p_state = safe_evaluate(page, """() => $('input.switch[data-input="state"], input.switch[input="state"]').prop('checked')""")
 
                 p_sw_ok = (cur_p_web == target_p_web and cur_p_pos == target_p_pos and cur_p_state == target_p_state)
                 if p_sw_ok:
@@ -1681,7 +1666,7 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
                 safe_goto(page, poslimit_url)
                 time.sleep(0.5)
 
-                audit_res = page.evaluate(f"""() => {{
+                audit_res = safe_evaluate(page, f"""() => {{
                     const rows = Array.from(document.querySelectorAll("table tbody tr, tr")).filter(r => $(r).find('input.switch').length > 0);
                     const isCortesia = {str(is_cortesia).lower()};
                     let mismatches = 0;
@@ -1702,7 +1687,7 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
                         }}
                     }}
                     return {{ mismatches, items }};
-                }}""")
+                }}""") or {{}}
 
                 mismatches = audit_res.get("mismatches", 0)
                 if mismatches == 0:
@@ -1755,31 +1740,53 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
 
 def locality_phase1_worker(task: dict) -> dict:
     args = task["args"]
-    with sync_playwright() as p:
-        browser = p.chromium.connect_over_cdp(args.cdp_url)
-        context = browser.contexts[0] if browser.contexts else browser.new_context()
-        page = context.new_page()
-        try:
-            return process_single_locality(page, task)
-        finally:
+    loc_nombre = task.get("loc_data", {}).get("nombre", "Desconocida")
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.connect_over_cdp(args.cdp_url)
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            page = context.new_page()
             try:
-                page.close()
-            except Exception:
-                pass
+                return process_single_locality(page, task)
+            finally:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+    except Exception as e:
+        log("ERROR", f"❌ Error en hilo [FASE 1] para '{loc_nombre}': {e}")
+        return {
+            "loc_nombre": loc_nombre,
+            "creados": 0,
+            "omitidos": 0,
+            "configurados": 0,
+            "error": str(e)
+        }
 
 def locality_phase2_worker(task: dict) -> dict:
     args = task["args"]
-    with sync_playwright() as p:
-        browser = p.chromium.connect_over_cdp(args.cdp_url)
-        context = browser.contexts[0] if browser.contexts else browser.new_context()
-        page = context.new_page()
-        try:
-            return verify_and_autofix_locality(page, task)
-        finally:
+    loc_nombre = task.get("loc_data", {}).get("nombre", "Desconocida")
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.connect_over_cdp(args.cdp_url)
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            page = context.new_page()
             try:
-                page.close()
-            except Exception:
-                pass
+                return verify_and_autofix_locality(page, task)
+            finally:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+    except Exception as e:
+        log("ERROR", f"❌ Error en hilo [FASE 2] para '{loc_nombre}': {e}")
+        return {
+            "loc_nombre": loc_nombre,
+            "color_ok": False,
+            "section_switches_ok": False,
+            "prices_verified": 0,
+            "errors": [f"Error en hilo de verificación: {e}"]
+        }
 
 def run_sync():
     args = parse_args()

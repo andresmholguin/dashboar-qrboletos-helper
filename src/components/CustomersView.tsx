@@ -19,7 +19,10 @@ import {
   ChevronsRight,
   Sparkles,
   Award,
-  Database
+  Database,
+  Check,
+  X,
+  ChevronDown
 } from 'lucide-react';
 import { Customer } from '@/lib/qrboletosApi';
 import {
@@ -42,19 +45,33 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEventFilter, setSelectedEventFilter] = useState<string>('todos');
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [isEventDropdownOpen, setIsEventDropdownOpen] = useState(false);
+  const [eventSearchQuery, setEventSearchQuery] = useState('');
+  const eventDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedEventsCountFilter, setSelectedEventsCountFilter] = useState<string>('todos');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  // Cerrar menú desplegable al hacer clic fuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (eventDropdownRef.current && !eventDropdownRef.current.contains(event.target as Node)) {
+        setIsEventDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Paginación de la tabla visual
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const isAbortingRef = useRef(false);
 
-  // Reiniciar a la página 1 cuando cambia la búsqueda, filtro de evento, filtro de cantidad o tamaño de página
+  // Reiniciar a la página 1 cuando cambia la búsqueda, filtro de eventos, filtro de cantidad o tamaño de página
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedEventFilter, selectedEventsCountFilter, pageSize]);
+  }, [searchQuery, selectedEvents, selectedEventsCountFilter, pageSize]);
 
   // Cargar desde IndexedDB al inicio, o iniciar sincronización si la base local está vacía
   useEffect(() => {
@@ -172,8 +189,9 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         c.identificacion?.numero?.includes(q);
 
       const matchesEvent =
-        selectedEventFilter === 'todos' ||
-        c.eventos?.some((e) => e.evento === selectedEventFilter);
+        selectedEvents.length === 0 ||
+        selectedEvents.length === uniqueEvents.length ||
+        c.eventos?.some((e) => e.evento && selectedEvents.includes(e.evento));
 
       // Conteo de eventos únicos/distintos comprados (no cuenta compras repetidas del mismo evento)
       const distinctEventsCount = new Set(
@@ -192,7 +210,7 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
 
       return matchesSearch && matchesEvent && matchesCount;
     });
-  }, [customers, searchQuery, selectedEventFilter, selectedEventsCountFilter]);
+  }, [customers, searchQuery, selectedEvents, uniqueEvents.length, selectedEventsCountFilter]);
 
   const stats = useMemo(() => {
     let totalLtv = 0;
@@ -223,7 +241,22 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
   const handleExportCsv = () => {
     if (filteredCustomers.length === 0) return;
 
-    const headers = ['ID Cliente', 'Tipo Doc', 'Documento', 'Nombre', 'Email', 'Telefono', 'Genero', 'Fecha Registro', 'LTV', 'Cant. Eventos', 'Eventos'];
+    const isFiltered = selectedEvents.length > 0 && selectedEvents.length < uniqueEvents.length;
+    const headers = [
+      'ID Cliente',
+      'Tipo Doc',
+      'Documento',
+      'Nombre',
+      'Email',
+      'Telefono',
+      'Genero',
+      'Fecha Registro',
+      'LTV',
+      'Cant. Eventos',
+      'Todos los Eventos',
+      ...(isFiltered ? ['Eventos Filtrados Coincidentes'] : []),
+    ];
+
     const rows = filteredCustomers.map((c) => {
       const docTipo = c.identificacion?.tipo || '';
       const docNum = c.identificacion?.numero || '';
@@ -232,6 +265,16 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         (c.eventos || []).map((e) => (e.evento || '').trim().toLowerCase()).filter(Boolean)
       ).size;
       const eventosStr = (c.eventos || []).map((e) => e.evento).join(' | ');
+
+      const matchedEvents = isFiltered
+        ? Array.from(
+            new Set(
+              (c.eventos || [])
+                .map((e) => e.evento || '')
+                .filter((ev) => selectedEvents.includes(ev))
+            )
+          ).join(' | ')
+        : '';
 
       return [
         c.id_cliente,
@@ -245,6 +288,7 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         totalLtv,
         distinctCount,
         '"' + eventosStr.replace(/"/g, '""') + '"',
+        ...(isFiltered ? ['"' + matchedEvents.replace(/"/g, '""') + '"'] : []),
       ];
     });
 
@@ -254,7 +298,14 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
     const link = document.createElement('a');
     link.setAttribute('href', url);
     const today = new Date().toISOString().split('T')[0];
-    const filterSuffix = selectedEventFilter !== 'todos' ? '_' + selectedEventFilter.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_') : '';
+
+    let filterSuffix = '';
+    if (selectedEvents.length === 1) {
+      filterSuffix = '_' + selectedEvents[0].substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
+    } else if (selectedEvents.length > 1 && selectedEvents.length < uniqueEvents.length) {
+      filterSuffix = `_${selectedEvents.length}_Eventos`;
+    }
+
     link.setAttribute('download', 'Clientes_QRBoletos_' + today + filterSuffix + '.csv');
     document.body.appendChild(link);
     link.click();
@@ -430,23 +481,156 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
             </select>
           </div>
 
-          {/* Filtro por Evento específico */}
-          <div className="flex items-center gap-2">
+          {/* Filtro de Selección Múltiple por Evento */}
+          <div className="relative flex items-center gap-2" ref={eventDropdownRef}>
             <label className="text-[11px] text-slate-400 font-semibold shrink-0 uppercase font-mono">
               Filtrar por Evento:
             </label>
-            <select
-              value={selectedEventFilter}
-              onChange={(e) => setSelectedEventFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer w-full sm:w-auto max-w-xs truncate"
-            >
-              <option value="todos">Todos los Eventos ({uniqueEvents.length})</option>
-              {uniqueEvents.map((evName, idx) => (
-                <option key={idx} value={evName}>
-                  {evName}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsEventDropdownOpen((prev) => !prev)}
+                className={`h-9 bg-slate-950 border text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 flex items-center justify-between gap-2.5 cursor-pointer transition-colors max-w-xs sm:max-w-sm ${
+                  selectedEvents.length > 0 && selectedEvents.length < uniqueEvents.length
+                    ? 'border-emerald-500/60 bg-emerald-950/20 text-emerald-200 shadow-sm'
+                    : 'border-slate-800 hover:border-slate-700'
+                }`}
+                title={
+                  selectedEvents.length === 0 || selectedEvents.length === uniqueEvents.length
+                    ? 'Todos los eventos'
+                    : selectedEvents.join(', ')
+                }
+              >
+                <span className="truncate text-left font-medium">
+                  {selectedEvents.length === 0 || selectedEvents.length === uniqueEvents.length ? (
+                    `Todos los Eventos (${uniqueEvents.length})`
+                  ) : selectedEvents.length === 1 ? (
+                    selectedEvents[0]
+                  ) : (
+                    <span>
+                      <span className="text-emerald-400 font-bold">{selectedEvents.length}</span> eventos seleccionados
+                    </span>
+                  )}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${
+                    isEventDropdownOpen ? 'rotate-180 text-emerald-400' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Menú Desplegable con Buscador y Checkboxes */}
+              {isEventDropdownOpen && (
+                <div className="absolute right-0 mt-2 z-50 w-72 sm:w-84 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-3 flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-150">
+                  {/* Buscador interno */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Buscar evento..."
+                      value={eventSearchQuery}
+                      onChange={(e) => setEventSearchQuery(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                      autoFocus
+                    />
+                    {eventSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setEventSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Acciones Rápidas: Todos / Limpiar / Contador */}
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEvents([...uniqueEvents])}
+                        className="text-emerald-400 hover:text-emerald-300 font-medium hover:underline cursor-pointer"
+                      >
+                        Marcar todos
+                      </button>
+                      <span className="text-slate-600">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEvents([])}
+                        className="text-slate-400 hover:text-rose-400 font-medium hover:underline cursor-pointer"
+                      >
+                        Limpiar
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {selectedEvents.length === 0
+                        ? `Todos (${uniqueEvents.length})`
+                        : `${selectedEvents.length} de ${uniqueEvents.length}`}
+                    </span>
+                  </div>
+
+                  {/* Lista de Eventos con Checkboxes */}
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    {(() => {
+                      const filteredList = uniqueEvents.filter((name) =>
+                        name.toLowerCase().includes(eventSearchQuery.toLowerCase().trim())
+                      );
+
+                      if (filteredList.length === 0) {
+                        return (
+                          <div className="text-center py-4 text-xs text-slate-500">
+                            No se encontraron eventos
+                          </div>
+                        );
+                      }
+
+                      return filteredList.map((evName) => {
+                        const isSelected = selectedEvents.includes(evName);
+                        return (
+                          <label
+                            key={evName}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEvents((prev) =>
+                                prev.includes(evName)
+                                  ? prev.filter((name) => name !== evName)
+                                  : [...prev, evName]
+                              );
+                            }}
+                            className={`flex items-start gap-2.5 p-2 rounded-xl text-xs cursor-pointer select-none transition-colors ${
+                              isSelected
+                                ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/30 font-medium'
+                                : 'hover:bg-slate-800/60 text-slate-300 border border-transparent'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className="mt-0.5 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-0 cursor-pointer pointer-events-none"
+                            />
+                            <span className="flex-1 break-words leading-tight">{evName}</span>
+                          </label>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Pie del menú */}
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                    <span className="text-[10px]">Cualquiera de los marcados (OR)</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEventDropdownOpen(false)}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                    >
+                      Listo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

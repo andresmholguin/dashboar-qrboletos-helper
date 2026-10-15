@@ -49,8 +49,21 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
   const [isEventDropdownOpen, setIsEventDropdownOpen] = useState(false);
   const [eventSearchQuery, setEventSearchQuery] = useState('');
   const eventDropdownRef = useRef<HTMLDivElement>(null);
+  const eventInputRef = useRef<HTMLInputElement>(null);
   const [selectedEventsCountFilter, setSelectedEventsCountFilter] = useState<string>('todos');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  const removeEvent = (eventName: string) => {
+    setSelectedEvents((prev) => prev.filter((name) => name !== eventName));
+  };
+
+  const toggleEvent = (eventName: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventName)
+        ? prev.filter((name) => name !== eventName)
+        : [...prev, eventName]
+    );
+  };
 
   // Cerrar menú desplegable al hacer clic fuera
   useEffect(() => {
@@ -446,21 +459,21 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
         </div>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col lg:flex-row gap-3 items-center justify-between shadow-sm">
-        <div className="relative w-full lg:w-80 xl:w-96">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, email, teléfono o cédula..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-500"
-          />
-        </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
+        {/* Fila 1: Búsqueda general y Cantidad de Eventos */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full sm:w-80 lg:w-96">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, email, teléfono o cédula..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-500"
+            />
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-          {/* Filtro por Cantidad de Eventos Comprados (Eventos distintos) */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
             <label className="text-[11px] text-slate-400 font-semibold shrink-0 uppercase font-mono">
               Cant. Eventos:
             </label>
@@ -480,157 +493,148 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
               <option value="3+">≥ 3 eventos (Super Fans / VIP)</option>
             </select>
           </div>
+        </div>
 
-          {/* Filtro de Selección Múltiple por Evento */}
-          <div className="relative flex items-center gap-2" ref={eventDropdownRef}>
-            <label className="text-[11px] text-slate-400 font-semibold shrink-0 uppercase font-mono">
-              Filtrar por Evento:
+        {/* Fila 2: Filtro de Eventos con Tags / Chips Removibles (Idéntico a la imagen) */}
+        <div className="space-y-1.5 pt-1 border-t border-slate-800/80" ref={eventDropdownRef}>
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <span>EVENTOS</span>
+              <span className="text-[10px] text-slate-500 font-normal">
+                {selectedEvents.length === 0
+                  ? `(Todos los eventos incluidos - ${uniqueEvents.length})`
+                  : `(${selectedEvents.length} de ${uniqueEvents.length} seleccionados)`}
+              </span>
             </label>
-            <div className="relative">
+
+            <div className="flex items-center gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => setIsEventDropdownOpen((prev) => !prev)}
-                className={`h-9 bg-slate-950 border text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 flex items-center justify-between gap-2.5 cursor-pointer transition-colors max-w-xs sm:max-w-sm ${
-                  selectedEvents.length > 0 && selectedEvents.length < uniqueEvents.length
-                    ? 'border-emerald-500/60 bg-emerald-950/20 text-emerald-200 shadow-sm'
-                    : 'border-slate-800 hover:border-slate-700'
-                }`}
-                title={
-                  selectedEvents.length === 0 || selectedEvents.length === uniqueEvents.length
-                    ? 'Todos los eventos'
-                    : selectedEvents.join(', ')
-                }
+                onClick={() => setSelectedEvents([...uniqueEvents])}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer hover:underline"
               >
-                <span className="truncate text-left font-medium">
-                  {selectedEvents.length === 0 || selectedEvents.length === uniqueEvents.length ? (
-                    `Todos los Eventos (${uniqueEvents.length})`
-                  ) : selectedEvents.length === 1 ? (
-                    selectedEvents[0]
-                  ) : (
-                    <span>
-                      <span className="text-emerald-400 font-bold">{selectedEvents.length}</span> eventos seleccionados
-                    </span>
-                  )}
-                </span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${
-                    isEventDropdownOpen ? 'rotate-180 text-emerald-400' : ''
-                  }`}
-                />
+                Seleccionar todos
               </button>
-
-              {/* Menú Desplegable con Buscador y Checkboxes */}
-              {isEventDropdownOpen && (
-                <div className="absolute right-0 mt-2 z-50 w-72 sm:w-84 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-3 flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-150">
-                  {/* Buscador interno */}
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Buscar evento..."
-                      value={eventSearchQuery}
-                      onChange={(e) => setEventSearchQuery(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-                      autoFocus
-                    />
-                    {eventSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setEventSearchQuery('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Acciones Rápidas: Todos / Limpiar / Contador */}
-                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 text-[11px]">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedEvents([...uniqueEvents])}
-                        className="text-emerald-400 hover:text-emerald-300 font-medium hover:underline cursor-pointer"
-                      >
-                        Marcar todos
-                      </button>
-                      <span className="text-slate-600">•</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedEvents([])}
-                        className="text-slate-400 hover:text-rose-400 font-medium hover:underline cursor-pointer"
-                      >
-                        Limpiar
-                      </button>
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {selectedEvents.length === 0
-                        ? `Todos (${uniqueEvents.length})`
-                        : `${selectedEvents.length} de ${uniqueEvents.length}`}
-                    </span>
-                  </div>
-
-                  {/* Lista de Eventos con Checkboxes */}
-                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                    {(() => {
-                      const filteredList = uniqueEvents.filter((name) =>
-                        name.toLowerCase().includes(eventSearchQuery.toLowerCase().trim())
-                      );
-
-                      if (filteredList.length === 0) {
-                        return (
-                          <div className="text-center py-4 text-xs text-slate-500">
-                            No se encontraron eventos
-                          </div>
-                        );
-                      }
-
-                      return filteredList.map((evName) => {
-                        const isSelected = selectedEvents.includes(evName);
-                        return (
-                          <label
-                            key={evName}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedEvents((prev) =>
-                                prev.includes(evName)
-                                  ? prev.filter((name) => name !== evName)
-                                  : [...prev, evName]
-                              );
-                            }}
-                            className={`flex items-start gap-2.5 p-2 rounded-xl text-xs cursor-pointer select-none transition-colors ${
-                              isSelected
-                                ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/30 font-medium'
-                                : 'hover:bg-slate-800/60 text-slate-300 border border-transparent'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              readOnly
-                              className="mt-0.5 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-0 cursor-pointer pointer-events-none"
-                            />
-                            <span className="flex-1 break-words leading-tight">{evName}</span>
-                          </label>
-                        );
-                      });
-                    })()}
-                  </div>
-
-                  {/* Pie del menú */}
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                    <span className="text-[10px]">Cualquiera de los marcados (OR)</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsEventDropdownOpen(false)}
-                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold text-xs cursor-pointer transition-colors"
-                    >
-                      Listo
-                    </button>
-                  </div>
-                </div>
-              )}
+              <span className="text-slate-600">•</span>
+              <button
+                type="button"
+                onClick={() => setSelectedEvents([])}
+                className="text-[11px] text-slate-400 hover:text-rose-400 font-semibold cursor-pointer hover:underline"
+              >
+                Limpiar selección
+              </button>
             </div>
+          </div>
+
+          {/* Caja contenedora de chips con borde y cursor inline */}
+          <div
+            onClick={() => {
+              eventInputRef.current?.focus();
+              setIsEventDropdownOpen(true);
+            }}
+            className="w-full bg-slate-950 border border-slate-800 focus-within:border-slate-600 rounded-xl p-2 min-h-[46px] flex flex-wrap items-center gap-1.5 cursor-text transition-all relative shadow-inner"
+          >
+            {selectedEvents.map((evName) => (
+              <span
+                key={evName}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800/90 text-slate-200 border border-slate-700/80 hover:border-slate-600 text-[11px] font-mono font-medium leading-none select-none transition-colors shadow-sm"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeEvent(evName);
+                  }}
+                  className="text-slate-400 hover:text-rose-400 font-bold text-sm leading-none cursor-pointer pr-0.5"
+                  title={`Quitar ${evName}`}
+                >
+                  ×
+                </button>
+                <span className="break-all">{evName}</span>
+              </span>
+            ))}
+
+            {/* Input al final de los chips para buscar/agregar */}
+            <input
+              ref={eventInputRef}
+              type="text"
+              value={eventSearchQuery}
+              onChange={(e) => {
+                setEventSearchQuery(e.target.value);
+                setIsEventDropdownOpen(true);
+              }}
+              onFocus={() => setIsEventDropdownOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Backspace' && !eventSearchQuery && selectedEvents.length > 0) {
+                  setSelectedEvents((prev) => prev.slice(0, -1));
+                }
+              }}
+              placeholder={
+                selectedEvents.length === 0
+                  ? 'Escribe o haz clic para buscar y seleccionar eventos...'
+                  : ''
+              }
+              className="bg-transparent border-none text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none flex-1 min-w-[160px] py-1"
+            />
+
+            {/* Menú Desplegable con opciones de eventos */}
+            {isEventDropdownOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2.5 max-h-64 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95 duration-150"
+              >
+                <div className="flex items-center justify-between px-2 py-1 text-[11px] text-slate-400 border-b border-slate-800/80 pb-1.5 mb-1">
+                  <span>Haz clic en un evento para agregarlo o quitarlo:</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEventDropdownOpen(false)}
+                    className="text-slate-400 hover:text-white font-bold cursor-pointer text-xs"
+                  >
+                    Listo ✕
+                  </button>
+                </div>
+
+                {(() => {
+                  const filteredList = uniqueEvents.filter((name) =>
+                    name.toLowerCase().includes(eventSearchQuery.toLowerCase().trim())
+                  );
+
+                  if (filteredList.length === 0) {
+                    return (
+                      <div className="text-center py-4 text-xs text-slate-500">
+                        No se encontraron eventos coincidentes con &quot;{eventSearchQuery}&quot;
+                      </div>
+                    );
+                  }
+
+                  return filteredList.map((evName) => {
+                    const isSelected = selectedEvents.includes(evName);
+                    return (
+                      <div
+                        key={evName}
+                        onClick={() => toggleEvent(evName)}
+                        className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer select-none transition-colors ${
+                          isSelected
+                            ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30 font-medium'
+                            : 'hover:bg-slate-800/70 text-slate-300 border border-transparent'
+                        }`}
+                      >
+                        <span className="font-mono">{evName}</span>
+                        {isSelected ? (
+                          <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> Seleccionado
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-500 hover:text-slate-300 font-mono">
+                            + Agregar
+                          </span>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
           </div>
         </div>
       </div>

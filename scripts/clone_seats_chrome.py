@@ -372,16 +372,62 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
     confirmed = False
 
     while (time.time() - start_wait) < max_wait:
-        time.sleep(2.0)
+        time.sleep(1.5)
         try:
-            # Comprobar si la página ya recargó y tiene SVG o si el modal ya se cerró
+            # 1. Comprobar si apareció la alerta de éxito: "Hemos clonado las ubicaciones satisfactoriamente"
             check = page.evaluate("""() => {
+                const bodyText = (document.body ? document.body.innerText : '') || '';
+                const hasSuccessMsg = bodyText.includes('Hemos clonado las ubicaciones satisfactoriamente') ||
+                                      bodyText.includes('clonado las ubicaciones') ||
+                                      bodyText.includes('ubicaciones satisfactoriamente');
+
+                let okClicked = false;
+                if (hasSuccessMsg) {
+                    // Buscar y pulsar el botón OK en el modal SweetAlert
+                    const btns = Array.from(document.querySelectorAll('.swal2-confirm, .sweet-alert button.confirm, .swal-button--confirm, .modal button, button'));
+                    const okBtn = btns.find(b => {
+                        const t = (b.innerText || b.value || '').trim().toUpperCase();
+                        return t === 'OK' || t === 'ACEPTAR' || t.includes('OK');
+                    });
+                    if (okBtn) {
+                        okBtn.click();
+                        okClicked = true;
+                    } else if (window.Swal && typeof window.Swal.close === 'function') {
+                        window.Swal.close();
+                        okClicked = true;
+                    } else if (window.swal && typeof window.swal.close === 'function') {
+                        window.swal.close();
+                        okClicked = true;
+                    }
+                }
+
                 const hasSvg = $('svg').length > 0 || $('.seat-item, [id*="seat"]').length > 0;
                 const cloneVisible = $('#clone, button:has-text(\"Clonar\")').is(':visible');
                 const modalVisible = $('#modalClone').is(':visible');
                 const seatCount = $('.seat-item, [id*="seat"], circle, rect.seat').length;
-                return { hasSvg, cloneVisible, modalVisible, seatCount };
+
+                return { hasSuccessMsg, okClicked, hasSvg, cloneVisible, modalVisible, seatCount };
             }""")
+
+            # Si detectamos la alerta de éxito
+            if check.get("hasSuccessMsg") or check.get("okClicked"):
+                log("SUCCESS", f"  🎉 Confirmación detectada en QRBoletos: 'Hemos clonado las ubicaciones satisfactoriamente'.")
+                try:
+                    ok_loc = page.locator(".swal2-confirm, .sweet-alert button.confirm, button:has-text('OK')").first
+                    if ok_loc.count() > 0 and ok_loc.is_visible():
+                        ok_loc.click()
+                        log("INFO", f"  👉 Botón 'OK' presionado automáticamente.")
+                except Exception:
+                    pass
+
+                confirmed = True
+                log("INFO", f"  🔄 Esperando recarga y renderizado del plano clonado...")
+                try:
+                    page.wait_for_load_state("domcontentloaded", timeout=15000)
+                except Exception:
+                    pass
+                time.sleep(2.0)
+                break
 
             if check.get("hasSvg") and not check.get("cloneVisible"):
                 confirmed = True
@@ -397,7 +443,17 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
                 pass
             time.sleep(2.0)
 
+    # Si se confirmó por la alerta de éxito o recarga, asegurar que el plano se visualice
     if confirmed:
+        try:
+            has_svg = page.evaluate("""() => $('svg').length > 0 || $('.seat-item, [id*="seat"]').length > 0""")
+            if not has_svg:
+                page.reload()
+                page.wait_for_load_state("domcontentloaded", timeout=15000)
+                time.sleep(1.5)
+        except Exception:
+            pass
+
         log("SUCCESS", f"  ✅ ¡Plano de '{section_name}' clonado exitosamente desde '{matched_text}'!")
         return {"name": section_name, "status": "cloned_success", "source": matched_text}
     else:
@@ -405,7 +461,11 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
         final_check = {}
         try:
             final_check = page.evaluate("""() => {
+                const bodyText = (document.body ? document.body.innerText : '') || '';
+                const hasSuccessMsg = bodyText.includes('Hemos clonado las ubicaciones satisfactoriamente') ||
+                                      bodyText.includes('clonado las ubicaciones');
                 return {
+                    hasSuccessMsg,
                     hasSvg: $('svg').length > 0 || $('.seat-item, [id*="seat"]').length > 0,
                     cloneVisible: $('#clone, button:has-text(\"Clonar\")').is(':visible')
                 };
@@ -413,7 +473,13 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
         except Exception:
             pass
 
-        if final_check.get("hasSvg") and not final_check.get("cloneVisible"):
+        if final_check.get("hasSuccessMsg") or (final_check.get("hasSvg") and not final_check.get("cloneVisible")):
+            try:
+                ok_loc = page.locator(".swal2-confirm, .sweet-alert button.confirm, button:has-text('OK')").first
+                if ok_loc.count() > 0 and ok_loc.is_visible():
+                    ok_loc.click()
+            except Exception:
+                pass
             log("SUCCESS", f"  ✅ ¡Plano de '{section_name}' clonado exitosamente desde '{matched_text}'!")
             return {"name": section_name, "status": "cloned_success", "source": matched_text}
         else:

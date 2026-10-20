@@ -309,11 +309,65 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
     # 5. Guardar clonación: Ejecutar exactamente 1 solo clic y deshabilitar para evitar duplicados
     log("INFO", f"  💾 Enviando solicitud de clonación (1 solo clic). Bloqueando re-envíos...")
 
+    # Registrar listener de diálogos nativos por si QRBoletos emite un window.alert tradicional
+    def handle_native_dialog(dialog):
+        try:
+            log("INFO", f"  🔔 Diálogo nativo detectado: '{dialog.message}'. Aceptando...")
+            dialog.accept()
+        except Exception:
+            pass
+
+    page.on("dialog", handle_native_dialog)
+
     click_result = page.evaluate("""() => {
         if (window.__clone_already_submitted) {
             return { ok: false, error: 'Ya se envió una solicitud de clonación previa' };
         }
         window.__clone_already_submitted = true;
+        window.__clone_success_detected = false;
+
+        // 1. Observer persistente en DOM: si aparece el texto aunque desaparezca en 1 o 2 segundos, capturarlo
+        try {
+            const observer = new MutationObserver(() => {
+                const text = (document.body ? document.body.innerText : '') || '';
+                if (text.includes('clonado las ubicaciones') || 
+                    text.includes('ubicaciones satisfactoriamente') || 
+                    text.includes('satisfactoriamente')) {
+                    window.__clone_success_detected = true;
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+        } catch (e) {}
+
+        // 2. Interceptar librerías de alerta (SweetAlert / Swal) por si tienen temporizador auto-cierre
+        try {
+            if (window.swal) {
+                const origSwal = window.swal;
+                window.swal = function(...args) {
+                    window.__clone_success_detected = true;
+                    return origSwal.apply(this, args);
+                };
+            }
+            if (window.Swal && window.Swal.fire) {
+                const origFire = window.Swal.fire;
+                window.Swal.fire = function(...args) {
+                    window.__clone_success_detected = true;
+                    return origFire.apply(this, args);
+                };
+            }
+        } catch (e) {}
+
+        // 3. Interceptar respuestas AJAX de jQuery
+        try {
+            $(document).ajaxComplete((event, xhr, settings) => {
+                try {
+                    const resp = xhr.responseText || '';
+                    if (resp.includes('clonado') || resp.includes('satisfactoriamente')) {
+                        window.__clone_success_detected = true;
+                    }
+                } catch(e) {}
+            });
+        } catch (e) {}
 
         // Desactivar tecla Enter en el modal para evitar envíos dobles o triples
         $('#modalClone').off('keydown.preventClone').on('keydown.preventClone', (e) => {
@@ -372,32 +426,29 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
     confirmed = False
 
     while (time.time() - start_wait) < max_wait:
-        time.sleep(1.5)
+        time.sleep(1.0)
         try:
-            # 1. Comprobar si apareció la alerta de éxito: "Hemos clonado las ubicaciones satisfactoriamente"
+            # 1. Comprobar si apareció la alerta de éxito o si el interceptor la registró
             check = page.evaluate("""() => {
                 const bodyText = (document.body ? document.body.innerText : '') || '';
-                const hasSuccessMsg = bodyText.includes('Hemos clonado las ubicaciones satisfactoriamente') ||
+                const hasSuccessMsg = (window.__clone_success_detected === true) ||
+                                      bodyText.includes('Hemos clonado las ubicaciones satisfactoriamente') ||
                                       bodyText.includes('clonado las ubicaciones') ||
                                       bodyText.includes('ubicaciones satisfactoriamente');
 
                 let okClicked = false;
                 if (hasSuccessMsg) {
-                    // Buscar y pulsar el botón OK en el modal SweetAlert
+                    // Buscar y pulsar el botón OK en el modal SweetAlert si aún está visible
                     const btns = Array.from(document.querySelectorAll('.swal2-confirm, .sweet-alert button.confirm, .swal-button--confirm, .modal button, button'));
                     const okBtn = btns.find(b => {
                         const t = (b.innerText || b.value || '').trim().toUpperCase();
                         return t === 'OK' || t === 'ACEPTAR' || t.includes('OK');
                     });
                     if (okBtn) {
-                        okBtn.click();
-                        okClicked = true;
-                    } else if (window.Swal && typeof window.Swal.close === 'function') {
-                        window.Swal.close();
-                        okClicked = true;
-                    } else if (window.swal && typeof window.swal.close === 'function') {
-                        window.swal.close();
-                        okClicked = true;
+                        try {
+                            okBtn.click();
+                            okClicked = true;
+                        } catch (e) {}
                     }
                 }
 
@@ -409,24 +460,11 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
                 return { hasSuccessMsg, okClicked, hasSvg, cloneVisible, modalVisible, seatCount };
             }""")
 
-            # Si detectamos la alerta de éxito
+            # Si detectamos la alerta de éxito (incluso si desaparece rápido)
             if check.get("hasSuccessMsg") or check.get("okClicked"):
                 log("SUCCESS", f"  🎉 Confirmación detectada en QRBoletos: 'Hemos clonado las ubicaciones satisfactoriamente'.")
-                try:
-                    ok_loc = page.locator(".swal2-confirm, .sweet-alert button.confirm, button:has-text('OK')").first
-                    if ok_loc.count() > 0 and ok_loc.is_visible():
-                        ok_loc.click()
-                        log("INFO", f"  👉 Botón 'OK' presionado automáticamente.")
-                except Exception:
-                    pass
-
                 confirmed = True
-                log("INFO", f"  🔄 Esperando recarga y renderizado del plano clonado...")
-                try:
-                    page.wait_for_load_state("domcontentloaded", timeout=15000)
-                except Exception:
-                    pass
-                time.sleep(2.0)
+                time.sleep(1.5)
                 break
 
             if check.get("hasSvg") and not check.get("cloneVisible"):
@@ -435,19 +473,22 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
                 log("INFO", f"  ✓ Plano detectado en el DOM ({seat_count} asientos confirmados).")
                 break
         except Exception:
-            # Si el contexto de ejecución fue destruido, significa que QRBoletos hizo location.reload()
-            log("INFO", f"  🔄 QRBoletos recargó la página tras clonar. Esperando confirmación de carga...")
+            # Si el contexto de ejecución fue destruido, significa que QRBoletos hizo location.reload() tras clonar
+            log("SUCCESS", f"  🔄 QRBoletos recargó la página tras completar la clonación.")
+            confirmed = True
             try:
                 page.wait_for_load_state("domcontentloaded", timeout=20000)
             except Exception:
                 pass
-            time.sleep(2.0)
+            time.sleep(1.5)
+            break
 
     # Si se confirmó por la alerta de éxito o recarga, asegurar que el plano se visualice
     if confirmed:
         try:
             has_svg = page.evaluate("""() => $('svg').length > 0 || $('.seat-item, [id*="seat"]').length > 0""")
             if not has_svg:
+                log("INFO", f"  🔄 Actualizando vista para verificar plano renderizado...")
                 page.reload()
                 page.wait_for_load_state("domcontentloaded", timeout=15000)
                 time.sleep(1.5)
@@ -462,7 +503,8 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
         try:
             final_check = page.evaluate("""() => {
                 const bodyText = (document.body ? document.body.innerText : '') || '';
-                const hasSuccessMsg = bodyText.includes('Hemos clonado las ubicaciones satisfactoriamente') ||
+                const hasSuccessMsg = (window.__clone_success_detected === true) ||
+                                      bodyText.includes('Hemos clonado las ubicaciones satisfactoriamente') ||
                                       bodyText.includes('clonado las ubicaciones');
                 return {
                     hasSuccessMsg,
@@ -474,12 +516,6 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
             pass
 
         if final_check.get("hasSuccessMsg") or (final_check.get("hasSvg") and not final_check.get("cloneVisible")):
-            try:
-                ok_loc = page.locator(".swal2-confirm, .sweet-alert button.confirm, button:has-text('OK')").first
-                if ok_loc.count() > 0 and ok_loc.is_visible():
-                    ok_loc.click()
-            except Exception:
-                pass
             log("SUCCESS", f"  ✅ ¡Plano de '{section_name}' clonado exitosamente desde '{matched_text}'!")
             return {"name": section_name, "status": "cloned_success", "source": matched_text}
         else:

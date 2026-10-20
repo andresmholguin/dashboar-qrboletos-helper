@@ -1,1276 +1,1347 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { Evento, Localidad, EventAvailabilitySummary, LocalidadAvailability } from '@/types';
-import {
-  ArrowLeft,
-  Search,
-  Globe,
-  Clipboard,
-  RefreshCw,
-  AlertCircle,
-  CheckCircle,
-  ExternalLink,
-  Settings,
-  DollarSign,
-  Armchair,
-  Database,
-  HelpCircle,
-  X,
-  Sparkles,
-  Zap,
-  Palette,
-  Ticket,
-  Tag,
-  ListFilter,
-  Copy,
-  Check,
-  AlertTriangle,
-  ShieldCheck
-} from 'lucide-react';
-import TarifarioUploaderModal from './TarifarioUploaderModal';
-import CloneSeatsModal from './CloneSeatsModal';
-import VerifyPricingModal from './VerifyPricingModal';
-
-interface LocalitiesViewProps {
-  evento: Evento;
-  eventoAvailability?: EventAvailabilitySummary;
-  onBack: () => void;
-  onSaveLocalities: (rowId: string, localidades: Localidad[]) => Promise<void>;
-  onOpenArtworks?: () => void;
-  onConfigureSettings?: () => void;
-}
-
-export default function LocalitiesView({
-  evento,
-  eventoAvailability,
-  onBack,
-  onSaveLocalities,
-  onOpenArtworks,
-  onConfigureSettings
-}: LocalitiesViewProps) {
-  const [htmlContent, setHtmlContent] = useState('');
-  const [localidades, setLocalidades] = useState<Localidad[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showPastePanel, setShowPastePanel] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [showTarifarioModal, setShowTarifarioModal] = useState(false);
-  const [showCloneSeatsModal, setShowCloneSeatsModal] = useState(false);
-  const [showVerifyPricingModal, setShowVerifyPricingModal] = useState(false);
-  const [isExtractingFromChrome, setIsExtractingFromChrome] = useState(false);
-  const [availability, setAvailability] = useState<EventAvailabilitySummary | null>(eventoAvailability || null);
-  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
-
-  // Obtener el dominio del evento
-  let domain = 'https://dashboard.qrboletos.com';
-  try {
-    if (evento.urlBase) {
-      const url = new URL(evento.urlBase);
-      domain = url.origin;
-    }
-  } catch (e) {
-    console.error('Error parseando el dominio:', e);
-  }
-
-  // URL del listado de localidades
-  const localitiesUrl = `${evento.urlBase}/sections/list.aspx`;
-
-  // Cargar localidades si ya existen en la base de datos
-  useEffect(() => {
-    if (evento.localidades && evento.localidades.length > 0) {
-      setLocalidades(evento.localidades);
-      setShowPastePanel(false);
-      setSuccess(`Cargadas ${evento.localidades.length} localidades de la base de datos.`);
-    } else {
-      setLocalidades([]);
-      setShowPastePanel(true);
-      setSuccess(null);
-    }
-    setError(null);
-  }, [evento]);
-
-  // Sincronizar o cargar aforo de localidades desde la API de Catálogo
-  useEffect(() => {
-    if (eventoAvailability) {
-      setAvailability(eventoAvailability);
-      return;
-    }
-
-    const fetchAvailability = async () => {
-      setIsAvailabilityLoading(true);
-      try {
-        const showId = evento.showId || evento.id;
-        const res = await fetch(`/api/catalog?id=${encodeURIComponent(showId || '')}&name=${encodeURIComponent(evento.nombre || '')}`);
-        const data = await res.json();
-        if (data.success && data.data) {
-          const d = data.data;
-          const totalAforo = d.localidades?.reduce((acc: number, l: any) => acc + (l.aforo || 0), 0) || 0;
-          const totalDisponibles = d.localidades?.reduce((acc: number, l: any) => acc + (l.disponibles || 0), 0) || 0;
-          const totalVendidos = Math.max(0, totalAforo - totalDisponibles);
-          const porcentaje = totalAforo > 0 ? Math.round((totalVendidos / totalAforo) * 100) : 0;
-          setAvailability({
-            showId: d.id_evento_espectaculo,
-            idEvento: d.id_evento,
-            evento: d.evento || evento.nombre,
-            espectaculo: d.espectaculo || '',
-            totalAforo,
-            totalDisponibles,
-            totalVendidos,
-            porcentaje,
-            localidades: (() => {
-              const locMap = new Map<string, { nombre: string; aforo: number; disponibles: number }>();
-              for (const l of d.localidades || []) {
-                const norm = cleanStr(l.localidad || '');
-                if (!norm) continue;
-                if (!locMap.has(norm)) {
-                  locMap.set(norm, {
-                    nombre: l.localidad,
-                    aforo: l.aforo || 0,
-                    disponibles: l.disponibles || 0,
-                  });
-                } else {
-                  const prev = locMap.get(norm)!;
-                  prev.aforo += (l.aforo || 0);
-                  prev.disponibles += (l.disponibles || 0);
-                }
-              }
-              return Array.from(locMap.values()).map((l) => {
-                const vendidos = Math.max(0, l.aforo - l.disponibles);
-                const pct = l.aforo > 0 ? Math.round((vendidos / l.aforo) * 100) : 0;
-                return {
-                  nombre: l.nombre,
-                  aforo: l.aforo,
-                  disponibles: l.disponibles,
-                  vendidos,
-                  porcentaje: pct,
-                };
-              });
-            })(),
-          });
-        }
-      } catch (e) {
-        console.warn('Error cargando aforo de localidades:', e);
-      } finally {
-        setIsAvailabilityLoading(false);
-      }
-    };
-
-    fetchAvailability();
-  }, [evento, eventoAvailability]);
-
-  // Normalizar y buscar aforo de una localidad específica consolidando duplicados
-  const cleanStr = (s: string) =>
-    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
-
-  const getLocalityAvailability = (locName: string): LocalidadAvailability | null => {
-    if (!availability?.localidades || availability.localidades.length === 0) return null;
-    const target = cleanStr(locName);
-    if (!target) return null;
-
-    // Buscar todas las coincidencias exactas primero, o por inclusión
-    const exactMatches = availability.localidades.filter((l) => cleanStr(l.nombre) === target);
-    const matches = exactMatches.length > 0
-      ? exactMatches
-      : availability.localidades.filter((l) => {
-          const candidate = cleanStr(l.nombre);
-          return candidate && (candidate.includes(target) || target.includes(candidate));
-        });
-
-    if (matches.length === 0) return null;
-
-    // Consolidar todos los aforos y disponibles coincidentes
-    const aforo = matches.reduce((acc, m) => acc + (m.aforo || 0), 0);
-    const disponibles = matches.reduce((acc, m) => acc + (m.disponibles || 0), 0);
-    const vendidos = Math.max(0, aforo - disponibles);
-    const porcentaje = aforo > 0 ? Math.round((vendidos / aforo) * 100) : 0;
-
-    return {
-      nombre: matches[0].nombre,
-      aforo,
-      disponibles,
-      vendidos,
-      porcentaje,
-    };
-  };
-
-  // Convertir URL relativa a absoluta
-  const makeAbsoluteUrl = (url: string): string => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-    return `${domain}${cleanUrl}`;
-  };
-
-  // Guardar localidades extraídas
-  const saveExtractedLocalities = async (extracted: Localidad[]) => {
-    if (!evento.id) return;
-    setIsSaving(true);
-    try {
-      await onSaveLocalities(evento.id, extracted);
-      setSuccess(`¡Se guardaron ${extracted.length} localidades en la base de datos!`);
-      setShowPastePanel(false); // Ocultar panel de pegado tras guardar
-    } catch (err: any) {
-      setError(`Se procesaron las localidades pero falló el autoguardado: ${err.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Petición al endpoint backend de extracción por HTML pegado
-  const handleManualExtract = async () => {
-    if (!htmlContent.trim()) {
-      setError('Por favor, pega el código HTML primero.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const res = await fetch('/api/extract-localidades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ htmlContent: htmlContent.trim() }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Ocurrió un error al extraer las localidades.');
-      }
-
-      setLocalidades(data.localidades);
-      setHtmlContent(''); // Limpiar textarea
-
-      // Guardar automáticamente en Sheets / Local Storage
-      await saveExtractedLocalities(data.localidades);
-
-    } catch (err: any) {
-      setError(err.message || 'Error al procesar el código HTML.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Extraer localidades directamente desde Google Chrome usando el bot
-  const handleExtractFromChrome = async () => {
-    setIsExtractingFromChrome(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await fetch('/api/chrome/extract-sections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUrl: evento.urlBase ? `${evento.urlBase}/sections.aspx` : undefined,
-          eventId: evento.id,
-          rowId: evento.rowId,
-          eventName: evento.nombre,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'No se pudieron extraer las localidades desde Chrome.');
-      }
-
-      if (data.urlBase) {
-        evento.urlBase = data.urlBase;
-      }
-      if (data.promoterId) evento.promoterId = data.promoterId;
-      if (data.eventId) evento.eventId = data.eventId;
-      if (data.showId) evento.showId = data.showId;
-
-      setLocalidades(data.localidades);
-      setShowPastePanel(false);
-      setSuccess(`¡${data.total} localidades extraídas de sections.aspx e importadas exitosamente!`);
-
-      // Guardar automáticamente en Sheets / Local Storage
-      await saveExtractedLocalities(data.localidades);
-    } catch (err: any) {
-      setError(`Error importando localidades desde Chrome: ${err.message}`);
-    } finally {
-      setIsExtractingFromChrome(false);
-    }
-  };
-
-  // Activa el panel de pegado y abre el enlace de secciones en otra pestaña
-  const handleActivateUpdate = () => {
-    window.open(localitiesUrl, '_blank');
-    setShowPastePanel(true);
-    setSuccess(null);
-    setError(null);
-  };
-
-  // Determinar la prioridad de visualización de cada localidad según su nombre
-  const getLocalityPriority = (name: string): number => {
-    const n = name.toLowerCase();
-
-    // 1. Experiencia Gold
-    if (n.includes('gold') || n.includes('experiencia gold')) {
-      return 1;
-    }
-
-    // 2. Platea
-    if (n.includes('platea')) {
-      return 2;
-    }
-
-    // 3. VIP's (Excluyendo visual restringida o VR)
-    if (n.includes('vip')) {
-      if (n.includes('restringida') || n.includes('vr')) {
-        return 4; // 4. VIP's visual restringida (VR)
-      }
-      return 3;
-    }
-
-    // 5. Preferencial (Excluyendo visual restringida o VR)
-    if (n.includes('preferencial')) {
-      if (n.includes('restringida') || n.includes('vr')) {
-        return 6; // 6. Preferencial visual restringida (VR)
-      }
-      return 5;
-    }
-
-    // 7. Cualquier otra localidad
-    return 7;
-  };
-
-  // Filtrar y ordenar localidades por búsqueda y prioridad
-  const filteredLocalidades = localidades
-    .filter((loc) => loc.nombre.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => {
-      const priorityA = getLocalityPriority(a.nombre);
-      const priorityB = getLocalityPriority(b.nombre);
-
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB;
-      }
-
-      // Orden numérico/alfabético secundario para la misma categoría (ej. VIP 1, VIP 2...)
-      return a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' });
-    });
-
-  // Targets para apertura masiva en pestañas
-  const configTargets = filteredLocalidades
-    .map(loc => loc.links?.find(l => l.label === 'Configuración')?.url || loc.url)
-    .filter((url): url is string => Boolean(url));
-
-  const priceTargets = filteredLocalidades
-    .map(loc => loc.links?.find(l => l.label === 'Precios')?.url)
-    .filter((url): url is string => Boolean(url));
-
-  const seatTargets = filteredLocalidades
-    .map(loc => loc.links?.find(l => l.label === 'Acomodación')?.url)
-    .filter((url): url is string => Boolean(url));
-
-  const [bulkOpeningMsg, setBulkOpeningMsg] = useState<string | null>(null);
-  const [popupBlockedNotice, setPopupBlockedNotice] = useState(false);
-
-  const openUrlsInTabs = (targets: string[], typeLabel: string) => {
-    const absoluteUrls = targets.map(makeAbsoluteUrl).filter(Boolean);
-    if (absoluteUrls.length === 0) return;
-
-    setBulkOpeningMsg(`Abriendo ${absoluteUrls.length} pestañas de ${typeLabel}...`);
-    setTimeout(() => setBulkOpeningMsg(null), 6000);
-
-    let hadBlocked = false;
-    absoluteUrls.forEach((url, idx) => {
-      setTimeout(() => {
-        try {
-          const w = window.open(url, '_blank');
-          if (!w || w.closed || typeof w.closed === 'undefined') {
-            hadBlocked = true;
-            setPopupBlockedNotice(true);
-          }
-        } catch {
-          hadBlocked = true;
-          setPopupBlockedNotice(true);
-        }
-      }, idx * 100);
-    });
-  };
-
-  const handleOpenAllConfig = () => openUrlsInTabs(configTargets, 'Configuración');
-  const handleOpenAllPrices = () => openUrlsInTabs(priceTargets, 'Precios');
-  const handleOpenAllSeats = () => openUrlsInTabs(seatTargets, 'Asientos');
-
-  const [isExtractingDiscounts, setIsExtractingDiscounts] = useState(false);
-  const [discountUrls, setDiscountUrls] = useState<string[]>([]);
-  const [discountCoupons, setDiscountCoupons] = useState<any[]>([]);
-  const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [copiedDiscounts, setCopiedDiscounts] = useState(false);
-  const [discountSearch, setDiscountSearch] = useState('');
-
-  const handleOpenAllDiscounts = async (forceOpenInChrome = true) => {
-    if (!evento.urlBase) {
-      setError('El evento no tiene configurada una URL base válida.');
-      return;
-    }
-
-    setIsExtractingDiscounts(true);
-    setBulkOpeningMsg('Consultando precios en Google Chrome y abriendo descuentos...');
-    try {
-      const res = await fetch('/api/chrome/extract-coupons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          showUrl: evento.urlBase,
-          sections: filteredLocalidades.map(l => ({ id: l.id, nombre: l.nombre })),
-          openInChrome: forceOpenInChrome,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        if (data.code === 'CHROME_OFFLINE') {
-          throw new Error('Google Chrome no está abierto en modo depuración (puerto 9222). Inicia "Iniciar_Chrome_Boleteria.bat".');
-        }
-        throw new Error(data.error || 'No se pudieron extraer las URLs de descuentos.');
-      }
-
-      const urls: string[] = data.urls || [];
-      const coupons: any[] = data.coupons || [];
-      setDiscountUrls(urls);
-      setDiscountCoupons(coupons);
-
-      if (urls.length === 0) {
-        setBulkOpeningMsg('No se encontraron precios para configurar descuentos (o todos son cortesías).');
-        setTimeout(() => setBulkOpeningMsg(null), 4000);
-        return;
-      }
-
-      if (data.openedInChrome) {
-        setSuccess(`¡Se abrieron con éxito ${data.openedCount || urls.length} pestañas de Descuentos directamente en Google Chrome!`);
-        setBulkOpeningMsg(`¡${data.openedCount || urls.length} pestañas abiertas en Google Chrome!`);
-        setTimeout(() => setBulkOpeningMsg(null), 5000);
-      } else {
-        setShowDiscountModal(true);
-        openUrlsInTabs(urls, 'Descuentos');
-      }
-    } catch (err: any) {
-      setError(`Error al abrir descuentos: ${err.message}`);
-      setBulkOpeningMsg(null);
-    } finally {
-      setIsExtractingDiscounts(false);
-    }
-  };
-
-  return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-      {/* Cabecera del panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="p-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2 flex-wrap">
-              {evento.nombre}
-              {localidades.length > 0 && !showPastePanel && (
-                <span className="text-[10px] text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1.5 shadow-sm">
-                  <Database className="w-3 h-3" />
-                  Persistido ({localidades.length})
-                </span>
-              )}
-            </h2>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-
-          {/* Botón para Importar Localidades directamente desde Chrome con el Bot */}
-          <button
-            onClick={handleExtractFromChrome}
-            disabled={isExtractingFromChrome}
-            className="h-9 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-600 text-emerald-800 dark:text-emerald-400 hover:text-white border border-emerald-300 dark:border-emerald-500/30 hover:border-emerald-500 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-50 whitespace-nowrap"
-            title="Importar todas las localidades directamente desde la pestaña activa de Chrome con el bot"
-          >
-            <Zap className={`w-3.5 h-3.5 fill-current ${isExtractingFromChrome ? 'animate-pulse' : ''}`} />
-            <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome'}</span>
-          </button>
-
-          {/* Botón para Cargar Tarifario con IA */}
-          <button
-            onClick={() => setShowTarifarioModal(true)}
-            className="h-9 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
-            title="Extraer precios de foto del comité y cargar en Chrome"
-          >
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            <span>Cargar Tarifario IA</span>
-          </button>
-
-          {/* Botón para Clonar Planos de Acomodación */}
-          <button
-            onClick={() => setShowCloneSeatsModal(true)}
-            className="h-9 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
-            title="Clonar distribución y planos de acomodación desde ARECOL -> PLANOS -> PRUEBA para localidades sin distribución"
-          >
-            <Armchair className="w-3.5 h-3.5" />
-            <span>Clonar Planos</span>
-          </button>
-
-          {/* Botón para Barrido y Verificación de Precios */}
-          <button
-            onClick={() => setShowVerifyPricingModal(true)}
-            className="h-9 px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
-            title="Auditar y auto-corregir colores de mapa (#86ff8d), switches web/pos y ADMON en cortesías"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Barrido y Verificación</span>
-          </button>
-
-          {/* Botón para Reemplazar / Actualizar Artes */}
-          {onOpenArtworks && (
-            <button
-              onClick={onOpenArtworks}
-              className="h-9 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
-              title="Actualizar o reemplazar el QRBoleto digital y el diseño físico (Boca y Godex) en las localidades"
-            >
-              <Palette className="w-3.5 h-3.5" />
-              <span>Actualizar Artes</span>
-            </button>
-          )}
-
-          {/* Botón para Configurar Evento (HTMLs, Restricciones, Switches, Imágenes) */}
-          {onConfigureSettings && (
-            <button
-              onClick={onConfigureSettings}
-              className="h-9 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
-              title="Configurar descripción, términos, edad mínima, switches e imágenes del evento"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Configurar Evento</span>
-            </button>
-          )}
-
-          {/* Botón para actualizar localidades si ya existen en la base de datos */}
-          {localidades.length > 0 && !showPastePanel && (
-            <button
-              onClick={handleActivateUpdate}
-              className="h-9 px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
-              title="Actualizar manualmente pegando código HTML"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Pegar HTML</span>
-            </button>
-          )}
-
-          <span className="h-9 px-3 py-2 text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-300 dark:border-slate-800 flex items-center gap-1.5 whitespace-nowrap">
-            <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />
-            <span>{domain.replace('https://', '')}</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Vista A: Panel de pegado manual (Si no hay localidades o se seleccionó Actualizar) */}
-      {showPastePanel && (
-        <div className="space-y-4">
-          {/* Banner de acceso rápido para importar con el bot */}
-          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <Zap className="w-4 h-4 fill-current" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
-                  ¿Tienes el show abierto en Google Chrome?
-                </p>
-                <p className="text-[11px] text-emerald-800 dark:text-emerald-400/80">
-                  Puedes importar automáticamente todas las localidades en 2 segundos sin copiar y pegar HTML.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleExtractFromChrome}
-              disabled={isExtractingFromChrome}
-              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome ahora'}</span>
-            </button>
-          </div>
-
-          <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-5">
-            <div className="flex items-start gap-3 mb-4">
-              <Clipboard className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">O Pega el Código HTML de la Página de Localidades</h3>
-                <p className="text-xs text-slate-400">
-                  Pega el código fuente HTML de la página de secciones de QRBoletos si prefieres extracción manual.
-                </p>
-              </div>
-            </div>
-
-            <textarea
-              className="w-full h-44 bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono placeholder:text-slate-600"
-              placeholder="Haz clic derecho -> Inspeccionar en el contenedor de localidades, o pulsa Ctrl+U, copia el código HTML completo de la página de secciones de QRBoletos y pégalo aquí..."
-              value={htmlContent}
-              onChange={(e) => setHtmlContent(e.target.value)}
-            />
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleManualExtract}
-                  disabled={isLoading || isSaving || !htmlContent.trim()}
-                  className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="w-4.5 h-4.5 animate-spin" />
-                      Procesando HTML...
-                    </>
-                  ) : isSaving ? (
-                    <>
-                      <RefreshCw className="w-4.5 h-4.5 animate-spin text-emerald-300" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Clipboard className="w-4.5 h-4.5" />
-                      Procesar Código HTML
-                    </>
-                  )}
-                </button>
-
-                {/* Permitir cancelar y volver al listado si ya existen localidades guardadas */}
-                {localidades.length > 0 && (
-                  <button
-                    onClick={() => {
-                      setShowPastePanel(false);
-                      setError(null);
-                    }}
-                    className="border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                    Cancelar
-                  </button>
-                )}
-              </div>
-
-              {/* Enlace alternativo para abrir la URL manualmente */}
-              <a
-                href={localitiesUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-slate-400 hover:text-emerald-400 flex items-center gap-1 font-medium transition-colors"
-              >
-                Abrir configuración de secciones en QRBoletos
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-
-            {/* Ayuda de copiado */}
-            <p className="text-[11px] text-slate-500 mt-4 flex items-start gap-1.5 border-t border-slate-900 pt-3">
-              <HelpCircle className="w-4 h-4 shrink-0 text-slate-600 mt-0.5" />
-              <span>
-                <strong>¿Cómo copiar el código?</strong> En la pestaña de QRBoletos que se abrió, haz clic derecho en cualquier parte y selecciona <strong>&quot;Ver código fuente de la página&quot;</strong> (o presiona <code>Ctrl + U</code>). Copia todo el contenido (<code>Ctrl + A</code> y luego <code>Ctrl + C</code>) y pégalo en el cuadro de arriba.
-              </span>
-            </p>
-          </div>
-
-          {/* Feedback visual de errores */}
-          {error && (
-            <div className="bg-red-500/5 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <span className="font-semibold block">Error al Procesar HTML</span>
-                <p className="text-xs text-red-300/90">{error}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Vista B: Listado de Localidades (Si hay localidades guardadas y no se está actualizando) */}
-      {!showPastePanel && localidades.length > 0 && (
-        <div className="space-y-4 mt-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800/80">
-            <div className="flex flex-wrap items-center gap-3">
-              <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                <Armchair className="text-emerald-500 w-5 h-5" />
-                Localidades Encontradas ({filteredLocalidades.length})
-              </h3>
-
-              {/* Botones de Apertura Masiva de Localidades en Nuevas Pestañas */}
-              <div className="flex flex-wrap items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-inner">
-                <span className="text-[11px] font-bold text-slate-400 px-2 flex items-center gap-1">
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                  Abrir todas en pestañas:
-                </span>
-                
-                {/* Abrir Configuración de todas */}
-                <button
-                  type="button"
-                  onClick={handleOpenAllConfig}
-                  disabled={configTargets.length === 0}
-                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-pink-950/50 text-slate-300 hover:text-pink-300 border border-slate-700/80 hover:border-pink-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={`Abrir pestaña de Configuración para cada una de las ${configTargets.length} localidades`}
-                >
-                  <Settings className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-                  <span>Configuración</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
-                    {configTargets.length}
-                  </span>
-                </button>
-
-                {/* Abrir Precios de todas */}
-                <button
-                  type="button"
-                  onClick={handleOpenAllPrices}
-                  disabled={priceTargets.length === 0}
-                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-amber-950/50 text-slate-300 hover:text-amber-300 border border-slate-700/80 hover:border-amber-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={`Abrir pestaña de Precios para cada una de las ${priceTargets.length} localidades`}
-                >
-                  <DollarSign className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Precios</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
-                    {priceTargets.length}
-                  </span>
-                </button>
-
-                {/* Abrir Asientos de todas */}
-                <button
-                  type="button"
-                  onClick={handleOpenAllSeats}
-                  disabled={seatTargets.length === 0}
-                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-blue-950/50 text-slate-300 hover:text-blue-300 border border-slate-700/80 hover:border-blue-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={`Abrir pestaña de Acomodación/Asientos para cada una de las ${seatTargets.length} localidades`}
-                >
-                  <Armchair className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span>Asientos</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
-                    {seatTargets.length}
-                  </span>
-                </button>
-
-                {/* Abrir Descuentos de todas (Precios no cortesías) */}
-                <div className="flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenAllDiscounts(true)}
-                    disabled={isExtractingDiscounts || filteredLocalidades.length === 0}
-                    className={`h-7 px-2.5 bg-slate-800/90 hover:bg-purple-950/50 text-slate-300 hover:text-purple-300 border border-slate-700/80 hover:border-purple-500/50 ${discountUrls.length > 0 ? 'rounded-l-lg border-r-0' : 'rounded-lg'} text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed`}
-                    title="Abrir automáticamente pestaña de Descuentos (coupons.aspx) para cada precio del evento en Google Chrome (excluyendo cortesías)"
-                  >
-                    <Tag className={`w-3.5 h-3.5 text-purple-400 shrink-0 ${isExtractingDiscounts ? 'animate-spin' : ''}`} />
-                    <span>{isExtractingDiscounts ? 'Abriendo en Chrome...' : 'Descuentos'}</span>
-                    {discountUrls.length > 0 ? (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 bg-purple-950/70 border border-purple-700/50 rounded-md text-purple-300 font-bold">
-                        {discountUrls.length}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-400">
-                        %
-                      </span>
-                    )}
-                  </button>
-                  {discountUrls.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowDiscountModal(true)}
-                      className="h-7 px-1.5 bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-300 hover:text-white rounded-r-lg text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
-                      title="Ver y gestionar lista de URLs de descuentos"
-                    >
-                      <ListFilter className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {/* Buscador de localidades */}
-            <div className="relative w-full lg:w-64">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Buscar localidad..."
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {popupBlockedNotice && (
-            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>
-                  <strong>Ventanas emergentes bloqueadas:</strong> Tu navegador no permitió abrir todas las pestañas simultáneamente. Haz clic en el ícono de ventana emergente bloqueada en la barra de direcciones de Chrome y selecciona &quot;Permitir siempre pop-ups&quot;.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPopupBlockedNotice(false)}
-                className="text-amber-400 hover:text-white p-1 rounded-lg hover:bg-amber-500/20 shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {bulkOpeningMsg && (
-            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3.5 py-2.5 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-200">
-              <span className="flex items-center gap-2 font-semibold">
-                <ExternalLink className="w-4 h-4 animate-bounce shrink-0" />
-                {bulkOpeningMsg}
-              </span>
-              <span className="text-[11px] text-slate-400">
-                💡 Si tu navegador abre solo una pestaña, haz clic en el ícono de ventanas emergentes bloqueadas en la barra de URL y selecciona &quot;Permitir siempre&quot;.
-              </span>
-            </div>
-          )}
-
-          {/* Resumen Global de Aforo del Evento si está disponible */}
-          {availability && (
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <Ticket className="w-4 h-4 shrink-0" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-200">
-                    Aforo Total Vendido: <span className="font-mono text-emerald-400 font-extrabold">{availability.totalVendidos.toLocaleString()}</span> / <span className="font-mono text-slate-300">{availability.totalAforo.toLocaleString()}</span> ({availability.porcentaje}%)
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    Disponibles en taquilla/online: <strong className="text-slate-300">{availability.totalDisponibles.toLocaleString()}</strong>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 w-full sm:w-48">
-                <div className="w-full bg-slate-900 border border-slate-800 rounded-full h-2.5 overflow-hidden p-0.5">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      availability.porcentaje >= 90
-                        ? 'bg-gradient-to-r from-rose-500 to-amber-500'
-                        : availability.porcentaje >= 60
-                        ? 'bg-gradient-to-r from-amber-500 to-emerald-400'
-                        : 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                    }`}
-                    style={{ width: `${Math.min(100, Math.max(0, availability.porcentaje))}%` }}
-                  />
-                </div>
-                <span className="text-xs font-mono font-bold text-slate-300 shrink-0">
-                  {availability.porcentaje}%
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Listado de tarjetas de localidad - Altamente optimizado en espacio */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredLocalidades.map((loc, idx) => {
-              // Obtener los links específicos
-              const configLink = loc.links?.find(l => l.label === 'Configuración')?.url || loc.url;
-              const pricesLink = loc.links?.find(l => l.label === 'Precios')?.url;
-              const seatsLink = loc.links?.find(l => l.label === 'Acomodación')?.url;
-              const locAvail = getLocalityAvailability(loc.nombre);
-
-              return (
-                <div
-                  key={idx}
-                  className="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 flex flex-col justify-between gap-3 hover:border-slate-700/60 transition-all group shadow-sm"
-                >
-                  {/* Nombre de la Localidad */}
-                  <div className="flex items-center gap-2 border-b border-slate-900 pb-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:scale-110 transition-transform shrink-0"></div>
-                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-wide truncate" title={loc.nombre}>
-                      {loc.nombre}
-                    </span>
-                  </div>
-
-                  {/* Aforo Vendido y Total + Barra de Progresión de la Localidad */}
-                  {locAvail ? (
-                    <div className="space-y-1.5 py-1 bg-slate-900/40 rounded-lg px-2.5 py-2 border border-slate-800/70">
-                      <div className="flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-slate-400 flex items-center gap-1 font-sans">
-                          <Ticket className="w-3 h-3 text-emerald-400 shrink-0" />
-                          <span>Vendidos: <strong className="text-slate-200 font-mono">{locAvail.vendidos.toLocaleString()}</strong> / {locAvail.aforo.toLocaleString()}</span>
-                        </span>
-                        <span
-                          className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
-                            locAvail.porcentaje >= 90
-                              ? 'bg-rose-500/20 text-rose-400'
-                              : locAvail.porcentaje >= 60
-                              ? 'bg-amber-500/20 text-amber-400'
-                              : 'bg-emerald-500/20 text-emerald-400'
-                          }`}
-                        >
-                          {locAvail.porcentaje}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-900 border border-slate-800 rounded-full h-2 overflow-hidden p-0.5">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            locAvail.porcentaje >= 90
-                              ? 'bg-gradient-to-r from-rose-500 to-amber-500'
-                              : locAvail.porcentaje >= 60
-                              ? 'bg-gradient-to-r from-amber-500 to-emerald-400'
-                              : 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                          }`}
-                          style={{ width: `${Math.min(100, Math.max(0, locAvail.porcentaje))}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
-                        <span>Disponibles: <strong className="text-emerald-400">{locAvail.disponibles.toLocaleString()}</strong></span>
-                        <span>Aforo: <strong className="text-slate-300">{locAvail.aforo.toLocaleString()}</strong></span>
-                      </div>
-                    </div>
-                  ) : isAvailabilityLoading ? (
-                    <div className="py-2 space-y-1.5 animate-pulse bg-slate-900/40 rounded-lg px-2.5 py-2">
-                      <div className="h-2.5 bg-slate-800 rounded w-2/3"></div>
-                      <div className="h-2 bg-slate-900 rounded w-full"></div>
-                    </div>
-                  ) : null}
-
-                  {/* Botones de acción - Compactos y distribuidos (Config, Precios, Asientos, Descuentos) */}
-                  {(() => {
-                    const locCoupons = discountCoupons.filter(
-                      c => (loc.id && c.secId === loc.id) || cleanStr(c.secName) === cleanStr(loc.nombre)
-                    );
-
-                    return (
-                      <div className="grid grid-cols-4 gap-1">
-                        {/* Botón de Configuración */}
-                        <a
-                          href={makeAbsoluteUrl(configLink)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-slate-900 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                          title="Configuración"
-                        >
-                          <Settings className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate w-full text-center">Config</span>
-                        </a>
-
-                        {/* Botón de Precios */}
-                        {pricesLink ? (
-                          <a
-                            href={makeAbsoluteUrl(pricesLink)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                            title="Precios"
-                          >
-                            <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500 shrink-0" />
-                            <span className="truncate w-full text-center">Precios</span>
-                          </a>
-                        ) : (
-                          <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
-                            <DollarSign className="w-3.5 h-3.5 shrink-0" />
-                            <span>Precios</span>
-                          </div>
-                        )}
-
-                        {/* Botón de Acomodación */}
-                        {seatsLink ? (
-                          <a
-                            href={makeAbsoluteUrl(seatsLink)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-slate-900 border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                            title="Acomodación"
-                          >
-                            <Armchair className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                            <span className="truncate w-full text-center">Asientos</span>
-                          </a>
-                        ) : (
-                          <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
-                            <Armchair className="w-3.5 h-3.5 shrink-0" />
-                            <span>Asientos</span>
-                          </div>
-                        )}
-
-                        {/* Botón de Descuentos para esta localidad (puede tener 1 o más precios) */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (locCoupons.length > 0) {
-                              locCoupons.forEach((c, i) => {
-                                setTimeout(() => window.open(c.couponsUrl, '_blank'), i * 80);
-                              });
-                            } else {
-                              handleOpenAllDiscounts(true);
-                            }
-                          }}
-                          disabled={isExtractingDiscounts}
-                          className="bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-slate-300 hover:text-purple-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-                          title={
-                            locCoupons.length > 0
-                              ? `Abrir ${locCoupons.length} ${locCoupons.length === 1 ? 'precio de descuento' : 'precios de descuentos'} para ${loc.nombre}`
-                              : `Consultar y abrir descuentos para ${loc.nombre}`
-                          }
-                        >
-                          <Tag className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                          <span className="truncate w-full text-center">
-                            {locCoupons.length > 0 ? `Desc (${locCoupons.length})` : 'Desc'}
-                          </span>
-                        </button>
-                      </div>
-                    );
-                  })()}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Cargar Tarifario con IA y Sincronizar en Chrome */}
-      <TarifarioUploaderModal
-        evento={{ ...evento, localidades }}
-        isOpen={showTarifarioModal}
-        onClose={() => setShowTarifarioModal(false)}
-        onSyncComplete={() => {
-          // Si el usuario actualiza localidades
-        }}
-      />
-
-      {/* Modal para Clonar Planos de Acomodación */}
-      <CloneSeatsModal
-        evento={{ ...evento, localidades }}
-        isOpen={showCloneSeatsModal}
-        onClose={() => setShowCloneSeatsModal(false)}
-      />
-
-      {/* Modal para Barrido y Verificación Exhaustiva de Precios */}
-      <VerifyPricingModal
-        evento={{ ...evento, localidades }}
-        isOpen={showVerifyPricingModal}
-        onClose={() => setShowVerifyPricingModal(false)}
-      />
-
-      {/* Modal para Gestión y Lista Detallada de URLs de Descuentos */}
-      {showDiscountModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            {/* Cabecera */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                  <Tag className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                    Descuentos por Precio
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono">
-                      {discountUrls.length} {discountUrls.length === 1 ? 'precio' : 'precios'}
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    URLs de coupons.aspx generadas para cada precio comercial (no cortesías).
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDiscountModal(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Barra de Acciones Rápidas */}
-            <div className="p-4 border-b border-slate-800/80 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleOpenAllDiscounts(true)}
-                  disabled={isExtractingDiscounts}
-                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-                  title="Abrir todas directamente en pestañas de Google Chrome via CDP"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-current" />
-                  <span>{isExtractingDiscounts ? 'Abriendo en Chrome...' : 'Re-abrir todas en Google Chrome'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(discountUrls.join('\n'));
-                    setCopiedDiscounts(true);
-                    setTimeout(() => setCopiedDiscounts(false), 2500);
-                  }}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-                >
-                  {copiedDiscounts ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">¡Copiadas al portapapeles!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Copiar todas las URLs</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Buscador interno */}
-              <div className="relative w-full sm:w-56">
-                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Filtrar por localidad/etapa..."
-                  value={discountSearch}
-                  onChange={(e) => setDiscountSearch(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
-                />
-              </div>
-            </div>
-
-            {/* Apertura en Bloques de 10 si hay muchas */}
-            {discountUrls.length > 10 && (
-              <div className="px-4 py-2 bg-slate-950/40 border-b border-slate-800/60 flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-slate-400 text-[11px] font-semibold flex items-center gap-1">
-                  <ExternalLink className="w-3 h-3 text-slate-500" />
-                  Abrir en el navegador por bloques (evita bloqueo de pop-ups):
-                </span>
-                {Array.from({ length: Math.ceil(discountUrls.length / 10) }).map((_, bIdx) => {
-                  const start = bIdx * 10;
-                  const end = Math.min(start + 10, discountUrls.length);
-                  return (
-                    <button
-                      key={bIdx}
-                      type="button"
-                      onClick={() => {
-                        const batch = discountUrls.slice(start, end);
-                        batch.forEach((url, i) => {
-                          setTimeout(() => window.open(url, '_blank'), i * 80);
-                        });
-                      }}
-                      className="px-2 py-0.5 bg-slate-800 hover:bg-purple-900/60 text-slate-300 hover:text-purple-300 border border-slate-700/80 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer"
-                    >
-                      {start + 1}-{end}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Listado scrolleable de Precios y URLs Agrupado por Localidad */}
-            <div className="p-4 overflow-y-auto space-y-4 flex-1 max-h-[50vh]">
-              {(() => {
-                const filtered = discountCoupons.filter((item) => {
-                  if (!discountSearch.trim()) return true;
-                  const q = discountSearch.toLowerCase();
-                  return (
-                    (item.secName || '').toLowerCase().includes(q) ||
-                    (item.priceName || '').toLowerCase().includes(q) ||
-                    (item.etapa || '').toLowerCase().includes(q)
-                  );
-                });
-
-                // Agrupar por localidad
-                const groups: { [key: string]: typeof discountCoupons } = {};
-                for (const item of filtered) {
-                  const key = item.secName || 'Sin Localidad';
-                  if (!groups[key]) groups[key] = [];
-                  groups[key].push(item);
-                }
-
-                const groupKeys = Object.keys(groups);
-                if (groupKeys.length === 0) {
-                  return (
-                    <div className="text-center py-8 text-slate-500 text-xs">
-                      No se encontraron precios que coincidan con la búsqueda.
-                    </div>
-                  );
-                }
-
-                return groupKeys.map((secName, gIdx) => {
-                  const items = groups[secName];
-                  return (
-                    <div key={gIdx} className="bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                      {/* Cabecera de la Localidad con contador de precios */}
-                      <div className="px-3.5 py-2.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                          <span className="font-extrabold text-xs text-slate-100 uppercase tracking-wide">
-                            {secName}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px] font-bold">
-                            {items.length} {items.length === 1 ? 'precio' : 'precios'}
-                          </span>
-                        </div>
-                        {items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              items.forEach((item, i) => {
-                                setTimeout(() => window.open(item.couponsUrl, '_blank'), i * 80);
-                              });
-                            }}
-                            className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer transition-colors"
-                            title={`Abrir pestañas de los ${items.length} precios de ${secName}`}
-                          >
-                            <span>Abrir los {items.length}</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Filas de precios de esta localidad */}
-                      <div className="p-2 space-y-1.5">
-                        {items.map((item, pIdx) => (
-                          <div
-                            key={pIdx}
-                            className="p-2 bg-slate-900/40 hover:bg-slate-900/80 border border-slate-800/60 hover:border-purple-500/30 rounded-lg flex items-center justify-between gap-3 text-xs transition-colors"
-                          >
-                            <div className="flex flex-wrap items-center gap-2 min-w-0">
-                              <span className="text-slate-200 font-semibold truncate">
-                                {item.priceName}
-                              </span>
-                              {item.etapa && (
-                                <span className="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-[10px] text-purple-300 font-mono">
-                                  {item.etapa}
-                                </span>
-                              )}
-                            </div>
-                            <a
-                              href={item.couponsUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-300 hover:text-white rounded-md text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors"
-                            >
-                              <span>Abrir</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-
-            {/* Footer */}
-            <div className="p-3 border-t border-slate-800 bg-slate-950/50 flex justify-between items-center text-xs text-slate-400">
-              <span>{discountUrls.length} URLs de cupones listas</span>
-              <button
-                type="button"
-                onClick={() => setShowDiscountModal(false)}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Evento, Localidad, EventAvailabilitySummary, LocalidadAvailability } from '@/types';
+import {
+  ArrowLeft,
+  Search,
+  Globe,
+  Clipboard,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle,
+  ExternalLink,
+  Settings,
+  DollarSign,
+  Armchair,
+  Database,
+  HelpCircle,
+  X,
+  Sparkles,
+  Zap,
+  Palette,
+  Ticket,
+  Tag,
+  ListFilter,
+  Copy,
+  Check,
+  AlertTriangle,
+  ShieldCheck
+} from 'lucide-react';
+import TarifarioUploaderModal from './TarifarioUploaderModal';
+import CloneSeatsModal from './CloneSeatsModal';
+import VerifyPricingModal from './VerifyPricingModal';
+
+interface LocalitiesViewProps {
+  evento: Evento;
+  eventoAvailability?: EventAvailabilitySummary;
+  onBack: () => void;
+  onSaveLocalities: (rowId: string, localidades: Localidad[]) => Promise<void>;
+  onOpenArtworks?: () => void;
+  onConfigureSettings?: () => void;
+}
+
+export default function LocalitiesView({
+  evento,
+  eventoAvailability,
+  onBack,
+  onSaveLocalities,
+  onOpenArtworks,
+  onConfigureSettings
+}: LocalitiesViewProps) {
+  const [htmlContent, setHtmlContent] = useState('');
+  const [localidades, setLocalidades] = useState<Localidad[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showPastePanel, setShowPastePanel] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showTarifarioModal, setShowTarifarioModal] = useState(false);
+  const [showCloneSeatsModal, setShowCloneSeatsModal] = useState(false);
+  const [showVerifyPricingModal, setShowVerifyPricingModal] = useState(false);
+  const [isExtractingFromChrome, setIsExtractingFromChrome] = useState(false);
+  const [availability, setAvailability] = useState<EventAvailabilitySummary | null>(eventoAvailability || null);
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+
+  // Obtener el dominio del evento
+  let domain = 'https://dashboard.qrboletos.com';
+  try {
+    if (evento.urlBase) {
+      const url = new URL(evento.urlBase);
+      domain = url.origin;
+    }
+  } catch (e) {
+    console.error('Error parseando el dominio:', e);
+  }
+
+  // URL del listado de localidades
+  const localitiesUrl = `${evento.urlBase}/sections/list.aspx`;
+
+  // Cargar localidades si ya existen en la base de datos
+  useEffect(() => {
+    if (evento.localidades && evento.localidades.length > 0) {
+      setLocalidades(evento.localidades);
+      setShowPastePanel(false);
+      setSuccess(`Cargadas ${evento.localidades.length} localidades de la base de datos.`);
+    } else {
+      setLocalidades([]);
+      setShowPastePanel(true);
+      setSuccess(null);
+    }
+    setError(null);
+  }, [evento]);
+
+  // Sincronizar o cargar aforo de localidades desde la API de Catálogo
+  useEffect(() => {
+    if (eventoAvailability) {
+      setAvailability(eventoAvailability);
+      return;
+    }
+
+    const fetchAvailability = async () => {
+      setIsAvailabilityLoading(true);
+      try {
+        const showId = evento.showId || evento.id;
+        const res = await fetch(`/api/catalog?id=${encodeURIComponent(showId || '')}&name=${encodeURIComponent(evento.nombre || '')}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          const d = data.data;
+          const totalAforo = d.localidades?.reduce((acc: number, l: any) => acc + (l.aforo || 0), 0) || 0;
+          const totalDisponibles = d.localidades?.reduce((acc: number, l: any) => acc + (l.disponibles || 0), 0) || 0;
+          const totalVendidos = Math.max(0, totalAforo - totalDisponibles);
+          const porcentaje = totalAforo > 0 ? Math.round((totalVendidos / totalAforo) * 100) : 0;
+          setAvailability({
+            showId: d.id_evento_espectaculo,
+            idEvento: d.id_evento,
+            evento: d.evento || evento.nombre,
+            espectaculo: d.espectaculo || '',
+            totalAforo,
+            totalDisponibles,
+            totalVendidos,
+            porcentaje,
+            localidades: (() => {
+              const locMap = new Map<string, { nombre: string; aforo: number; disponibles: number }>();
+              for (const l of d.localidades || []) {
+                const norm = cleanStr(l.localidad || '');
+                if (!norm) continue;
+                if (!locMap.has(norm)) {
+                  locMap.set(norm, {
+                    nombre: l.localidad,
+                    aforo: l.aforo || 0,
+                    disponibles: l.disponibles || 0,
+                  });
+                } else {
+                  const prev = locMap.get(norm)!;
+                  prev.aforo += (l.aforo || 0);
+                  prev.disponibles += (l.disponibles || 0);
+                }
+              }
+              return Array.from(locMap.values()).map((l) => {
+                const vendidos = Math.max(0, l.aforo - l.disponibles);
+                const pct = l.aforo > 0 ? Math.round((vendidos / l.aforo) * 100) : 0;
+                return {
+                  nombre: l.nombre,
+                  aforo: l.aforo,
+                  disponibles: l.disponibles,
+                  vendidos,
+                  porcentaje: pct,
+                };
+              });
+            })(),
+          });
+        }
+      } catch (e) {
+        console.warn('Error cargando aforo de localidades:', e);
+      } finally {
+        setIsAvailabilityLoading(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [evento, eventoAvailability]);
+
+  // Normalizar y buscar aforo de una localidad específica consolidando duplicados
+  const cleanStr = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const getLocalityAvailability = (locName: string): LocalidadAvailability | null => {
+    if (!availability?.localidades || availability.localidades.length === 0) return null;
+    const target = cleanStr(locName);
+    if (!target) return null;
+
+    // Buscar todas las coincidencias exactas primero, o por inclusión
+    const exactMatches = availability.localidades.filter((l) => cleanStr(l.nombre) === target);
+    const matches = exactMatches.length > 0
+      ? exactMatches
+      : availability.localidades.filter((l) => {
+          const candidate = cleanStr(l.nombre);
+          return candidate && (candidate.includes(target) || target.includes(candidate));
+        });
+
+    if (matches.length === 0) return null;
+
+    // Consolidar todos los aforos y disponibles coincidentes
+    const aforo = matches.reduce((acc, m) => acc + (m.aforo || 0), 0);
+    const disponibles = matches.reduce((acc, m) => acc + (m.disponibles || 0), 0);
+    const vendidos = Math.max(0, aforo - disponibles);
+    const porcentaje = aforo > 0 ? Math.round((vendidos / aforo) * 100) : 0;
+
+    return {
+      nombre: matches[0].nombre,
+      aforo,
+      disponibles,
+      vendidos,
+      porcentaje,
+    };
+  };
+
+  // Convertir URL relativa a absoluta
+  const makeAbsoluteUrl = (url: string): string => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${domain}${cleanUrl}`;
+  };
+
+  // Guardar localidades extraídas
+  const saveExtractedLocalities = async (extracted: Localidad[]) => {
+    if (!evento.id) return;
+    setIsSaving(true);
+    try {
+      await onSaveLocalities(evento.id, extracted);
+      setSuccess(`¡Se guardaron ${extracted.length} localidades en la base de datos!`);
+      setShowPastePanel(false); // Ocultar panel de pegado tras guardar
+    } catch (err: any) {
+      setError(`Se procesaron las localidades pero falló el autoguardado: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Petición al endpoint backend de extracción por HTML pegado
+  const handleManualExtract = async () => {
+    if (!htmlContent.trim()) {
+      setError('Por favor, pega el código HTML primero.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch('/api/extract-localidades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ htmlContent: htmlContent.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Ocurrió un error al extraer las localidades.');
+      }
+
+      setLocalidades(data.localidades);
+      setHtmlContent(''); // Limpiar textarea
+
+      // Guardar automáticamente en Sheets / Local Storage
+      await saveExtractedLocalities(data.localidades);
+
+    } catch (err: any) {
+      setError(err.message || 'Error al procesar el código HTML.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Extraer localidades directamente desde Google Chrome usando el bot
+  const handleExtractFromChrome = async () => {
+    setIsExtractingFromChrome(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('/api/chrome/extract-sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUrl: evento.urlBase ? `${evento.urlBase}/sections.aspx` : undefined,
+          eventId: evento.id,
+          rowId: evento.rowId,
+          eventName: evento.nombre,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'No se pudieron extraer las localidades desde Chrome.');
+      }
+
+      if (data.urlBase) {
+        evento.urlBase = data.urlBase;
+      }
+      if (data.promoterId) evento.promoterId = data.promoterId;
+      if (data.eventId) evento.eventId = data.eventId;
+      if (data.showId) evento.showId = data.showId;
+
+      setLocalidades(data.localidades);
+      setShowPastePanel(false);
+      setSuccess(`¡${data.total} localidades extraídas de sections.aspx e importadas exitosamente!`);
+
+      // Guardar automáticamente en Sheets / Local Storage
+      await saveExtractedLocalities(data.localidades);
+    } catch (err: any) {
+      setError(`Error importando localidades desde Chrome: ${err.message}`);
+    } finally {
+      setIsExtractingFromChrome(false);
+    }
+  };
+
+  // Activa el panel de pegado y abre el enlace de secciones en otra pestaña
+  const handleActivateUpdate = () => {
+    window.open(localitiesUrl, '_blank');
+    setShowPastePanel(true);
+    setSuccess(null);
+    setError(null);
+  };
+
+  // Determinar la prioridad de visualización de cada localidad según su nombre
+  const getLocalityPriority = (name: string): number => {
+    const n = name.toLowerCase();
+
+    // 1. Experiencia Gold
+    if (n.includes('gold') || n.includes('experiencia gold')) {
+      return 1;
+    }
+
+    // 2. Platea
+    if (n.includes('platea')) {
+      return 2;
+    }
+
+    // 3. VIP's (Excluyendo visual restringida o VR)
+    if (n.includes('vip')) {
+      if (n.includes('restringida') || n.includes('vr')) {
+        return 4; // 4. VIP's visual restringida (VR)
+      }
+      return 3;
+    }
+
+    // 5. Preferencial (Excluyendo visual restringida o VR)
+    if (n.includes('preferencial')) {
+      if (n.includes('restringida') || n.includes('vr')) {
+        return 6; // 6. Preferencial visual restringida (VR)
+      }
+      return 5;
+    }
+
+    // 7. Cualquier otra localidad
+    return 7;
+  };
+
+  // Filtrar y ordenar localidades por búsqueda y prioridad
+  const filteredLocalidades = localidades
+    .filter((loc) => loc.nombre.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      const priorityA = getLocalityPriority(a.nombre);
+      const priorityB = getLocalityPriority(b.nombre);
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Orden numérico/alfabético secundario para la misma categoría (ej. VIP 1, VIP 2...)
+      return a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+  // Targets para apertura masiva en pestañas
+  const configTargets = filteredLocalidades
+    .map(loc => loc.links?.find(l => l.label === 'Configuración')?.url || loc.url)
+    .filter((url): url is string => Boolean(url));
+
+  const priceTargets = filteredLocalidades
+    .map(loc => loc.links?.find(l => l.label === 'Precios')?.url)
+    .filter((url): url is string => Boolean(url));
+
+  const seatTargets = filteredLocalidades
+    .map(loc => loc.links?.find(l => l.label === 'Acomodación')?.url)
+    .filter((url): url is string => Boolean(url));
+
+  const [bulkOpeningMsg, setBulkOpeningMsg] = useState<string | null>(null);
+  const [popupBlockedNotice, setPopupBlockedNotice] = useState(false);
+
+  const openUrlsInTabs = (targets: string[], typeLabel: string) => {
+    const absoluteUrls = targets.map(makeAbsoluteUrl).filter(Boolean);
+    if (absoluteUrls.length === 0) return;
+
+    setBulkOpeningMsg(`Abriendo ${absoluteUrls.length} pestañas de ${typeLabel}...`);
+    setTimeout(() => setBulkOpeningMsg(null), 6000);
+
+    let hadBlocked = false;
+    absoluteUrls.forEach((url, idx) => {
+      setTimeout(() => {
+        try {
+          const w = window.open(url, '_blank');
+          if (!w || w.closed || typeof w.closed === 'undefined') {
+            hadBlocked = true;
+            setPopupBlockedNotice(true);
+          }
+        } catch {
+          hadBlocked = true;
+          setPopupBlockedNotice(true);
+        }
+      }, idx * 100);
+    });
+  };
+
+  const handleOpenAllConfig = () => openUrlsInTabs(configTargets, 'Configuración');
+  const handleOpenAllPrices = () => openUrlsInTabs(priceTargets, 'Precios');
+  const handleOpenAllSeats = () => openUrlsInTabs(seatTargets, 'Asientos');
+
+  const [isExtractingDiscounts, setIsExtractingDiscounts] = useState(false);
+  const [loadingLocalityDiscountId, setLoadingLocalityDiscountId] = useState<string | null>(null);
+  const [discountUrls, setDiscountUrls] = useState<string[]>([]);
+  const [discountCoupons, setDiscountCoupons] = useState<any[]>([]);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [copiedDiscounts, setCopiedDiscounts] = useState(false);
+  const [discountSearch, setDiscountSearch] = useState('');
+
+  // Abrir Descuentos de todas las localidades en pestañas de la misma ventana (igual que Precios y Asientos)
+  const handleOpenAllDiscounts = async () => {
+    if (!evento.urlBase) {
+      setError('El evento no tiene configurada una URL base válida.');
+      return;
+    }
+
+    // Si ya tenemos cupones en caché para todas las localidades visibles, abrirlos directamente en pestañas
+    const matchingCoupons = discountCoupons.filter(c =>
+      filteredLocalidades.some(l => (l.id && c.secId === l.id) || cleanStr(c.secName) === cleanStr(l.nombre))
+    );
+
+    if (matchingCoupons.length > 0 && matchingCoupons.length >= filteredLocalidades.length) {
+      const urls = matchingCoupons.map(c => c.couponsUrl).filter(Boolean);
+      openUrlsInTabs(urls, 'Descuentos');
+      return;
+    }
+
+    setIsExtractingDiscounts(true);
+    setBulkOpeningMsg('Consultando precios para abrir descuentos en pestañas...');
+    try {
+      const res = await fetch('/api/chrome/extract-coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          showUrl: evento.urlBase,
+          sections: filteredLocalidades.map(l => ({ id: l.id, nombre: l.nombre })),
+          openInChrome: false, // Abrir en la misma ventana (pestañas del navegador) igual que precios y asientos
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (data.code === 'CHROME_OFFLINE') {
+          throw new Error('Google Chrome no está abierto en modo depuración (puerto 9222). Inicia "Iniciar_Chrome_Boleteria.bat".');
+        }
+        throw new Error(data.error || 'No se pudieron extraer las URLs de descuentos.');
+      }
+
+      const urls: string[] = data.urls || [];
+      const coupons: any[] = data.coupons || [];
+      setDiscountUrls(urls);
+      setDiscountCoupons(coupons);
+
+      if (urls.length === 0) {
+        setBulkOpeningMsg('No se encontraron precios para configurar descuentos (o todos son cortesías).');
+        setTimeout(() => setBulkOpeningMsg(null), 4000);
+        return;
+      }
+
+      // Abrir en pestañas del navegador igual que Configuración, Precios y Asientos
+      openUrlsInTabs(urls, 'Descuentos');
+    } catch (err: any) {
+      setError(`Error al abrir descuentos: ${err.message}`);
+      setBulkOpeningMsg(null);
+    } finally {
+      setIsExtractingDiscounts(false);
+    }
+  };
+
+  // Abrir Descuentos ÚNICAMENTE de una localidad específica
+  const handleOpenLocalityDiscounts = async (loc: Localidad) => {
+    // 1. Si ya tenemos cupones extraídos para esta localidad en particular, abrirlos inmediatamente en pestañas
+    const locCoupons = discountCoupons.filter(
+      c => (loc.id && c.secId === loc.id) || cleanStr(c.secName) === cleanStr(loc.nombre)
+    );
+
+    if (locCoupons.length > 0) {
+      const urls = locCoupons.map(c => c.couponsUrl).filter(Boolean);
+      openUrlsInTabs(urls, `Descuentos de ${loc.nombre}`);
+      return;
+    }
+
+    // 2. Si no están en caché, consultar únicamente para esta localidad
+    if (!evento.urlBase) {
+      setError('El evento no tiene configurada una URL base válida.');
+      return;
+    }
+
+    const locKey = loc.id || loc.nombre;
+    setLoadingLocalityDiscountId(locKey);
+    setBulkOpeningMsg(`Consultando precios de ${loc.nombre}...`);
+
+    try {
+      const res = await fetch('/api/chrome/extract-coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          showUrl: evento.urlBase,
+          sections: [{ id: loc.id, nombre: loc.nombre }],
+          openInChrome: false, // En la misma ventana / pestañas del navegador
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (data.code === 'CHROME_OFFLINE') {
+          throw new Error('Google Chrome no está abierto en modo depuración (puerto 9222). Inicia "Iniciar_Chrome_Boleteria.bat".');
+        }
+        throw new Error(data.error || `No se pudieron extraer los descuentos para ${loc.nombre}.`);
+      }
+
+      const newCoupons: any[] = data.coupons || [];
+      const newUrls: string[] = data.urls || [];
+
+      if (newCoupons.length > 0) {
+        setDiscountCoupons(prev => {
+          const filtered = prev.filter(c => c.secId !== loc.id && cleanStr(c.secName) !== cleanStr(loc.nombre));
+          return [...filtered, ...newCoupons];
+        });
+        setDiscountUrls(prev => Array.from(new Set([...prev, ...newUrls])));
+      }
+
+      if (newUrls.length === 0) {
+        setBulkOpeningMsg(`No se encontraron precios comerciales para ${loc.nombre} (o son cortesías).`);
+        setTimeout(() => setBulkOpeningMsg(null), 4000);
+        return;
+      }
+
+      // Abrir en pestañas únicamente los precios de esta localidad
+      openUrlsInTabs(newUrls, `Descuentos de ${loc.nombre}`);
+    } catch (err: any) {
+      setError(`Error al abrir descuentos de ${loc.nombre}: ${err.message}`);
+      setBulkOpeningMsg(null);
+    } finally {
+      setLoadingLocalityDiscountId(null);
+    }
+  };
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      {/* Cabecera del panel */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2 flex-wrap">
+              {evento.nombre}
+              {localidades.length > 0 && !showPastePanel && (
+                <span className="text-[10px] text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1.5 shadow-sm">
+                  <Database className="w-3 h-3" />
+                  Persistido ({localidades.length})
+                </span>
+              )}
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+
+          {/* Botón para Importar Localidades directamente desde Chrome con el Bot */}
+          <button
+            onClick={handleExtractFromChrome}
+            disabled={isExtractingFromChrome}
+            className="h-9 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-600 text-emerald-800 dark:text-emerald-400 hover:text-white border border-emerald-300 dark:border-emerald-500/30 hover:border-emerald-500 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-50 whitespace-nowrap"
+            title="Importar todas las localidades directamente desde la pestaña activa de Chrome con el bot"
+          >
+            <Zap className={`w-3.5 h-3.5 fill-current ${isExtractingFromChrome ? 'animate-pulse' : ''}`} />
+            <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome'}</span>
+          </button>
+
+          {/* Botón para Cargar Tarifario con IA */}
+          <button
+            onClick={() => setShowTarifarioModal(true)}
+            className="h-9 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Extraer precios de foto del comité y cargar en Chrome"
+          >
+            <Sparkles className="w-3.5 h-3.5 fill-current" />
+            <span>Cargar Tarifario IA</span>
+          </button>
+
+          {/* Botón para Clonar Planos de Acomodación */}
+          <button
+            onClick={() => setShowCloneSeatsModal(true)}
+            className="h-9 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Clonar distribución y planos de acomodación desde ARECOL -> PLANOS -> PRUEBA para localidades sin distribución"
+          >
+            <Armchair className="w-3.5 h-3.5" />
+            <span>Clonar Planos</span>
+          </button>
+
+          {/* Botón para Barrido y Verificación de Precios */}
+          <button
+            onClick={() => setShowVerifyPricingModal(true)}
+            className="h-9 px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Auditar y auto-corregir colores de mapa (#86ff8d), switches web/pos y ADMON en cortesías"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Barrido y Verificación</span>
+          </button>
+
+          {/* Botón para Reemplazar / Actualizar Artes */}
+          {onOpenArtworks && (
+            <button
+              onClick={onOpenArtworks}
+              className="h-9 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+              title="Actualizar o reemplazar el QRBoleto digital y el diseño físico (Boca y Godex) en las localidades"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span>Actualizar Artes</span>
+            </button>
+          )}
+
+          {/* Botón para Configurar Evento (HTMLs, Restricciones, Switches, Imágenes) */}
+          {onConfigureSettings && (
+            <button
+              onClick={onConfigureSettings}
+              className="h-9 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+              title="Configurar descripción, términos, edad mínima, switches e imágenes del evento"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>Configurar Evento</span>
+            </button>
+          )}
+
+          {/* Botón para actualizar localidades si ya existen en la base de datos */}
+          {localidades.length > 0 && !showPastePanel && (
+            <button
+              onClick={handleActivateUpdate}
+              className="h-9 px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
+              title="Actualizar manualmente pegando código HTML"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Pegar HTML</span>
+            </button>
+          )}
+
+          <span className="h-9 px-3 py-2 text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-300 dark:border-slate-800 flex items-center gap-1.5 whitespace-nowrap">
+            <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />
+            <span>{domain.replace('https://', '')}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Vista A: Panel de pegado manual (Si no hay localidades o se seleccionó Actualizar) */}
+      {showPastePanel && (
+        <div className="space-y-4">
+          {/* Banner de acceso rápido para importar con el bot */}
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Zap className="w-4 h-4 fill-current" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                  ¿Tienes el show abierto en Google Chrome?
+                </p>
+                <p className="text-[11px] text-emerald-800 dark:text-emerald-400/80">
+                  Puedes importar automáticamente todas las localidades en 2 segundos sin copiar y pegar HTML.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleExtractFromChrome}
+              disabled={isExtractingFromChrome}
+              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>{isExtractingFromChrome ? 'Importando...' : 'Importar de Chrome ahora'}</span>
+            </button>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <Clipboard className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-200">O Pega el Código HTML de la Página de Localidades</h3>
+                <p className="text-xs text-slate-400">
+                  Pega el código fuente HTML de la página de secciones de QRBoletos si prefieres extracción manual.
+                </p>
+              </div>
+            </div>
+
+            <textarea
+              className="w-full h-44 bg-slate-900 border border-slate-800 text-slate-100 rounded-xl px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono placeholder:text-slate-600"
+              placeholder="Haz clic derecho -> Inspeccionar en el contenedor de localidades, o pulsa Ctrl+U, copia el código HTML completo de la página de secciones de QRBoletos y pégalo aquí..."
+              value={htmlContent}
+              onChange={(e) => setHtmlContent(e.target.value)}
+            />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleManualExtract}
+                  disabled={isLoading || isSaving || !htmlContent.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md hover:shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="w-4.5 h-4.5 animate-spin" />
+                      Procesando HTML...
+                    </>
+                  ) : isSaving ? (
+                    <>
+                      <RefreshCw className="w-4.5 h-4.5 animate-spin text-emerald-300" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Clipboard className="w-4.5 h-4.5" />
+                      Procesar Código HTML
+                    </>
+                  )}
+                </button>
+
+                {/* Permitir cancelar y volver al listado si ya existen localidades guardadas */}
+                {localidades.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setShowPastePanel(false);
+                      setError(null);
+                    }}
+                    className="border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancelar
+                  </button>
+                )}
+              </div>
+
+              {/* Enlace alternativo para abrir la URL manualmente */}
+              <a
+                href={localitiesUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-slate-400 hover:text-emerald-400 flex items-center gap-1 font-medium transition-colors"
+              >
+                Abrir configuración de secciones en QRBoletos
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+            {/* Ayuda de copiado */}
+            <p className="text-[11px] text-slate-500 mt-4 flex items-start gap-1.5 border-t border-slate-900 pt-3">
+              <HelpCircle className="w-4 h-4 shrink-0 text-slate-600 mt-0.5" />
+              <span>
+                <strong>¿Cómo copiar el código?</strong> En la pestaña de QRBoletos que se abrió, haz clic derecho en cualquier parte y selecciona <strong>&quot;Ver código fuente de la página&quot;</strong> (o presiona <code>Ctrl + U</code>). Copia todo el contenido (<code>Ctrl + A</code> y luego <code>Ctrl + C</code>) y pégalo en el cuadro de arriba.
+              </span>
+            </p>
+          </div>
+
+          {/* Feedback visual de errores */}
+          {error && (
+            <div className="bg-red-500/5 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="font-semibold block">Error al Procesar HTML</span>
+                <p className="text-xs text-red-300/90">{error}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Vista B: Listado de Localidades (Si hay localidades guardadas y no se está actualizando) */}
+      {!showPastePanel && localidades.length > 0 && (
+        <div className="space-y-4 mt-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800/80">
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
+                <Armchair className="text-emerald-500 w-5 h-5" />
+                Localidades Encontradas ({filteredLocalidades.length})
+              </h3>
+
+              {/* Botones de Apertura Masiva de Localidades en Nuevas Pestañas */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl shadow-inner">
+                <span className="text-[11px] font-bold text-slate-400 px-2 flex items-center gap-1">
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                  Abrir todas en pestañas:
+                </span>
+                
+                {/* Abrir Configuración de todas */}
+                <button
+                  type="button"
+                  onClick={handleOpenAllConfig}
+                  disabled={configTargets.length === 0}
+                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-pink-950/50 text-slate-300 hover:text-pink-300 border border-slate-700/80 hover:border-pink-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={`Abrir pestaña de Configuración para cada una de las ${configTargets.length} localidades`}
+                >
+                  <Settings className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                  <span>Configuración</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
+                    {configTargets.length}
+                  </span>
+                </button>
+
+                {/* Abrir Precios de todas */}
+                <button
+                  type="button"
+                  onClick={handleOpenAllPrices}
+                  disabled={priceTargets.length === 0}
+                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-amber-950/50 text-slate-300 hover:text-amber-300 border border-slate-700/80 hover:border-amber-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={`Abrir pestaña de Precios para cada una de las ${priceTargets.length} localidades`}
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Precios</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
+                    {priceTargets.length}
+                  </span>
+                </button>
+
+                {/* Abrir Asientos de todas */}
+                <button
+                  type="button"
+                  onClick={handleOpenAllSeats}
+                  disabled={seatTargets.length === 0}
+                  className="h-7 px-2.5 bg-slate-800/90 hover:bg-blue-950/50 text-slate-300 hover:text-blue-300 border border-slate-700/80 hover:border-blue-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={`Abrir pestaña de Acomodación/Asientos para cada una de las ${seatTargets.length} localidades`}
+                >
+                  <Armchair className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>Asientos</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-300">
+                    {seatTargets.length}
+                  </span>
+                </button>
+
+                {/* Abrir Descuentos de todas (Precios no cortesías) */}
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={handleOpenAllDiscounts}
+                    disabled={isExtractingDiscounts || filteredLocalidades.length === 0}
+                    className={`h-7 px-2.5 bg-slate-800/90 hover:bg-purple-950/50 text-slate-300 hover:text-purple-300 border border-slate-700/80 hover:border-purple-500/50 ${discountUrls.length > 0 ? 'rounded-l-lg border-r-0' : 'rounded-lg'} text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed`}
+                    title="Abrir pestañas de Descuentos (coupons.aspx) en la misma ventana para cada precio comercial del evento"
+                  >
+                    <Tag className={`w-3.5 h-3.5 text-purple-400 shrink-0 ${isExtractingDiscounts ? 'animate-spin' : ''}`} />
+                    <span>{isExtractingDiscounts ? 'Consultando...' : 'Descuentos'}</span>
+                    {discountUrls.length > 0 ? (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 bg-purple-950/70 border border-purple-700/50 rounded-md text-purple-300 font-bold">
+                        {discountUrls.length}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-950/70 border border-slate-700/50 rounded-md text-slate-400">
+                        %
+                      </span>
+                    )}
+                  </button>
+                  {discountUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDiscountModal(true)}
+                      className="h-7 px-1.5 bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-300 hover:text-white rounded-r-lg text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
+                      title="Ver y gestionar lista de URLs de descuentos"
+                    >
+                      <ListFilter className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Buscador de localidades */}
+            <div className="relative w-full lg:w-64">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar localidad..."
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {popupBlockedNotice && (
+            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>Ventanas emergentes bloqueadas:</strong> Tu navegador no permitió abrir todas las pestañas simultáneamente. Haz clic en el ícono de ventana emergente bloqueada en la barra de direcciones de Chrome y selecciona &quot;Permitir siempre pop-ups&quot;.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPopupBlockedNotice(false)}
+                className="text-amber-400 hover:text-white p-1 rounded-lg hover:bg-amber-500/20 shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {bulkOpeningMsg && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3.5 py-2.5 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-200">
+              <span className="flex items-center gap-2 font-semibold">
+                <ExternalLink className="w-4 h-4 animate-bounce shrink-0" />
+                {bulkOpeningMsg}
+              </span>
+              <span className="text-[11px] text-slate-400">
+                💡 Si tu navegador abre solo una pestaña, haz clic en el ícono de ventanas emergentes bloqueadas en la barra de URL y selecciona &quot;Permitir siempre&quot;.
+              </span>
+            </div>
+          )}
+
+          {/* Resumen Global de Aforo del Evento si está disponible */}
+          {availability && (
+            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Ticket className="w-4 h-4 shrink-0" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    Aforo Total Vendido: <span className="font-mono text-emerald-400 font-extrabold">{availability.totalVendidos.toLocaleString()}</span> / <span className="font-mono text-slate-300">{availability.totalAforo.toLocaleString()}</span> ({availability.porcentaje}%)
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono">
+                    Disponibles en taquilla/online: <strong className="text-slate-300">{availability.totalDisponibles.toLocaleString()}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-48">
+                <div className="w-full bg-slate-900 border border-slate-800 rounded-full h-2.5 overflow-hidden p-0.5">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      availability.porcentaje >= 90
+                        ? 'bg-gradient-to-r from-rose-500 to-amber-500'
+                        : availability.porcentaje >= 60
+                        ? 'bg-gradient-to-r from-amber-500 to-emerald-400'
+                        : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(0, availability.porcentaje))}%` }}
+                  />
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-300 shrink-0">
+                  {availability.porcentaje}%
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Listado de tarjetas de localidad - Altamente optimizado en espacio */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredLocalidades.map((loc, idx) => {
+              // Obtener los links específicos
+              const configLink = loc.links?.find(l => l.label === 'Configuración')?.url || loc.url;
+              const pricesLink = loc.links?.find(l => l.label === 'Precios')?.url;
+              const seatsLink = loc.links?.find(l => l.label === 'Acomodación')?.url;
+              const locAvail = getLocalityAvailability(loc.nombre);
+
+              return (
+                <div
+                  key={idx}
+                  className="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 flex flex-col justify-between gap-3 hover:border-slate-700/60 transition-all group shadow-sm"
+                >
+                  {/* Nombre de la Localidad */}
+                  <div className="flex items-center gap-2 border-b border-slate-900 pb-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:scale-110 transition-transform shrink-0"></div>
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-wide truncate" title={loc.nombre}>
+                      {loc.nombre}
+                    </span>
+                  </div>
+
+                  {/* Aforo Vendido y Total + Barra de Progresión de la Localidad */}
+                  {locAvail ? (
+                    <div className="space-y-1.5 py-1 bg-slate-900/40 rounded-lg px-2.5 py-2 border border-slate-800/70">
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-slate-400 flex items-center gap-1 font-sans">
+                          <Ticket className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span>Vendidos: <strong className="text-slate-200 font-mono">{locAvail.vendidos.toLocaleString()}</strong> / {locAvail.aforo.toLocaleString()}</span>
+                        </span>
+                        <span
+                          className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
+                            locAvail.porcentaje >= 90
+                              ? 'bg-rose-500/20 text-rose-400'
+                              : locAvail.porcentaje >= 60
+                              ? 'bg-amber-500/20 text-amber-400'
+                              : 'bg-emerald-500/20 text-emerald-400'
+                          }`}
+                        >
+                          {locAvail.porcentaje}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-900 border border-slate-800 rounded-full h-2 overflow-hidden p-0.5">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            locAvail.porcentaje >= 90
+                              ? 'bg-gradient-to-r from-rose-500 to-amber-500'
+                              : locAvail.porcentaje >= 60
+                              ? 'bg-gradient-to-r from-amber-500 to-emerald-400'
+                              : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(0, locAvail.porcentaje))}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                        <span>Disponibles: <strong className="text-emerald-400">{locAvail.disponibles.toLocaleString()}</strong></span>
+                        <span>Aforo: <strong className="text-slate-300">{locAvail.aforo.toLocaleString()}</strong></span>
+                      </div>
+                    </div>
+                  ) : isAvailabilityLoading ? (
+                    <div className="py-2 space-y-1.5 animate-pulse bg-slate-900/40 rounded-lg px-2.5 py-2">
+                      <div className="h-2.5 bg-slate-800 rounded w-2/3"></div>
+                      <div className="h-2 bg-slate-900 rounded w-full"></div>
+                    </div>
+                  ) : null}
+
+                  {/* Botones de acción - Compactos y distribuidos (Config, Precios, Asientos, Descuentos) */}
+                  {(() => {
+                    const locCoupons = discountCoupons.filter(
+                      c => (loc.id && c.secId === loc.id) || cleanStr(c.secName) === cleanStr(loc.nombre)
+                    );
+
+                    return (
+                      <div className="grid grid-cols-4 gap-1">
+                        {/* Botón de Configuración */}
+                        <a
+                          href={makeAbsoluteUrl(configLink)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-slate-900 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                          title="Configuración"
+                        >
+                          <Settings className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate w-full text-center">Config</span>
+                        </a>
+
+                        {/* Botón de Precios */}
+                        {pricesLink ? (
+                          <a
+                            href={makeAbsoluteUrl(pricesLink)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                            title="Precios"
+                          >
+                            <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500 shrink-0" />
+                            <span className="truncate w-full text-center">Precios</span>
+                          </a>
+                        ) : (
+                          <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
+                            <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                            <span>Precios</span>
+                          </div>
+                        )}
+
+                        {/* Botón de Acomodación */}
+                        {seatsLink ? (
+                          <a
+                            href={makeAbsoluteUrl(seatsLink)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-slate-900 border border-slate-800 hover:border-blue-500/40 text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                            title="Acomodación"
+                          >
+                            <Armchair className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span className="truncate w-full text-center">Asientos</span>
+                          </a>
+                        ) : (
+                          <div className="bg-slate-950/40 border border-slate-900 text-slate-600 rounded-lg py-2 px-1 text-[10px] font-bold flex flex-col items-center justify-center gap-1 select-none opacity-40">
+                            <Armchair className="w-3.5 h-3.5 shrink-0" />
+                            <span>Asientos</span>
+                          </div>
+                        )}
+
+                        {/* Botón de Descuentos para esta localidad (únicamente los precios de esta localidad) */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenLocalityDiscounts(loc)}
+                          disabled={loadingLocalityDiscountId === (loc.id || loc.nombre) || isExtractingDiscounts}
+                          className="bg-slate-900 border border-slate-800 hover:border-purple-500/40 text-slate-300 hover:text-purple-400 rounded-lg py-2 px-1 text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm disabled:opacity-50"
+                          title={
+                            locCoupons.length > 0
+                              ? `Abrir pestaña(s) de descuentos (${locCoupons.length}) para ${loc.nombre}`
+                              : `Consultar y abrir pestaña(s) de descuentos para ${loc.nombre}`
+                          }
+                        >
+                          <Tag className={`w-3.5 h-3.5 text-purple-400 shrink-0 ${loadingLocalityDiscountId === (loc.id || loc.nombre) ? 'animate-spin' : ''}`} />
+                          <span className="truncate w-full text-center">
+                            {loadingLocalityDiscountId === (loc.id || loc.nombre)
+                              ? 'Cargando...'
+                              : locCoupons.length > 0
+                              ? `Desc (${locCoupons.length})`
+                              : 'Desc'}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Cargar Tarifario con IA y Sincronizar en Chrome */}
+      <TarifarioUploaderModal
+        evento={{ ...evento, localidades }}
+        isOpen={showTarifarioModal}
+        onClose={() => setShowTarifarioModal(false)}
+        onSyncComplete={() => {
+          // Si el usuario actualiza localidades
+        }}
+      />
+
+      {/* Modal para Clonar Planos de Acomodación */}
+      <CloneSeatsModal
+        evento={{ ...evento, localidades }}
+        isOpen={showCloneSeatsModal}
+        onClose={() => setShowCloneSeatsModal(false)}
+      />
+
+      {/* Modal para Barrido y Verificación Exhaustiva de Precios */}
+      <VerifyPricingModal
+        evento={{ ...evento, localidades }}
+        isOpen={showVerifyPricingModal}
+        onClose={() => setShowVerifyPricingModal(false)}
+      />
+
+      {/* Modal para Gestión y Lista Detallada de URLs de Descuentos */}
+      {showDiscountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Cabecera */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    Descuentos por Precio
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono">
+                      {discountUrls.length} {discountUrls.length === 1 ? 'precio' : 'precios'}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    URLs de coupons.aspx generadas para cada precio comercial (no cortesías).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDiscountModal(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Barra de Acciones Rápidas */}
+            <div className="p-4 border-b border-slate-800/80 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openUrlsInTabs(discountUrls, 'Descuentos')}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                  title="Abrir todas en pestañas del navegador actual"
+                >
+                  <Tag className="w-3.5 h-3.5 shrink-0" />
+                  <span>Abrir todas en pestañas ({discountUrls.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(discountUrls.join('\n'));
+                    setCopiedDiscounts(true);
+                    setTimeout(() => setCopiedDiscounts(false), 2500);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                >
+                  {copiedDiscounts ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">¡Copiadas al portapapeles!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copiar todas las URLs</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Buscador interno */}
+              <div className="relative w-full sm:w-56">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filtrar por localidad/etapa..."
+                  value={discountSearch}
+                  onChange={(e) => setDiscountSearch(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Apertura en Bloques de 10 si hay muchas */}
+            {discountUrls.length > 10 && (
+              <div className="px-4 py-2 bg-slate-950/40 border-b border-slate-800/60 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-slate-400 text-[11px] font-semibold flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  Abrir en el navegador por bloques (evita bloqueo de pop-ups):
+                </span>
+                {Array.from({ length: Math.ceil(discountUrls.length / 10) }).map((_, bIdx) => {
+                  const start = bIdx * 10;
+                  const end = Math.min(start + 10, discountUrls.length);
+                  return (
+                    <button
+                      key={bIdx}
+                      type="button"
+                      onClick={() => {
+                        const batch = discountUrls.slice(start, end);
+                        batch.forEach((url, i) => {
+                          setTimeout(() => window.open(url, '_blank'), i * 80);
+                        });
+                      }}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-purple-900/60 text-slate-300 hover:text-purple-300 border border-slate-700/80 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer"
+                    >
+                      {start + 1}-{end}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Listado scrolleable de Precios y URLs Agrupado por Localidad */}
+            <div className="p-4 overflow-y-auto space-y-4 flex-1 max-h-[50vh]">
+              {(() => {
+                const filtered = discountCoupons.filter((item) => {
+                  if (!discountSearch.trim()) return true;
+                  const q = discountSearch.toLowerCase();
+                  return (
+                    (item.secName || '').toLowerCase().includes(q) ||
+                    (item.priceName || '').toLowerCase().includes(q) ||
+                    (item.etapa || '').toLowerCase().includes(q)
+                  );
+                });
+
+                // Agrupar por localidad
+                const groups: { [key: string]: typeof discountCoupons } = {};
+                for (const item of filtered) {
+                  const key = item.secName || 'Sin Localidad';
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(item);
+                }
+
+                const groupKeys = Object.keys(groups);
+                if (groupKeys.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-slate-500 text-xs">
+                      No se encontraron precios que coincidan con la búsqueda.
+                    </div>
+                  );
+                }
+
+                return groupKeys.map((secName, gIdx) => {
+                  const items = groups[secName];
+                  return (
+                    <div key={gIdx} className="bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                      {/* Cabecera de la Localidad con contador de precios */}
+                      <div className="px-3.5 py-2.5 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                          <span className="font-extrabold text-xs text-slate-100 uppercase tracking-wide">
+                            {secName}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px] font-bold">
+                            {items.length} {items.length === 1 ? 'precio' : 'precios'}
+                          </span>
+                        </div>
+                        {items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              items.forEach((item, i) => {
+                                setTimeout(() => window.open(item.couponsUrl, '_blank'), i * 80);
+                              });
+                            }}
+                            className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer transition-colors"
+                            title={`Abrir pestañas de los ${items.length} precios de ${secName}`}
+                          >
+                            <span>Abrir los {items.length}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Filas de precios de esta localidad */}
+                      <div className="p-2 space-y-1.5">
+                        {items.map((item, pIdx) => (
+                          <div
+                            key={pIdx}
+                            className="p-2 bg-slate-900/40 hover:bg-slate-900/80 border border-slate-800/60 hover:border-purple-500/30 rounded-lg flex items-center justify-between gap-3 text-xs transition-colors"
+                          >
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
+                              <span className="text-slate-200 font-semibold truncate">
+                                {item.priceName}
+                              </span>
+                              {item.etapa && (
+                                <span className="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-[10px] text-purple-300 font-mono">
+                                  {item.etapa}
+                                </span>
+                              )}
+                            </div>
+                            <a
+                              href={item.couponsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-300 hover:text-white rounded-md text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors"
+                            >
+                              <span>Abrir</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950/50 flex justify-between items-center text-xs text-slate-400">
+              <span>{discountUrls.length} URLs de cupones listas</span>
+              <button
+                type="button"
+                onClick={() => setShowDiscountModal(false)}
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

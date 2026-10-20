@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { showUrl, sections, openInChrome = true } = body;
+    const { showUrl, sections, openInChrome = false } = body;
 
     if (!showUrl) {
       return NextResponse.json(

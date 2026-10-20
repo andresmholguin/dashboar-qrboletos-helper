@@ -306,60 +306,119 @@ def clone_locality_seats(page: Page, section_name: str, seats_url: str, args) ->
     }}""")
     time.sleep(0.4)
 
-    # 5. Guardar clonación
-    log("INFO", f"  💾 Enviando solicitud de clonación y guardado...")
-    save_result = None
-    try:
-        save_result = page.evaluate("""() => {
-            return new Promise((resolve) => {
-                let resolved = false;
-                let timer = setTimeout(() => {
-                    if (!resolved) {
-                        resolved = true;
-                        resolve({ status: 'timeout_or_reloading' });
-                    }
-                }, 8000);
+    # 5. Guardar clonación: Ejecutar exactamente 1 solo clic y deshabilitar para evitar duplicados
+    log("INFO", f"  💾 Enviando solicitud de clonación (1 solo clic). Bloqueando re-envíos...")
 
-                $(document).on('ajaxComplete', (e, xhr, settings) => {
-                    if (resolved) return;
-                    resolved = true;
-                    clearTimeout(timer);
-                    resolve({ status: 'ajaxComplete' });
-                });
+    click_result = page.evaluate("""() => {
+        if (window.__clone_already_submitted) {
+            return { ok: false, error: 'Ya se envió una solicitud de clonación previa' };
+        }
+        window.__clone_already_submitted = true;
 
-                const btn = document.querySelector('#modalClone button.btn-primary') || document.querySelector('#modalClone button:not(.close):not(.btn-secondary)');
-                if (btn) {
-                    btn.click();
-                } else {
-                    $('#modalClone form').submit();
-                }
-            });
-        }""")
-    except Exception as e:
-        # Si la recarga nativa destruyó el contexto, es normal tras el guardado
-        pass
+        // Desactivar tecla Enter en el modal para evitar envíos dobles o triples
+        $('#modalClone').off('keydown.preventClone').on('keydown.preventClone', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
 
-    # Esperar que la recarga de página o respuesta se procese
-    time.sleep(2.0)
-    try:
-        page.wait_for_load_state("domcontentloaded", timeout=10000)
-    except Exception:
-        pass
+        // Desactivar envíos duplicados en el form
+        $('#modalClone form').off('submit.preventClone').on('submit.preventClone', function(e) {
+            if (this.dataset.submitted === 'true') {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            this.dataset.submitted = 'true';
+        });
 
-    # Comprobación final: el modal debe cerrarse y el botón '#clone' debe desaparecer o haber svg
-    final_check = page.evaluate("""() => {
-        return {
-            cloneExists: $('#clone').is(':visible'),
-            hasSvg: $('svg').length > 0 || $('.seat-item, [id*="seat"]').length > 0
-        };
+        // Buscar botón Guardar (amarillo / btn-warning / btn-primary / texto Guardar)
+        const allButtons = Array.from(document.querySelectorAll('#modalClone button, #modalClone input[type="submit"]'));
+        const btnGuardar = allButtons.find(b => {
+            const txt = (b.innerText || b.value || '').trim().toLowerCase();
+            return txt.includes('guardar');
+        }) || document.querySelector('#modalClone button.btn-primary') || document.querySelector('#modalClone button:not(.close):not(.btn-secondary)');
+
+        if (!btnGuardar) {
+            return { ok: false, error: 'No se encontró el botón Guardar en el modal' };
+        }
+
+        // Ejecutar exactamente 1 solo clic
+        btnGuardar.click();
+
+        // Inmediatamente deshabilitar el botón y cambiar texto para que no reciba más clics ni enters
+        try {
+            btnGuardar.disabled = true;
+            btnGuardar.style.pointerEvents = 'none';
+            btnGuardar.style.opacity = '0.6';
+            btnGuardar.innerText = 'Guardando... Espere por favor';
+            $(btnGuardar).prop('disabled', true).addClass('disabled');
+        } catch (e) {}
+
+        return { ok: true };
     }""")
 
-    if not final_check.get("cloneExists") or final_check.get("hasSvg"):
+    if not click_result.get("ok"):
+        log("ERROR", f"  ❌ Error al disparar guardado: {click_result.get('error')}")
+        return {"name": section_name, "status": "save_error"}
+
+    log("INFO", f"  ⏳ Guardado iniciado con 1 solo clic. Esperando a que el servidor de QRBoletos procese la clonación (puede tardar de 15 a 60 segundos)...")
+
+    # Esperar activamente la finalización de la clonación (hasta 90 segundos)
+    start_wait = time.time()
+    max_wait = 90.0
+    confirmed = False
+
+    while (time.time() - start_wait) < max_wait:
+        time.sleep(2.0)
+        try:
+            # Comprobar si la página ya recargó y tiene SVG o si el modal ya se cerró
+            check = page.evaluate("""() => {
+                const hasSvg = $('svg').length > 0 || $('.seat-item, [id*="seat"]').length > 0;
+                const cloneVisible = $('#clone, button:has-text(\"Clonar\")').is(':visible');
+                const modalVisible = $('#modalClone').is(':visible');
+                const seatCount = $('.seat-item, [id*="seat"], circle, rect.seat').length;
+                return { hasSvg, cloneVisible, modalVisible, seatCount };
+            }""")
+
+            if check.get("hasSvg") and not check.get("cloneVisible"):
+                confirmed = True
+                seat_count = check.get("seatCount", 0)
+                log("INFO", f"  ✓ Plano detectado en el DOM ({seat_count} asientos confirmados).")
+                break
+        except Exception:
+            # Si el contexto de ejecución fue destruido, significa que QRBoletos hizo location.reload()
+            log("INFO", f"  🔄 QRBoletos recargó la página tras clonar. Esperando confirmación de carga...")
+            try:
+                page.wait_for_load_state("domcontentloaded", timeout=20000)
+            except Exception:
+                pass
+            time.sleep(2.0)
+
+    if confirmed:
         log("SUCCESS", f"  ✅ ¡Plano de '{section_name}' clonado exitosamente desde '{matched_text}'!")
         return {"name": section_name, "status": "cloned_success", "source": matched_text}
     else:
-        log("WARNING", f"  ⚠️ Clonación enviada para '{section_name}', pero el plano no se confirmó inmediatamente.")
-        return {"name": section_name, "status": "unconfirmed", "source": matched_text}
+        # Última verificación post-espera
+        final_check = {}
+        try:
+            final_check = page.evaluate("""() => {
+                return {
+                    hasSvg: $('svg').length > 0 || $('.seat-item, [id*="seat"]').length > 0,
+                    cloneVisible: $('#clone, button:has-text(\"Clonar\")').is(':visible')
+                };
+            }""")
+        except Exception:
+            pass
+
+        if final_check.get("hasSvg") and not final_check.get("cloneVisible"):
+            log("SUCCESS", f"  ✅ ¡Plano de '{section_name}' clonado exitosamente desde '{matched_text}'!")
+            return {"name": section_name, "status": "cloned_success", "source": matched_text}
+        else:
+            log("WARNING", f"  ⚠️ La clonación de '{section_name}' tardó más de {int(max_wait)}s o requiere verificación manual.")
+            return {"name": section_name, "status": "timeout", "source": matched_text}
 
 def run_clone():
     args = parse_args()

@@ -68,6 +68,7 @@ export default function CloneSeatsModal({
   if (!isOpen || !mounted) return null;
 
   const handleStartClone = async () => {
+    if (isRunning) return;
     setIsRunning(true);
     setStatus('running');
     setLogs([]);
@@ -194,6 +195,7 @@ export default function CloneSeatsModal({
                   value={sourcePromoter}
                   onChange={(e) => setSourcePromoter(e.target.value)}
                   disabled={isRunning}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -207,6 +209,7 @@ export default function CloneSeatsModal({
                   value={sourceEvent}
                   onChange={(e) => setSourceEvent(e.target.value)}
                   disabled={isRunning}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -220,6 +223,7 @@ export default function CloneSeatsModal({
                   value={sourceShow}
                   onChange={(e) => setSourceShow(e.target.value)}
                   disabled={isRunning}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -231,6 +235,16 @@ export default function CloneSeatsModal({
                 Para cada localidad sin acomodación, el robot buscará la opción coincidente en el modal de QRBoletos (ej. <strong>PREFERENCIAL 1</strong>, <strong>VIP 3</strong>, <strong>PLATEA</strong>) y guardará la distribución. Las que ya cuenten con plano serán conservadas sin sobreescribir.
               </span>
             </p>
+
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-2.5 text-xs text-amber-200">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-bold text-amber-300">Protección anti-duplicados (1 solo clic/enter):</span>
+                <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                  El robot realiza <strong>estrictamente 1 solo clic</strong> en &quot;Guardar&quot; y deshabilita el formulario de inmediato. La clonación en el servidor de QRBoletos puede tardar <strong>entre 15 y 45 segundos</strong> en generar los asientos; el bot espera pacientemente la confirmación sin reintentar para evitar planos duplicados.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Consola de logs en vivo */}

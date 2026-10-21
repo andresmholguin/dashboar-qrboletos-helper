@@ -1133,16 +1133,17 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
         * 'Mostrar en el punto de venta' (data-input="pos") -> Sí (True)
     - Color en el mapa: #86ff8d
     """
-    has_paid_price = any(p.get("valor", 0) > 0 for p in precios)
-    target_web = True if has_paid_price else False
+    # En la configuración de la localidad (sections/{id}/settings.aspx),
+    # tanto 'Mostrar en el sitio web' como 'Mostrar en el punto de venta' deben estar siempre activos (True/Sí)
+    target_web = True
     target_pos = True
     target_color = "#86ff8d"
 
     section_settings_url = f"https://dashboard.qrboletos.com/promoters/{promoter_id}/events/{event_id}/shows/{show_id}/sections/{section_id}/settings.aspx"
 
     log("INFO", f"  📍 Configuración de Localidad '{loc_nombre}':")
-    log("INFO", f"     • Mostrar en Web: {'SÍ' if target_web else 'NO (Solo Cortesía)'}")
-    log("INFO", f"     • Mostrar en Punto de Venta: {'SÍ' if target_pos else 'NO'}")
+    log("INFO", f"     • Mostrar en Web: SÍ")
+    log("INFO", f"     • Mostrar en Punto de Venta: SÍ")
     log("INFO", f"     • Color en el mapa: {target_color}")
 
     if dry_run:
@@ -1536,9 +1537,9 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
         return result
 
     # 1. Auditoría de Settings de Sección (settings.aspx)
+    # Tanto 'Mostrar en el sitio web' como 'Mostrar en el punto de venta' deben estar siempre activos (True/Sí)
     section_settings_url = f"https://dashboard.qrboletos.com/promoters/{promoter_id}/events/{event_id}/shows/{show_id}/sections/{section_id}/settings.aspx"
-    has_paid_price = any(p.get("valor", 0) > 0 for p in precios)
-    target_web = True if has_paid_price else False
+    target_web = True
     target_pos = True
     target_color = "#86ff8d"
 
@@ -1558,7 +1559,7 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
             if color_ok and web_ok and pos_ok:
                 result["color_ok"] = True
                 result["section_switches_ok"] = True
-                log("SUCCESS", f"  ✓ Localidad '{loc_nombre}': Color (#86ff8d) y Switches (Web={'Sí' if target_web else 'No'}, POS=Sí) 100% confirmados.")
+                log("SUCCESS", f"  ✓ Localidad '{loc_nombre}': Color (#86ff8d) y Switches (Web=Sí, POS=Sí) 100% confirmados.")
                 break
 
             if attempt <= max_retries:

@@ -191,7 +191,7 @@ export default function VerifyPricingModal({
                   <span>2. Switches de Canal</span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Valida en cada precio que <strong>Venta en Línea</strong> y <strong>Punto de Venta</strong> estén activos (con Cortesías apagadas en línea).
+                  Valida en la localidad que <strong>Mostrar en Web</strong> y <strong>Punto de Venta</strong> estén activos (Sí), y en cada precio que Venta en Línea esté activa (con Cortesías apagadas en línea).
                 </p>
               </div>
 

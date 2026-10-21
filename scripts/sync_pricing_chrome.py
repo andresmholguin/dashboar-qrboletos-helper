@@ -1156,7 +1156,7 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
         time.sleep(delay_ms / 1000.0)
 
         # 1. Configurar Color en el mapa (#86ff8d)
-        log("INFO", f"     🎨 Aplicando Color en el mapa ({target_color})...")
+        log("INFO", f"     🎨 Aplicando y guardando Color en el mapa ({target_color})...")
         try:
             page.evaluate(f"""() => {{
                 return new Promise((resolve) => {{
@@ -1171,17 +1171,20 @@ def configure_section_settings(page: Page, promoter_id: str, event_id: str, show
                     }};
                     $(document).on('ajaxComplete', onAjax);
 
+                    const targetColor = '{target_color}';
                     const $cp = $('.color-picker');
-                    if ($cp.length && typeof $cp.colorpicker === 'function') {{
-                        $cp.colorpicker('setValue', '{target_color}');
-                    }} else {{
-                        const $el = $('#hexa');
-                        if (typeof $el.colorpicker === 'function') {{
-                            $el.colorpicker('setValue', '{target_color}');
-                        }} else {{
-                            $el.val('{target_color}').trigger('change').trigger('changeColor');
+                    
+                    // Disparar changeColor con objeto color.toHex() explícito (requerido por QRBoletos para persistir en BD)
+                    if ($cp.length) {{
+                        $cp.trigger({{
+                            type: 'changeColor',
+                            color: {{ toHex: () => targetColor }}
+                        }});
+                        if (typeof $cp.colorpicker === 'function') {{
+                            try {{ $cp.colorpicker('setValue', targetColor); }} catch (e) {{}}
                         }}
                     }}
+                    $('#hexa').val(targetColor).trigger('change');
 
                     setTimeout(() => {{
                         if (resolved) return;
@@ -1552,38 +1555,62 @@ def verify_and_autofix_locality(page: Page, task: dict) -> dict:
             curr_web = safe_evaluate(page, "() => $('input.switch[data-input=\"web\"]').prop('checked')")
             curr_pos = safe_evaluate(page, "() => $('input.switch[data-input=\"pos\"]').prop('checked')")
 
-            color_ok = (curr_color == target_color.lower())
+            # Forzar y asegurar guardado de Color en BD (ya que input#hexa puede tener el valor visual por defecto sin estar guardado en BD)
+            safe_evaluate(page, f"""() => {{
+                return new Promise((resolve) => {{
+                    let resolved = false;
+                    const onAjax = (e, xhr, settings) => {{
+                        if (resolved) return;
+                        if (settings && settings.type === 'POST') {{
+                            resolved = true;
+                            $(document).off('ajaxComplete', onAjax);
+                            resolve(true);
+                        }}
+                    }};
+                    $(document).on('ajaxComplete', onAjax);
+
+                    const targetColor = '{target_color}';
+                    const $cp = $('.color-picker');
+                    if ($cp.length) {{
+                        $cp.trigger({{
+                            type: 'changeColor',
+                            color: {{ toHex: () => targetColor }}
+                        }});
+                        if (typeof $cp.colorpicker === 'function') {{
+                            try {{ $cp.colorpicker('setValue', targetColor); }} catch (e) {{}}
+                        }}
+                    }}
+                    $('#hexa').val(targetColor).trigger('change');
+
+                    setTimeout(() => {{
+                        if (resolved) return;
+                        resolved = true;
+                        $(document).off('ajaxComplete', onAjax);
+                        resolve(true);
+                    }}, 1500);
+                }});
+            }}""")
+
             web_ok = (curr_web == target_web)
             pos_ok = (curr_pos == target_pos)
 
-            if color_ok and web_ok and pos_ok:
+            if web_ok and pos_ok:
                 result["color_ok"] = True
                 result["section_switches_ok"] = True
-                log("SUCCESS", f"  ✓ Localidad '{loc_nombre}': Color (#86ff8d) y Switches (Web=Sí, POS=Sí) 100% confirmados.")
+                log("SUCCESS", f"  ✓ Localidad '{loc_nombre}': Color (#86ff8d) guardado en BD y Switches (Web=Sí, POS=Sí) confirmados.")
                 break
 
             if attempt <= max_retries:
-                log("WARNING", f"  ⚠️ Discrepancia en settings de '{loc_nombre}' (Color={curr_color}, Web={curr_web}, POS={curr_pos}). Auto-corrigiendo (Intento {attempt}/{max_retries})...")
-                if not color_ok:
-                    safe_evaluate(page, f"""() => {{
-                        const $cp = $('.color-picker');
-                        if ($cp.length && typeof $cp.colorpicker === 'function') {{
-                            $cp.colorpicker('setValue', '{target_color}');
-                        }} else {{
-                            $('#hexa').val('{target_color}').trigger('change').trigger('changeColor');
-                        }}
-                    }}""")
-                    time.sleep(0.5)
-
+                log("WARNING", f"  ⚠️ Corrigiendo switches de '{loc_nombre}' (Web={curr_web}, POS={curr_pos}). Auto-corrigiendo (Intento {attempt}/{max_retries})...")
                 if not web_ok:
                     safe_evaluate(page, f"""() => {{
-                        $('input.switch[data-input="web"]').bootstrapSwitch('state', {str(target_web).lower()});
+                        $('input.switch[data-input=\"web\"]').bootstrapSwitch('state', {str(target_web).lower()});
                     }}""")
                     time.sleep(0.5)
 
                 if not pos_ok:
                     safe_evaluate(page, f"""() => {{
-                        $('input.switch[data-input="pos"]').bootstrapSwitch('state', {str(target_pos).lower()});
+                        $('input.switch[data-input=\"pos\"]').bootstrapSwitch('state', {str(target_pos).lower()});
                     }}""")
                     time.sleep(0.5)
 

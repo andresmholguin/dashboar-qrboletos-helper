@@ -18,6 +18,7 @@ import {
   Users,
   Ticket,
   Archive,
+  BarChart3,
 } from 'lucide-react';
 
 interface EventCardProps {
@@ -92,6 +93,25 @@ export default function EventCard({
   const isOnSale = !isArchived && evento.enVenta !== false;
   const localitiesCount = evento.localidades?.length || 0;
 
+  // URLs directas a Informes y Etapas del evento en QRBoletos
+  let reportsUrl = '';
+  let phasesUrl = '';
+  if (evento.urlBase) {
+    const m = evento.urlBase.match(/^(https?:\/\/[^\/]+)\/promoters\/([^\/]+)\/events\/([^\/]+)\/shows\/([^\/?#.]+)/i);
+    if (m) {
+      const [, origin, pId, eId, sId] = m;
+      reportsUrl = `${origin}/promoters/${pId}/events/${eId}/shows/${sId}/reports/sales/summary.aspx`;
+      phasesUrl = `${origin}/promoters/${pId}/events/${eId}/shows/${sId}/phases.aspx`;
+    } else {
+      const clean = evento.urlBase.replace(/\/sections.*$/i, '').replace(/\.aspx.*$/i, '').replace(/\/$/, '');
+      reportsUrl = `${clean}/reports/sales/summary.aspx`;
+      phasesUrl = `${clean}/phases.aspx`;
+    }
+  } else if (evento.promoterId && evento.eventId && evento.showId) {
+    reportsUrl = `https://dashboard.qrboletos.com/promoters/${evento.promoterId}/events/${evento.eventId}/shows/${evento.showId}/reports/sales/summary.aspx`;
+    phasesUrl = `https://dashboard.qrboletos.com/promoters/${evento.promoterId}/events/${evento.eventId}/shows/${evento.showId}/phases.aspx`;
+  }
+
   return (
     <article
       className={`group relative bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between focus-within:ring-2 focus-within:ring-emerald-500/80 ${isArchived
@@ -104,7 +124,11 @@ export default function EventCard({
     >
       <div>
         {/* 1. Flyer / Banner del Evento */}
-        <div className="w-full aspect-[80/60] relative rounded-xl overflow-hidden mb-3.5 border border-slate-800/90 bg-slate-950 flex items-center justify-center group-hover:border-emerald-500/40 transition-all">
+        <div
+          onDoubleClick={() => onOpenLocalities(evento)}
+          title="Doble clic para ver localidades"
+          className="w-full aspect-[80/60] relative rounded-xl overflow-hidden mb-3.5 border border-slate-800/90 bg-slate-950 flex items-center justify-center group-hover:border-emerald-500/40 transition-all cursor-pointer select-none"
+        >
           {imageSrc && !imgError ? (
             <img
               src={imageSrc}
@@ -124,7 +148,7 @@ export default function EventCard({
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 via-transparent to-black/60 pointer-events-none" />
 
           {/* Badges Superiores Izquierdos: ID y Estado */}
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10">
+          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10" onDoubleClick={(e) => e.stopPropagation()}>
             {evento.id && (
               <span className="bg-black/80 backdrop-blur-md text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold shadow-md">
                 #{evento.id}
@@ -149,7 +173,7 @@ export default function EventCard({
           </div>
 
           {/* Acciones Rápidas en Esquina Superior Derecha: Favorito y Menú de Opciones */}
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
+          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10" onDoubleClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={handleFavoriteClick}
@@ -190,6 +214,30 @@ export default function EventCard({
                     >
                       <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       <span>Ver en QRBoletos.com</span>
+                    </a>
+                  )}
+                  {reportsUrl && (
+                    <a
+                      href={reportsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>Informes de Ventas</span>
+                    </a>
+                  )}
+                  {phasesUrl && (
+                    <a
+                      href={phasesUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      <span>Etapas de Venta</span>
                     </a>
                   )}
                   {onOpenArtworks && (

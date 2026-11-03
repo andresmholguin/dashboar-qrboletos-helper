@@ -133,3 +133,15 @@ export function getEventTimestamp(dateStr: string): number {
   const timestamp = Date.parse(dateStr);
   return isNaN(timestamp) ? Infinity : timestamp;
 }
+
+/**
+ * Retorna el timestamp del final del día (23:59:59.999) del evento.
+ * Un evento solo se considera finalizado una vez transcurrido todo el día del evento.
+ */
+export function getEventEndOfDayTimestamp(dateStr: string): number {
+  if (!dateStr) return Infinity;
+  const startTimestamp = getEventTimestamp(dateStr);
+  if (startTimestamp === Infinity) return Infinity;
+  const d = new Date(startTimestamp);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+}

@@ -100,7 +100,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { id, favorito, localidades, archivado } = body;
+    const { id, favorito, localidades, archivado, enVenta } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -113,7 +113,7 @@ export async function PATCH(request: Request) {
     if (favorito !== undefined) {
       success = await updateEventoFavoritoInSheets(id, favorito);
     } else if (archivado !== undefined) {
-      success = await updateEventoArchivadoInSheets(id, Boolean(archivado));
+      success = await updateEventoArchivadoInSheets(id, Boolean(archivado), enVenta);
     } else if (localidades !== undefined) {
       success = await updateEventoLocalidadesInSheets(id, localidades);
     } else {

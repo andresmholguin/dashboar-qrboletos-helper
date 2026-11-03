@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Evento, EventAvailabilitySummary } from '@/types';
-import { formatDateString, getEventTimestamp } from '@/utils/dateFormatter';
+import { formatDateString, getEventTimestamp, getEventEndOfDayTimestamp } from '@/utils/dateFormatter';
 import {
   Layers,
   Trash2,
@@ -86,10 +86,9 @@ export default function EventCard({
     rawImg = `https://d1bw1k6fnbki29.cloudfront.net/eventos/${evento.id}/home.jpg`;
   }
   const imageSrc = rawImg;
-  const todayStartTimestamp = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
-  const eventTime = evento.fecha ? getEventTimestamp(evento.fecha) : Infinity;
-  const isPastDate = eventTime !== Infinity && eventTime < todayStartTimestamp;
-  const isArchived = Boolean(evento.archivado) || isPastDate;
+  const isArchived = Boolean(evento.archivado);
+  const eventEndTime = evento.fecha ? getEventEndOfDayTimestamp(evento.fecha) : Infinity;
+  const isFinalized = eventEndTime !== Infinity && Date.now() > eventEndTime;
   const isOnSale = !isArchived && evento.enVenta !== false;
   const localitiesCount = evento.localidades?.length || 0;
 
@@ -158,6 +157,11 @@ export default function EventCard({
               <span className="backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 bg-slate-950/90 text-slate-400 border border-slate-700/80">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
                 <span>ARCHIVADO</span>
+              </span>
+            ) : isFinalized ? (
+              <span className="backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 bg-slate-900/90 text-slate-300 border border-slate-700/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span>FINALIZADO</span>
               </span>
             ) : isOnSale ? (
               <span className="backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 bg-emerald-950/90 text-emerald-300 border border-emerald-500/50">
@@ -289,7 +293,7 @@ export default function EventCard({
                       className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Archive className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{isArchived ? 'Mover a Configuración' : 'Archivar Evento'}</span>
+                      <span>{isArchived ? 'Desarchivar Evento' : 'Archivar Evento'}</span>
                     </button>
                   )}
                   <div className="my-1 border-t border-slate-800" />

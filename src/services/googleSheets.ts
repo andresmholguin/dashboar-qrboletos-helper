@@ -233,15 +233,10 @@ export async function fetchEventosFromSheets(): Promise<Evento[]> {
     let espectaculoVal = row[13] || '';
     let sitioVal = row[14] || '';
 
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const eventTime = fechaVal ? getEventTimestamp(fechaVal) : Infinity;
-    const isDatePast = eventTime !== Infinity && eventTime < todayStart;
-
     let enVenta = false;
     let archivado = false;
     const estadoUpper = estadoVentaRaw.toUpperCase();
-    if (estadoUpper.includes('ARCHIV') || isDatePast) {
+    if (estadoUpper.includes('ARCHIV')) {
       archivado = true;
       enVenta = false;
     } else if (estadoUpper.includes('VENTA')) {
@@ -399,7 +394,7 @@ export async function updateEventoFavoritoInSheets(idOrRowId: string, favorito: 
 /**
  * Actualiza el estado de archivado en Google Sheets para un evento (Columna M).
  */
-export async function updateEventoArchivadoInSheets(idOrRowId: string, archivado: boolean): Promise<boolean> {
+export async function updateEventoArchivadoInSheets(idOrRowId: string, archivado: boolean, enVenta?: boolean): Promise<boolean> {
   if (!isSheetsConfigured()) {
     throw new Error('Google Sheets no está configurado.');
   }
@@ -410,6 +405,7 @@ export async function updateEventoArchivadoInSheets(idOrRowId: string, archivado
 
   // Columna M es Estado Venta
   const cellRange = `${SHEET_NAME}!M${rowId}`;
+  const targetState = archivado ? 'ARCHIVADO' : (enVenta ? 'A LA VENTA' : 'EN CONFIGURACION');
 
   try {
     await sheets.spreadsheets.values.update({
@@ -417,7 +413,7 @@ export async function updateEventoArchivadoInSheets(idOrRowId: string, archivado
       range: cellRange,
       valueInputOption: 'RAW',
       requestBody: {
-        values: [[archivado ? 'ARCHIVADO' : 'EN CONFIGURACION']],
+        values: [[targetState]],
       },
     });
     return true;
@@ -848,10 +844,18 @@ export async function syncEventsFromCatalog(): Promise<{
       addedCount++;
     }
 
-    const todayStartTimestamp = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
-    const remoteTime = (isoDate || existing?.fecha) ? getEventTimestamp(isoDate || existing?.fecha || '') : Infinity;
-    const isRemotePast = remoteTime !== Infinity && remoteTime < todayStartTimestamp;
-    const remoteEstado = isRemotePast ? 'ARCHIVADO' : 'A LA VENTA';
+    // Si ya existía en Sheets, preservamos su estado manual exacto (ARCHIVADO, EN CONFIGURACION o A LA VENTA)
+    // Si es un evento nuevo de la API remota: 'A LA VENTA'
+    let remoteEstado = 'A LA VENTA';
+    if (existing) {
+      if (existing.archivado) {
+        remoteEstado = 'ARCHIVADO';
+      } else if (existing.enVenta === false) {
+        remoteEstado = 'EN CONFIGURACION';
+      } else {
+        remoteEstado = 'A LA VENTA';
+      }
+    }
 
     const row = [
       remote.id, // Columna A: ID oficial QRBoletos
@@ -875,35 +879,19 @@ export async function syncEventsFromCatalog(): Promise<{
   }
 
   // 3.1. PRESERVAR EVENTOS NO LISTADOS A VENTA:
-  // - Si ya pasó su fecha de evento o nunca salieron a venta -> ARCHIVADO
-  // - Si vinieron de la API pero ya no están -> ARCHIVADO
-  // - Si están en montaje / detectados por Chrome con fecha futura -> EN CONFIGURACION
-  const todayStartTimestamp = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
-
+  // Se preserva exactamente el estado actual configurado en Sheets (ARCHIVADO, A LA VENTA o EN CONFIGURACION)
   for (const existing of currentEvents) {
     const key = existing.id || existing.rowId || existing.nombre;
     if (existing.id && seenIds.has(existing.id)) continue;
     if (!matchedExistingKeys.has(key)) {
       if (existing.id) seenIds.add(existing.id);
 
-      const existingTime = existing.fecha ? getEventTimestamp(existing.fecha) : Infinity;
-      const isPastDate = existingTime !== Infinity && existingTime < todayStartTimestamp;
-
       let estadoVenta = 'EN CONFIGURACION';
-      if (existing.archivado || isPastDate) {
-        // Ya archivado, o ya pasó su fecha (nunca salió a venta o ya caducó)
+      if (existing.archivado) {
         estadoVenta = 'ARCHIVADO';
-        if (!existing.archivado) archivedCount++;
       } else if (existing.enVenta) {
-        // Estaba a la venta pero ya no viene en la API activa de catálogo -> Archivarlo
-        estadoVenta = 'ARCHIVADO';
-        archivedCount++;
-      } else if (existing.id && /^\d+$/.test(existing.id) && parseInt(existing.id, 10) > 100) {
-        // Venía de la API con ID numérico oficial pero ya no está en la API -> Archivarlo
-        estadoVenta = 'ARCHIVADO';
-        archivedCount++;
+        estadoVenta = 'A LA VENTA';
       } else {
-        // Evento en montaje detectado por Chrome que nunca ha salido a la venta (fecha futura)
         estadoVenta = 'EN CONFIGURACION';
       }
 

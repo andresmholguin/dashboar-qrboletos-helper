@@ -470,12 +470,20 @@ export default function Home() {
 
   // Archivar o restaurar evento
   const handleArchiveEvent = async (id: string, nuevoEstado: boolean) => {
+    const targetEvento = eventos.find((e) => e.id === id || e.rowId === id);
+    // Al restaurar: si tiene enlace público, regresa a A la Venta; si no, a Configuración
+    const shouldBeOnSale = nuevoEstado ? false : Boolean(targetEvento?.enlace && targetEvento.enlace.includes('qrboletos.com/event'));
+
     if (isSheetsMode) {
       try {
         const res = await fetch('/api/events', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, archivado: nuevoEstado }),
+          body: JSON.stringify({
+            id,
+            archivado: nuevoEstado,
+            enVenta: shouldBeOnSale,
+          }),
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
@@ -490,11 +498,17 @@ export default function Home() {
     setEventos((prev) =>
       prev.map((e) =>
         e.id === id || e.rowId === id
-          ? { ...e, archivado: nuevoEstado, enVenta: nuevoEstado ? false : e.enVenta }
+          ? { ...e, archivado: nuevoEstado, enVenta: shouldBeOnSale }
           : e
       )
     );
-    setSyncToast(nuevoEstado ? 'Evento movido a Archivados' : 'Evento restaurado a Configuración');
+    setSyncToast(
+      nuevoEstado
+        ? 'Evento movido a Archivados'
+        : shouldBeOnSale
+        ? 'Evento restaurado a A la Venta'
+        : 'Evento restaurado a Configuración'
+    );
     setTimeout(() => setSyncToast(null), 4000);
   };
 
@@ -550,10 +564,8 @@ export default function Home() {
   const todayStart = getTodayStartTimestamp();
 
   // Función para determinar si un evento está archivado:
-  // - Marcado explícitamente como archivado (e.archivado === true)
-  // - O su fecha ya pasó con respecto a hoy (< todayStart)
-  const isEventArchived = (e: Evento) =>
-    Boolean(e.archivado) || (Boolean(e.fecha) && getEventTimestamp(e.fecha) < todayStart);
+  // - Solo si está marcado explícitamente como archivado (e.archivado === true)
+  const isEventArchived = (e: Evento) => Boolean(e.archivado);
 
   // Dividir en archivados (pasados o archivados desde API/Sheets) y activos
   const passedEvents = sortedEvents
@@ -1117,7 +1129,7 @@ export default function Home() {
                               Eventos Archivados ({passedEvents.length})
                             </span>
                             <span className="text-[11px] text-slate-500 font-normal">
-                              Eventos que existieron en la API, cuya fecha ya pasó o que nunca salieron a venta.
+                              Eventos archivados manualmente del catálogo.
                             </span>
                           </div>
                         </div>

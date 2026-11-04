@@ -181,7 +181,7 @@ export default function EventCard({
             )}
           </div>
 
-          {/* Acciones Rápidas en Esquina Superior Derecha: Favorito, Archivar y Menú de Opciones */}
+          {/* Acciones Rápidas en Esquina Superior Derecha: Favorito y Menú de Opciones */}
           <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20" onDoubleClick={(e) => e.stopPropagation()}>
             <button
               type="button"
@@ -195,24 +195,6 @@ export default function EventCard({
             >
               <Star className="w-3.5 h-3.5" fill={evento.favorito ? 'currentColor' : 'none'} />
             </button>
-
-            {onArchiveEvent && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onArchiveEvent(evento.id || evento.rowId || '', !isArchived);
-                }}
-                aria-label={isArchived ? `Desarchivar ${evento.nombre}` : `Archivar ${evento.nombre}`}
-                title={isArchived ? 'Desarchivar evento' : 'Archivar evento'}
-                className={`p-2 rounded-xl backdrop-blur-md border transition-all cursor-pointer shadow-md active:scale-90 ${isArchived
-                  ? 'bg-purple-500/25 text-purple-300 border-purple-500/50 hover:bg-purple-500/40'
-                  : 'bg-black/60 text-slate-300 border-white/10 hover:text-white hover:bg-black/80 hover:border-slate-500'
-                  }`}
-              >
-                <Archive className="w-3.5 h-3.5" />
-              </button>
-            )}
 
             {/* Menú Contextual Dropdown */}
             <div className="relative" ref={menuRef}>

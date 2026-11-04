@@ -768,7 +768,6 @@ export default function Home() {
             onSaveLocalities={handleSaveLocalities}
             onOpenArtworks={() => setArtworksEvento(selectedEvento)}
             onConfigureSettings={() => setSettingsEvento(selectedEvento)}
-            onArchiveEvent={handleArchiveEvent}
           />
         ) : (
           // Dashboard principal

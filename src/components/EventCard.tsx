@@ -113,7 +113,9 @@ export default function EventCard({
 
   return (
     <article
-      className={`group relative bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between focus-within:ring-2 focus-within:ring-emerald-500/80 ${isArchived
+      className={`group relative bg-slate-900 border rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between focus-within:ring-2 focus-within:ring-emerald-500/80 ${
+        isMenuOpen ? 'z-30' : 'z-0'
+      } ${isArchived
         ? 'border-slate-800/80 bg-slate-950/70 hover:border-slate-700'
         : !isOnSale
         ? 'border-amber-500/30 hover:border-amber-500/60 bg-gradient-to-b from-slate-900 via-slate-900 to-amber-950/15'
@@ -126,25 +128,28 @@ export default function EventCard({
         <div
           onDoubleClick={() => onOpenLocalities(evento)}
           title="Doble clic para ver localidades"
-          className="w-full aspect-[80/60] relative rounded-xl overflow-hidden mb-3.5 border border-slate-800/90 bg-slate-950 flex items-center justify-center group-hover:border-emerald-500/40 transition-all cursor-pointer select-none"
+          className="w-full aspect-[80/60] relative rounded-xl mb-3.5 border border-slate-800/90 bg-slate-950 flex items-center justify-center group-hover:border-emerald-500/40 transition-all cursor-pointer select-none"
         >
-          {imageSrc && !imgError ? (
-            <img
-              src={imageSrc}
-              alt={`Afiche del evento ${evento.nombre}`}
-              onError={() => setImgError(true)}
-              className="w-full h-full object-cover object-top scale-[1.02] group-hover:scale-[1.08] transition-transform duration-1000 ease-out"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col items-center justify-center text-slate-500 font-mono text-[11px] tracking-wider select-none uppercase font-bold gap-1.5">
-              <Layers className="w-6 h-6 text-slate-700" />
-              <span>QRBoletos</span>
-            </div>
-          )}
+          {/* Contenedor con overflow-hidden para la imagen y el gradiente */}
+          <div className="absolute inset-0 rounded-xl overflow-hidden">
+            {imageSrc && !imgError ? (
+              <img
+                src={imageSrc}
+                alt={`Afiche del evento ${evento.nombre}`}
+                onError={() => setImgError(true)}
+                className="w-full h-full object-cover object-top scale-[1.02] group-hover:scale-[1.08] transition-transform duration-1000 ease-out"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 flex flex-col items-center justify-center text-slate-500 font-mono text-[11px] tracking-wider select-none uppercase font-bold gap-1.5">
+                <Layers className="w-6 h-6 text-slate-700" />
+                <span>QRBoletos</span>
+              </div>
+            )}
 
-          {/* Gradiente sutil para legibilidad de badges */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 via-transparent to-black/60 pointer-events-none" />
+            {/* Gradiente sutil para legibilidad de badges */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 via-transparent to-black/60 pointer-events-none" />
+          </div>
 
           {/* Badges Superiores Izquierdos: ID y Estado */}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10" onDoubleClick={(e) => e.stopPropagation()}>
@@ -176,12 +181,13 @@ export default function EventCard({
             )}
           </div>
 
-          {/* Acciones Rápidas en Esquina Superior Derecha: Favorito y Menú de Opciones */}
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10" onDoubleClick={(e) => e.stopPropagation()}>
+          {/* Acciones Rápidas en Esquina Superior Derecha: Favorito, Archivar y Menú de Opciones */}
+          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20" onDoubleClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={handleFavoriteClick}
               aria-label={evento.favorito ? `Quitar ${evento.nombre} de favoritos` : `Marcar ${evento.nombre} como favorito`}
+              title={evento.favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}
               className={`p-2 rounded-xl backdrop-blur-md border transition-all cursor-pointer shadow-md active:scale-90 ${evento.favorito
                 ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30'
                 : 'bg-black/60 text-slate-300 border-white/10 hover:text-amber-400 hover:bg-black/80'
@@ -189,6 +195,24 @@ export default function EventCard({
             >
               <Star className="w-3.5 h-3.5" fill={evento.favorito ? 'currentColor' : 'none'} />
             </button>
+
+            {onArchiveEvent && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onArchiveEvent(evento.id || evento.rowId || '', !isArchived);
+                }}
+                aria-label={isArchived ? `Desarchivar ${evento.nombre}` : `Archivar ${evento.nombre}`}
+                title={isArchived ? 'Desarchivar evento' : 'Archivar evento'}
+                className={`p-2 rounded-xl backdrop-blur-md border transition-all cursor-pointer shadow-md active:scale-90 ${isArchived
+                  ? 'bg-purple-500/25 text-purple-300 border-purple-500/50 hover:bg-purple-500/40'
+                  : 'bg-black/60 text-slate-300 border-white/10 hover:text-white hover:bg-black/80 hover:border-slate-500'
+                  }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             {/* Menú Contextual Dropdown */}
             <div className="relative" ref={menuRef}>
@@ -206,7 +230,7 @@ export default function EventCard({
               </button>
 
               {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-48 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-xl shadow-2xl py-1.5 z-30 animate-in fade-in slide-in-from-top-1 duration-150 space-y-0.5">
+                <div className="absolute right-0 top-full mt-1.5 w-52 max-h-[80vh] overflow-y-auto bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150 space-y-0.5">
                   {evento.enlace && (
                     <a
                       href={evento.enlace}

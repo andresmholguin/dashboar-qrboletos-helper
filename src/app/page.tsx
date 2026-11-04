@@ -502,6 +502,9 @@ export default function Home() {
           : e
       )
     );
+    if (selectedEvento && (selectedEvento.id === id || selectedEvento.rowId === id)) {
+      setSelectedEvento({ ...selectedEvento, archivado: nuevoEstado, enVenta: shouldBeOnSale });
+    }
     setSyncToast(
       nuevoEstado
         ? 'Evento movido a Archivados'
@@ -765,6 +768,7 @@ export default function Home() {
             onSaveLocalities={handleSaveLocalities}
             onOpenArtworks={() => setArtworksEvento(selectedEvento)}
             onConfigureSettings={() => setSettingsEvento(selectedEvento)}
+            onArchiveEvent={handleArchiveEvent}
           />
         ) : (
           // Dashboard principal

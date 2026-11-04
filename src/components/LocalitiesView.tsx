@@ -28,7 +28,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   BarChart3,
-  Layers
+  Layers,
+  Archive
 } from 'lucide-react';
 import TarifarioUploaderModal from './TarifarioUploaderModal';
 import CloneSeatsModal from './CloneSeatsModal';
@@ -41,6 +42,7 @@ interface LocalitiesViewProps {
   onSaveLocalities: (rowId: string, localidades: Localidad[]) => Promise<void>;
   onOpenArtworks?: () => void;
   onConfigureSettings?: () => void;
+  onArchiveEvent?: (id: string, archivado: boolean) => void;
 }
 
 export default function LocalitiesView({
@@ -49,7 +51,8 @@ export default function LocalitiesView({
   onBack,
   onSaveLocalities,
   onOpenArtworks,
-  onConfigureSettings
+  onConfigureSettings,
+  onArchiveEvent
 }: LocalitiesViewProps) {
   const [htmlContent, setHtmlContent] = useState('');
   const [localidades, setLocalidades] = useState<Localidad[]>([]);
@@ -686,6 +689,22 @@ export default function LocalitiesView({
               <Layers className="w-3.5 h-3.5 text-indigo-400" />
               <span>Etapas</span>
             </a>
+          )}
+
+          {/* Botón Archivar / Desarchivar */}
+          {onArchiveEvent && (
+            <button
+              onClick={() => onArchiveEvent(evento.id || evento.rowId || '', !evento.archivado)}
+              className={`h-9 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap ${
+                evento.archivado
+                  ? 'bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 border border-purple-700/50'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600'
+              }`}
+              title={evento.archivado ? 'Desarchivar evento' : 'Archivar evento'}
+            >
+              <Archive className="w-3.5 h-3.5 text-slate-400" />
+              <span>{evento.archivado ? 'Desarchivar' : 'Archivar'}</span>
+            </button>
           )}
         </div>
       </div>

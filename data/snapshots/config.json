@@ -1,5 +1,5 @@
 {
   "autoSnapshotEnabled": true,
-  "compareSnapshotId": "latest_monday",
+  "compareSnapshotId": "previous_day",
   "lastAutoSnapshotWeek": "2026-W45"
 }

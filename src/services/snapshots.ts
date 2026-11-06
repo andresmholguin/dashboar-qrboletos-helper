@@ -12,6 +12,7 @@ export interface SnapshotMetadata {
   id: string;
   filename: string;
   createdAt: string;
+  cotDate?: string;
   label: string;
   isMonday: boolean;
   totalEvents: number;
@@ -66,7 +67,7 @@ export function getSnapshotConfig(): SnapshotConfig {
       const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
       return {
         autoSnapshotEnabled: data.autoSnapshotEnabled ?? true,
-        compareSnapshotId: data.compareSnapshotId ?? 'latest_monday',
+        compareSnapshotId: data.compareSnapshotId || 'previous_day',
         lastAutoSnapshotWeek: data.lastAutoSnapshotWeek,
       };
     } catch {
@@ -75,7 +76,7 @@ export function getSnapshotConfig(): SnapshotConfig {
   }
   return {
     autoSnapshotEnabled: true,
-    compareSnapshotId: 'latest_monday',
+    compareSnapshotId: 'previous_day',
   };
 }
 
@@ -196,6 +197,22 @@ export function saveSnapshot(salesData: any[], customLabel?: string): SnapshotMe
 
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8');
 
+  // Limpiar snapshots anteriores del mismo día para conservar únicamente el último reporte por día
+  try {
+    const files = fs.readdirSync(SNAPSHOTS_DIR);
+    for (const f of files) {
+      if (f.endsWith('.json') && f !== 'config.json' && f !== filename) {
+        if (f.startsWith(`snapshot_${cotDateStr}_`)) {
+          try {
+            fs.unlinkSync(path.join(SNAPSHOTS_DIR, f));
+          } catch {}
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Aviso limpiando snapshots del mismo día:', err);
+  }
+
   // Si fue un lunes o auto-snapshot, actualizar semana
   saveSnapshotConfig({ lastAutoSnapshotWeek: weekKey });
 
@@ -224,10 +241,12 @@ export function listSnapshots(): SnapshotMetadata[] {
         try {
           const raw = fs.readFileSync(path.join(SNAPSHOTS_DIR, f), 'utf-8');
           const data = JSON.parse(raw);
+          const cotDate = data.cotDate || (data.createdAt ? getColombiaWeekKey(new Date(data.createdAt)).cotDateStr : '');
           snapshots.push({
             id: data.id || f.replace('.json', ''),
             filename: f,
             createdAt: data.createdAt || '',
+            cotDate,
             label: data.label || f,
             isMonday: !!data.isMonday,
             totalEvents: data.totalEvents || (data.salesData?.length || 0),
@@ -241,7 +260,17 @@ export function listSnapshots(): SnapshotMetadata[] {
 
     // Ordenar descendente (más reciente primero)
     snapshots.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return snapshots;
+
+    // Solo mostrar el último reporte por día
+    const latestPerDayMap = new Map<string, SnapshotMetadata>();
+    for (const s of snapshots) {
+      const dayKey = s.cotDate || (s.createdAt ? getColombiaWeekKey(new Date(s.createdAt)).cotDateStr : s.id);
+      if (!latestPerDayMap.has(dayKey)) {
+        latestPerDayMap.set(dayKey, s);
+      }
+    }
+
+    return Array.from(latestPerDayMap.values());
   } catch (err) {
     console.error('Error listando snapshots:', err);
     return [];
@@ -365,7 +394,7 @@ export function getSnapshotById(idOrFilename: string): FullSnapshotData | null {
 
 export function getComparison(currentSales: any[], targetSnapshotId?: string) {
   const config = getSnapshotConfig();
-  const choice = targetSnapshotId || config.compareSnapshotId;
+  const choice = targetSnapshotId || config.compareSnapshotId || 'previous_day';
 
   if (choice === 'none') {
     return null;
@@ -378,7 +407,18 @@ export function getComparison(currentSales: any[], targetSnapshotId?: string) {
 
   let chosenSnapMeta: SnapshotMetadata | undefined;
 
-  if (choice === 'latest_monday') {
+  if (choice === 'previous_day' || choice === 'yesterday') {
+    const { cotDateStr } = getColombiaWeekKey();
+    // Buscar el snapshot más reciente cuya fecha sea anterior a la de hoy
+    chosenSnapMeta = allSnapshots.find((s) => {
+      const sCotDate = s.cotDate || (s.createdAt ? getColombiaWeekKey(new Date(s.createdAt)).cotDateStr : '');
+      return sCotDate && sCotDate < cotDateStr;
+    });
+    // Si no hay snapshot anterior a hoy, tomar el segundo disponible o el primero
+    if (!chosenSnapMeta) {
+      chosenSnapMeta = allSnapshots[1] || allSnapshots[0];
+    }
+  } else if (choice === 'latest_monday') {
     chosenSnapMeta = allSnapshots.find((s) => s.isMonday) || allSnapshots[allSnapshots.length - 1]; // más antiguo o lunes
   } else {
     chosenSnapMeta = allSnapshots.find((s) => s.id === choice || s.filename === choice);

@@ -67,6 +67,7 @@ interface SnapshotItem {
   filename: string;
   label: string;
   createdAt: string;
+  cotDate?: string;
   weekKey: string;
   isMonday: boolean;
   totalBoletos: number;
@@ -109,7 +110,7 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
 
   // Instantáneas y comparativo semanal
   const [snapshotsList, setSnapshotsList] = useState<SnapshotItem[]>([]);
-  const [compareSnapshotId, setCompareSnapshotId] = useState<string>('latest_monday');
+  const [compareSnapshotId, setCompareSnapshotId] = useState<string>('previous_day');
 
   // Selección de eventos para reportes filtrados
   const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
@@ -129,6 +130,8 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
         setSnapshotsList(data.snapshots);
         if (data.config?.compareSnapshotId) {
           setCompareSnapshotId(data.config.compareSnapshotId);
+        } else {
+          setCompareSnapshotId('previous_day');
         }
       }
     } catch (e) {
@@ -492,15 +495,28 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
             </select>
           </div>
 
-          {/* Selector de Comparativo Semanal */}
+          {/* Selector de Comparativo Semanal / Diario */}
           <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 px-2.5 py-1.5 rounded-xl shadow-inner">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-semibold uppercase hidden xl:inline">Comparar con:</span>
             <select
               value={compareSnapshotId}
-              onChange={(e) => setCompareSnapshotId(e.target.value)}
-              className="bg-transparent text-slate-900 dark:text-slate-200 text-xs font-bold focus:outline-none cursor-pointer max-w-[190px] truncate"
+              onChange={async (e) => {
+                const newId = e.target.value;
+                setCompareSnapshotId(newId);
+                try {
+                  await fetch('/api/reports/snapshots', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'set_comparison', compareSnapshotId: newId }),
+                  });
+                } catch {}
+              }}
+              className="bg-transparent text-slate-900 dark:text-slate-200 text-xs font-bold focus:outline-none cursor-pointer max-w-[210px] truncate"
               title="Compara la cantidad de boletos vendidos contra un informe previo"
             >
+              <option value="previous_day" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-200">
+                📅 Día anterior ({snapshotsList.find(s => s.cotDate && s.cotDate < (snapshotsList[0]?.cotDate || ''))?.label || 'Ayer'})
+              </option>
               <option value="latest_monday" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-200">
                 📅 Lunes de esta semana
               </option>

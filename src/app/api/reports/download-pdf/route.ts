@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       type: reportType = 'general',
       layout = 'standard_portrait',
       targetUrl,
-      compareSnapshotId = 'latest_monday',
+      compareSnapshotId = 'previous_day',
     } = body;
 
     const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
     const layout = searchParams.get('layout') || 'standard_portrait'; // 'standard_portrait' | 'compact_landscape' | 'onepage_portrait'
     const targetUrl = searchParams.get('targetUrl');
     const force = searchParams.get('force') === 'true';
-    const compareSnapshotId = searchParams.get('compareSnapshotId') || 'latest_monday';
+    const compareSnapshotId = searchParams.get('compareSnapshotId') || 'previous_day';
 
     const cachePath = path.join(process.cwd(), 'scratch', 'latest_sales_cache.json');
     let salesJsonPath = cachePath;

@@ -99,6 +99,7 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
   const [isDownloadingExcel, setIsDownloadingExcel] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [scrapeProgress, setScrapeProgress] = useState<{ active: boolean; seconds: number }>({ active: false, seconds: 0 });
   const [isCached, setIsCached] = useState<boolean>(false);
   const [cacheAge, setCacheAge] = useState<number>(0);
   const [isTodaySnapshot, setIsTodaySnapshot] = useState<boolean>(false);
@@ -175,7 +176,6 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
       try {
         data = JSON.parse(rawText);
       } catch {
-        // La respuesta no es JSON válido (ej. error 502/504 en HTML o texto crudo)
         if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || rawText.includes('504')) {
           throw new Error('La extracción tardó más de lo esperado en la nube. Vuelve a intentar o utiliza los datos en caché.');
         } else if (rawText.includes('TUNNEL_CONNECTION_FAILED') || rawText.includes('502') || rawText.includes('Bad Gateway')) {
@@ -187,25 +187,78 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
 
       if (!res.ok || !data.success) {
         if (res.status === 401 || data.code === 'SESSION_EXPIRED' || data.error?.includes('expirado') || data.error?.includes('login.aspx') || data.message?.includes('expirado')) {
-          throw new Error('⚠️ Tu sesión en Google Chrome ha caducado. Por favor abre tu navegador Chrome en la PC, inicia sesión en dashboard.qrboletos.com y vuelve a pulsar "Consultar Ventas".');
+          throw new Error('⚠️ Tu sesión en Google Chrome ha caducado. Por favor abre tu navegador Chrome en la PC, inicia sesión en dashboard.qrboletos.com y vuelve a pulsar "Actualizar Ventas".');
         } else if (res.status === 503 || data.code === 'CHROME_OFFLINE') {
           throw new Error('⚠️ Google Chrome no está abierto en modo depuración (puerto 9222). Ejecuta "Iniciar_Chrome_Boleteria.bat" en tu PC.');
         }
         throw new Error(data.message || data.error || `Error al consultar ventas (HTTP ${res.status})`);
       }
 
-      setSalesData(data.salesData || []);
-      setIsCached(!!data.cached);
-      setCacheAge(data.cacheAgeMinutes || 0);
-      setIsTodaySnapshot(!!data.isTodaySnapshot);
-      setSnapshotLabel(data.snapshotLabel || '');
+      // Si el servidor inició la extracción en segundo plano, sondear el estado sin bloquear peticiones largas
+      if (data.status === 'scraping') {
+        setScrapeProgress({ active: true, seconds: data.elapsedSeconds || 0 });
+        const startTime = Date.now();
+        const pollInterval = 2500;
 
-      if (!data.isTodaySnapshot && data.salesData && data.salesData.length > 0) {
-        checkAndSaveTodaySnapshot(data.salesData);
+        while (true) {
+          await new Promise((resolve) => setTimeout(resolve, pollInterval));
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          setScrapeProgress({ active: true, seconds: elapsed });
+
+          if (elapsed > 150) {
+            throw new Error('La extracción en Chrome superó los 2.5 minutos. Verifica que Chrome siga abierto y sin pantallas de error.');
+          }
+
+          try {
+            const statusRes = await fetch('/api/reports/sales?status=true');
+            const statusText = await statusRes.text();
+            let statusData: any = {};
+            try {
+              statusData = JSON.parse(statusText);
+            } catch {
+              continue;
+            }
+
+            if (statusData.status === 'completed') {
+              setSalesData(statusData.salesData || []);
+              setIsCached(!!statusData.cached);
+              setCacheAge(statusData.cacheAgeMinutes || 0);
+              setIsTodaySnapshot(!!statusData.isTodaySnapshot);
+              setSnapshotLabel(statusData.snapshotLabel || '');
+
+              if (!statusData.isTodaySnapshot && statusData.salesData && statusData.salesData.length > 0) {
+                checkAndSaveTodaySnapshot(statusData.salesData);
+              }
+              break;
+            } else if (statusData.status === 'error' || statusData.success === false) {
+              if (statusRes.status === 401 || statusData.code === 'SESSION_EXPIRED') {
+                throw new Error('⚠️ Tu sesión en Google Chrome ha caducado. Inicia sesión en dashboard.qrboletos.com y vuelve a intentar.');
+              } else if (statusRes.status === 503 || statusData.code === 'CHROME_OFFLINE') {
+                throw new Error('⚠️ Google Chrome no está abierto en modo depuración (puerto 9222). Ejecuta "Iniciar_Chrome_Boleteria.bat".');
+              }
+              throw new Error(statusData.error || 'Error durante la extracción de ventas en Chrome.');
+            }
+          } catch (pollErr: any) {
+            if (pollErr.message && (pollErr.message.includes('sesión') || pollErr.message.includes('Chrome') || pollErr.message.includes('minutos'))) {
+              throw pollErr;
+            }
+          }
+        }
+      } else {
+        setSalesData(data.salesData || []);
+        setIsCached(!!data.cached);
+        setCacheAge(data.cacheAgeMinutes || 0);
+        setIsTodaySnapshot(!!data.isTodaySnapshot);
+        setSnapshotLabel(data.snapshotLabel || '');
+
+        if (!data.isTodaySnapshot && data.salesData && data.salesData.length > 0) {
+          checkAndSaveTodaySnapshot(data.salesData);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Error al conectar con el servicio de reportes.');
     } finally {
+      setScrapeProgress({ active: false, seconds: 0 });
       setIsLoading(false);
     }
   };
@@ -415,7 +468,7 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
             title="Extraer ventas frescas desde Chrome CDP"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-amber-600 dark:text-amber-400' : ''}`} />
-            <span>{isLoading ? 'Consultando...' : 'Actualizar Ventas'}</span>
+            <span>{scrapeProgress.active ? `Extrayendo en Chrome (${scrapeProgress.seconds}s)...` : isLoading ? 'Consultando...' : 'Actualizar Ventas'}</span>
           </button>
 
           {/* Selector de Formato del PDF */}
@@ -484,7 +537,20 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
         </div>
       </div>
 
-
+      {/* Banner de progreso de extracción en vivo */}
+      {scrapeProgress.active && (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs px-4 py-2.5 rounded-2xl flex items-center justify-between gap-3 shadow-sm animate-pulse">
+          <div className="flex items-center gap-2.5">
+            <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+            <span className="font-medium">
+              Extrayendo reporte de ventas en Google Chrome vía CDP... ({scrapeProgress.seconds}s transcurridos)
+            </span>
+          </div>
+          <span className="text-[11px] text-amber-400/80 font-mono hidden sm:inline">
+            El proceso se ejecuta en tu PC en segundo plano
+          </span>
+        </div>
+      )}
 
       {/* Estado del Informe Diario / En Vivo */}
       {!isLoading && salesData.length > 0 && (
@@ -629,10 +695,14 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
               </div>
             </div>
 
-            {isLoading ? (
+            {isLoading && salesData.length === 0 ? (
               <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-xs space-y-3">
                 <RefreshCw className="w-7 h-7 animate-spin mx-auto text-emerald-600 dark:text-emerald-400" />
-                <p>Consultando el informe de ventas oficial de QRBoletos vía Chrome CDP...</p>
+                <p>
+                  {scrapeProgress.active
+                    ? `Extrayendo reporte de ventas en Google Chrome... (${scrapeProgress.seconds}s)`
+                    : 'Cargando informe de ventas oficial de QRBoletos...'}
+                </p>
               </div>
             ) : filteredEvents.length === 0 ? (
               <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-xs">

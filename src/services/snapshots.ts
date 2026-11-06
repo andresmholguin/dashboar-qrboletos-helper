@@ -305,6 +305,36 @@ export function getTodaySavedSnapshot(): FullSnapshotData | null {
 }
 
 /**
+ * Obtiene el snapshot más reciente guardado en el sistema (sin restringir a la fecha de hoy).
+ */
+export function getLatestSavedSnapshot(): FullSnapshotData | null {
+  ensureDir();
+  try {
+    const files = fs.readdirSync(SNAPSHOTS_DIR);
+    const snapshots: FullSnapshotData[] = [];
+
+    for (const f of files) {
+      if (f.endsWith('.json') && f !== 'config.json') {
+        try {
+          const raw = fs.readFileSync(path.join(SNAPSHOTS_DIR, f), 'utf-8');
+          const data = JSON.parse(raw);
+          if (Array.isArray(data.salesData) && data.salesData.length > 0) {
+            snapshots.push(data);
+          }
+        } catch {}
+      }
+    }
+
+    if (snapshots.length === 0) return null;
+    snapshots.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return snapshots[0];
+  } catch (err) {
+    console.error('Error obteniendo último snapshot guardado:', err);
+    return null;
+  }
+}
+
+/**
  * Busca y retorna un snapshot completo por id o nombre de archivo.
  */
 export function getSnapshotById(idOrFilename: string): FullSnapshotData | null {

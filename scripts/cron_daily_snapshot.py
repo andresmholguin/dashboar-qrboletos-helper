@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 cron_daily_snapshot.py
-Ejecución periódica diaria para Instantánea de Ventas Diaria (00:00 COT).
-Almacena el estado de ventas de los eventos activos y mantiene una retención móvil de 7 días.
+Ejecución periódica diaria para Instantánea de Ventas Diaria (06:00 AM COT).
+Almacena el estado de ventas de los eventos activos y mantiene el último reporte por día.
 """
 import sys
 import os
@@ -11,6 +11,7 @@ import time
 import datetime
 import urllib.request
 import urllib.error
+import subprocess
 
 PORTS_TO_TRY = [3001, 3000, 3002]
 
@@ -19,7 +20,6 @@ def log(msg):
     formatted = f"[{timestamp}] {msg}"
     print(formatted, flush=True)
     
-    # Escribir log a scratch/cron_snapshot.log
     scratch_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scratch")
     try:
         os.makedirs(scratch_dir, exist_ok=True)
@@ -41,79 +41,91 @@ def find_active_server_port():
             continue
     return None
 
+def ensure_server_running():
+    port = find_active_server_port()
+    if port:
+        return port
+
+    log("⚠️ Servidor Next.js no detectado. Iniciando en segundo plano en puerto 3001...")
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        cmd = ["cmd.exe", "/c", "npm run dev -- -p 3001"]
+        subprocess.Popen(cmd, cwd=root_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        log("Esperando inicio del servidor local...")
+        for _ in range(15):
+            time.sleep(2)
+            port = find_active_server_port()
+            if port:
+                log(f"✅ Servidor detectado en puerto {port}.")
+                return port
+    except Exception as e:
+        log(f"Aviso intentando iniciar servidor: {e}")
+
+    return 3001
+
 def main():
     log("=======================================================")
-    log("🚀 Iniciando captura automática de snapshot diario (00:00 COT)...")
+    log("🚀 Iniciando actualización automática de ventas diaria (06:00 AM)...")
 
-    port = find_active_server_port()
-    if not port:
-        log("⚠️ Servidor Next.js no detectado en puertos 3001, 3000 o 3002.")
-        log("💡 Intentando consultar puerto por defecto 3001...")
-        port = 3001
-
+    port = ensure_server_running()
     base_url = f"http://localhost:{port}"
 
-    # 1. Forzar refresco y captura de ventas en vivo
     sales_url = f"{base_url}/api/reports/sales?forceRefresh=true"
-    log(f"Consultando ventas frescas en {sales_url}...")
+    log(f"Disparando extracción en {sales_url}...")
 
     sales_data = None
-    for attempt in range(1, 4):
-        try:
-            req = urllib.request.Request(
-                sales_url,
-                headers={"User-Agent": "QRBoletos-Daily-Cron/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=180) as resp:
-                res_json = json.loads(resp.read().decode("utf-8"))
-                if res_json.get("success"):
-                    sales_data = res_json.get("salesData", [])
-                    log(f"✅ Ventas obtenidas exitosamente: {len(sales_data)} eventos activos.")
-                    break
-                else:
-                    log(f"⚠️ Intento {attempt}: Respuesta de ventas no exitosa: {res_json.get('error')}")
-        except Exception as e:
-            log(f"⚠️ Intento {attempt} falló al contactar {sales_url}: {e}")
-        time.sleep(3)
-
-    if not sales_data:
-        log("❌ No se pudieron obtener los datos de ventas. Abortando snapshot.")
-        sys.exit(1)
-
-    # 2. Tomar Snapshot mediante la API de Snapshots
-    snap_endpoint = f"{base_url}/api/reports/snapshots"
-    log(f"Guardando snapshot diario en {snap_endpoint}...")
+    snapshot_meta = None
 
     try:
-        payload = json.dumps({
-            "action": "take_snapshot",
-            "customLabel": None,
-            "salesData": sales_data
-        }).encode("utf-8")
-
-        req_snap = urllib.request.Request(
-            snap_endpoint,
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": "QRBoletos-Daily-Cron/1.0"
-            }
+        req = urllib.request.Request(
+            sales_url,
+            headers={"User-Agent": "QRBoletos-Daily-Cron/1.0"}
         )
-        with urllib.request.urlopen(req_snap, timeout=30) as resp:
-            snap_res = json.loads(resp.read().decode("utf-8"))
-            if snap_res.get("success"):
-                meta = snap_res.get("snapshot", {})
-                log(f"📸 Snapshot guardado exitosamente: ID={meta.get('id')} | Etiqueta='{meta.get('label')}'")
-                log(f"🎟️ Boletos totales en captura: {meta.get('totalBoletos', 0)} en {meta.get('totalEvents', 0)} eventos.")
-                log("🧹 Rotación de 7 días ejecutada automáticamente.")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            res_json = json.loads(resp.read().decode("utf-8"))
+            
+            if res_json.get("status") == "scraping" or res_json.get("success"):
+                log("⏳ Extracción en curso en Google Chrome vía CDP. Esperando finalización...")
+                
+                # Sondear el estado cada 3 segundos hasta un máximo de 120 segundos
+                for poll_step in range(40):
+                    time.sleep(3)
+                    status_url = f"{base_url}/api/reports/sales?status=true"
+                    try:
+                        req_s = urllib.request.Request(status_url, headers={"User-Agent": "QRBoletos-Daily-Cron/1.0"})
+                        with urllib.request.urlopen(req_s, timeout=10) as s_resp:
+                            s_json = json.loads(s_resp.read().decode("utf-8"))
+                            status = s_json.get("status")
+                            
+                            if status == "completed":
+                                sales_data = s_json.get("salesData", [])
+                                snapshot_meta = {
+                                    "id": s_json.get("snapshotId"),
+                                    "label": s_json.get("snapshotLabel")
+                                }
+                                log(f"✅ Extracción finalizada con éxito: {len(sales_data)} eventos extraídos.")
+                                log(f"📸 Snapshot guardado: {snapshot_meta.get('label')} (ID: {snapshot_meta.get('id')})")
+                                break
+                            elif status == "error":
+                                log(f"❌ Error en la extracción de Chrome: {s_json.get('error')}")
+                                sys.exit(1)
+                            else:
+                                elapsed = s_json.get("elapsedSeconds", (poll_step + 1) * 3)
+                                log(f"   ... extrayendo ventas ({elapsed}s)")
+                    except Exception as poll_err:
+                        log(f"   ... esperando respuesta ({poll_err})")
             else:
-                log(f"❌ Error al guardar snapshot: {snap_res.get('error')}")
+                log(f"❌ Respuesta inicial no exitosa: {res_json.get('error')}")
                 sys.exit(1)
     except Exception as e:
-        log(f"❌ Error comunicando con la API de snapshots: {e}")
+        log(f"❌ Error conectando con la API de ventas: {e}")
         sys.exit(1)
 
-    log("🎉 Proceso de captura diaria de las 00:00 finalizado con éxito.")
+    if not sales_data:
+        log("❌ No se recibieron datos de ventas tras el sondeo. Verifica que Google Chrome esté abierto en puerto 9222.")
+        sys.exit(1)
+
+    log("🎉 Actualización automática completada exitosamente a las 06:00 AM.")
     log("=======================================================")
 
 if __name__ == "__main__":

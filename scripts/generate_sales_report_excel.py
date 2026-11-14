@@ -241,9 +241,12 @@ async def scrape_show_sales(page, show_url):
                     const valorServicio = row[7] || "0";
                     const totalServicio = row[8] || "0";
 
+                    const valNum = parseInt(String(valorEntrada).replace(/[^0-9]/g, '') || '0', 10);
+                    const totNum = parseInt(String(totalEntradas).replace(/[^0-9]/g, '') || '0', 10);
                     const isCortesia = ref.toUpperCase().includes("CORTES") || 
                                        etapa.toUpperCase().includes("CORTES") || 
-                                       canal.toUpperCase().includes("CORTES");
+                                       canal.toUpperCase().includes("CORTES") ||
+                                       (valNum === 0 && totNum === 0);
 
                     detalleCanales.push({
                         localidad: locHeader,
@@ -262,21 +265,26 @@ async def scrape_show_sales(page, show_url):
             }
         }
 
-        // 4. Calcular cortesías y boletos pagados por localidad
+        // 4. Calcular cortesías y boletos pagados por localidad (coincidencia exacta primero)
         for (const loc of resumenLocalidades) {
             const locNameUpper = (loc.localidad || "").trim().toUpperCase();
             let cortesiasCount = 0;
             let pagadosCount = 0;
 
-            for (const d of detalleCanales) {
-                const dLocUpper = (d.localidad || "").trim().toUpperCase();
-                if (dLocUpper === locNameUpper || dLocUpper.includes(locNameUpper) || locNameUpper.includes(dLocUpper)) {
-                    const qty = parseInt(String(d.cantidad).replace(/[^0-9]/g, '') || '0', 10);
-                    if (d.isCortesia) {
-                        cortesiasCount += qty;
-                    } else {
-                        pagadosCount += qty;
-                    }
+            let matchedDetails = detalleCanales.filter(d => (d.localidad || "").trim().toUpperCase() === locNameUpper);
+            if (matchedDetails.length === 0) {
+                matchedDetails = detalleCanales.filter(d => {
+                    const dLocUpper = (d.localidad || "").trim().toUpperCase();
+                    return dLocUpper.includes(locNameUpper) || locNameUpper.includes(dLocUpper);
+                });
+            }
+
+            for (const d of matchedDetails) {
+                const qty = parseInt(String(d.cantidad).replace(/[^0-9]/g, '') || '0', 10);
+                if (d.isCortesia) {
+                    cortesiasCount += qty;
+                } else {
+                    pagadosCount += qty;
                 }
             }
 

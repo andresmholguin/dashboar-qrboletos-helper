@@ -111,8 +111,9 @@ export default function MasivosView() {
   });
   const [creatingTemplate, setCreatingTemplate] = useState(false);
 
-  // Configuración activa de la plantilla a enviar
+  // Configuración activa de la plantilla o Envío Directo (Direct Send)
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig>({
+    sendMode: 'template',
     name: 'info_villaarruga',
     languageCode: 'es_co',
     headerType: 'IMAGE',
@@ -121,6 +122,12 @@ export default function MasivosView() {
     bodyVariables: [],
     buttonType: 'NONE',
     buttonValue: '',
+    directBodyText:
+      'Hola {{primer_nombre}}, te compartimos información importante sobre tu ingreso al evento en Arena USC.',
+    directFooterText: 'QRBoletos Oficial',
+    directButtonType: 'NONE',
+    directButtonText: 'Ver Detalles',
+    directButtonUrl: 'https://qrboletos.com',
   });
 
   // Prueba rápida individual
@@ -733,14 +740,20 @@ export default function MasivosView() {
       alert('No hay destinatarios válidos en la selección actual.');
       return;
     }
-    if (!templateConfig.name.trim()) {
+    const isDirect = templateConfig.sendMode === 'direct_send';
+    if (!isDirect && !templateConfig.name.trim()) {
       alert('Ingresa o selecciona el nombre de la plantilla de Meta.');
       return;
     }
+    if (isDirect && !(templateConfig.directBodyText || '').trim()) {
+      alert('Escribe el texto del mensaje para Envío Directo (Direct Send).');
+      return;
+    }
 
+    const labelName = isDirect ? 'direct_send_utility' : templateConfig.name;
     const newCampaign: WhatsAppCampaign = {
       id: 'camp_' + Date.now(),
-      title: `${templateConfig.name} (${new Date().toLocaleDateString('es-CO', {
+      title: `${labelName} (${new Date().toLocaleDateString('es-CO', {
         day: '2-digit',
         month: 'short',
         hour: '2-digit',
@@ -749,7 +762,7 @@ export default function MasivosView() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'draft',
-      templateConfig: { ...templateConfig },
+      templateConfig: { ...templateConfig, name: labelName },
       recipients: audienceAnalysis.finalRecipients.map((r) => ({ ...r, status: 'pending' })),
       stats: {
         total: audienceAnalysis.finalRecipients.length,
@@ -973,6 +986,13 @@ export default function MasivosView() {
   }, [metaTemplates, templateConfig.name, templateConfig.languageCode]);
 
   const previewBodyText = useMemo(() => {
+    if (templateConfig.sendMode === 'direct_send') {
+      return (templateConfig.directBodyText || '')
+        .replace(/\{\{\s*nombre\s*\}\}/gi, 'Andrés Holguín')
+        .replace(/\{\{\s*primer_nombre\s*\}\}/gi, 'Andrés')
+        .replace(/\{\{\s*1\s*\}\}/g, 'Andrés');
+    }
+
     const bodyComp = selectedMetaTemplateObj?.components?.find((c) => c.type === 'BODY');
     let text =
       bodyComp?.text ||
@@ -1242,121 +1262,173 @@ export default function MasivosView() {
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-white">
-                1. Plantilla de Meta & Multimedia
+                1. Mensaje / Plantilla & Multimedia
               </h2>
             </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => fetchMetaTemplates()}
-                disabled={loadingTemplates}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1 border border-slate-700 cursor-pointer"
-                title="Sincronizar lista de plantillas aprobadas en Meta"
-              >
-                <RefreshCw className={'w-3 h-3 ' + (loadingTemplates ? 'animate-spin text-emerald-400' : '')} />
-                <span>Cargar de Meta ({metaTemplates.length})</span>
-              </button>
-              <button
-                onClick={() => setShowCreateTemplateModal(true)}
-                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[11px] font-bold flex items-center gap-1 border border-emerald-500/30 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Crear en Meta</span>
-              </button>
-            </div>
+            {(templateConfig.sendMode || 'template') === 'template' && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => fetchMetaTemplates()}
+                  disabled={loadingTemplates}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1 border border-slate-700 cursor-pointer"
+                  title="Sincronizar lista de plantillas aprobadas en Meta"
+                >
+                  <RefreshCw className={'w-3 h-3 ' + (loadingTemplates ? 'animate-spin text-emerald-400' : '')} />
+                  <span>Cargar de Meta ({metaTemplates.length})</span>
+                </button>
+                <button
+                  onClick={() => setShowCreateTemplateModal(true)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[11px] font-bold flex items-center gap-1 border border-emerald-500/30 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Crear en Meta</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Selector de plantillas cargadas desde Meta */}
-          {metaTemplates.length > 0 && (
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-slate-400 uppercase">
-                Seleccionar Plantilla de tu cuenta Meta ({metaTemplates.length})
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={templateSearch}
-                  onChange={(e) => setTemplateSearch(e.target.value)}
-                  placeholder="Filtrar plantillas aprobadas..."
-                  className="w-full px-3 py-1.5 mb-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                />
-                <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 divide-y divide-slate-900">
-                  {metaTemplates
-                    .filter(
-                      (t) =>
-                        !templateSearch ||
-                        t.name.toLowerCase().includes(templateSearch.toLowerCase())
-                    )
-                    .map((tpl) => (
-                      <button
-                        key={tpl.id}
-                        type="button"
-                        onClick={() => handleSelectMetaTemplate(tpl)}
-                        className={
-                          'w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-900 transition-colors cursor-pointer ' +
-                          (templateConfig.name === tpl.name ? 'bg-emerald-950/50 text-emerald-300' : 'text-slate-300')
-                        }
-                      >
-                        <div className="truncate pr-2">
-                          <span className="font-mono font-bold">{tpl.name}</span>
-                          <span className="text-[10px] text-slate-400 ml-1.5">({tpl.language})</span>
-                        </div>
-                        <span
-                          className={
-                            'text-[10px] px-1.5 py-0.5 rounded font-bold ' +
-                            (tpl.status === 'APPROVED'
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-amber-500/20 text-amber-400')
-                          }
-                        >
-                          {tpl.status}
-                        </span>
-                      </button>
-                    ))}
-                </div>
+          {/* Selector de Modo: Plantilla Clásica vs Envío Directo (Direct Send de Meta) */}
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-950 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setTemplateConfig({ ...templateConfig, sendMode: 'template' })}
+              className={
+                'py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ' +
+                ((templateConfig.sendMode || 'template') === 'template'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white')
+              }
+            >
+              📋 Plantilla de Meta (Marketing / Utility)
+            </button>
+            <button
+              type="button"
+              onClick={() => setTemplateConfig({ ...templateConfig, sendMode: 'direct_send' })}
+              className={
+                'py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ' +
+                (templateConfig.sendMode === 'direct_send'
+                  ? 'bg-indigo-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white')
+              }
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>Envío Directo (Sin Plantilla)</span>
+            </button>
+          </div>
+
+          {templateConfig.sendMode === 'direct_send' && (
+            <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-[11px] text-indigo-200 space-y-1">
+              <div className="font-bold text-indigo-300 flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Meta Direct Send Activo (category: &quot;utility&quot;)</span>
               </div>
+              <p className="text-indigo-200/80 leading-relaxed">
+                Envía avisos informativos de eventos (horarios, logística de ingreso, cambios de fecha o recordatorios a compradores) <strong>sin crear ni esperar aprobación de plantilla en Meta</strong>. Meta genera la plantilla automáticamente en segundo plano. <em>(No usar para promociones comerciales puras de Marketing)</em>.
+              </p>
             </div>
           )}
 
-          {/* Nombre manual e Idioma (exactamente como en index.js) */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
-                Nombre de Plantilla (template.name)
-              </label>
-              <input
-                type="text"
-                value={templateConfig.name}
-                onChange={(e) =>
-                  setTemplateConfig({ ...templateConfig, name: e.target.value })
-                }
-                placeholder="info_villaarruga"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
-                Idioma (code)
-              </label>
-              <input
-                type="text"
-                list="whatsapp-lang-codes"
-                value={templateConfig.languageCode}
-                onChange={(e) =>
-                  setTemplateConfig({ ...templateConfig, languageCode: e.target.value })
-                }
-                placeholder="es_co"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-              />
-              <datalist id="whatsapp-lang-codes">
-                <option value="es_co" />
-                <option value="es_CO" />
-                <option value="es" />
-                <option value="es_MX" />
-                <option value="en_US" />
-                <option value="en" />
-              </datalist>
-            </div>
-          </div>
+          {/* MODO A: PLANTILLA DE META */}
+          {(templateConfig.sendMode || 'template') === 'template' && (
+            <>
+              {/* Selector de plantillas cargadas desde Meta */}
+              {metaTemplates.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase">
+                    Seleccionar Plantilla de tu cuenta Meta ({metaTemplates.length})
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={templateSearch}
+                      onChange={(e) => setTemplateSearch(e.target.value)}
+                      placeholder="Filtrar plantillas aprobadas..."
+                      className="w-full px-3 py-1.5 mb-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                    />
+                    <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 divide-y divide-slate-900">
+                      {metaTemplates
+                        .filter(
+                          (t) =>
+                            !templateSearch ||
+                            t.name.toLowerCase().includes(templateSearch.toLowerCase())
+                        )
+                        .map((tpl) => (
+                          <button
+                            key={tpl.id}
+                            type="button"
+                            onClick={() => handleSelectMetaTemplate(tpl)}
+                            className={
+                              'w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-900 transition-colors cursor-pointer ' +
+                              (templateConfig.name === tpl.name
+                                ? 'bg-emerald-950/50 text-emerald-300'
+                                : 'text-slate-300')
+                            }
+                          >
+                            <div className="truncate pr-2">
+                              <span className="font-mono font-bold">{tpl.name}</span>
+                              <span className="text-[10px] text-slate-400 ml-1.5">
+                                ({tpl.language})
+                              </span>
+                            </div>
+                            <span
+                              className={
+                                'text-[10px] px-1.5 py-0.5 rounded font-bold ' +
+                                (tpl.status === 'APPROVED'
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : 'bg-amber-500/20 text-amber-400')
+                              }
+                            >
+                              {tpl.status}
+                            </span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nombre manual e Idioma (exactamente como en index.js) */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                    Nombre de Plantilla (template.name)
+                  </label>
+                  <input
+                    type="text"
+                    value={templateConfig.name}
+                    onChange={(e) =>
+                      setTemplateConfig({ ...templateConfig, name: e.target.value })
+                    }
+                    placeholder="info_villaarruga"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                    Idioma (code)
+                  </label>
+                  <input
+                    type="text"
+                    list="whatsapp-lang-codes"
+                    value={templateConfig.languageCode}
+                    onChange={(e) =>
+                      setTemplateConfig({ ...templateConfig, languageCode: e.target.value })
+                    }
+                    placeholder="es_co"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                  <datalist id="whatsapp-lang-codes">
+                    <option value="es_co" />
+                    <option value="es_CO" />
+                    <option value="es" />
+                    <option value="es_MX" />
+                    <option value="en_US" />
+                    <option value="en" />
+                  </datalist>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Header Multimedia (Imagen / Video / Documento / Ninguno) */}
           <div className="space-y-2">
@@ -1414,111 +1486,238 @@ export default function MasivosView() {
             )}
           </div>
 
-          {/* Variables del Body ({{1}}, {{2}}, ...) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold text-slate-400 uppercase">
-                Variables del Texto Body ({templateConfig.bodyVariables.length})
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  setTemplateConfig({
-                    ...templateConfig,
-                    bodyVariables: [
-                      ...templateConfig.bodyVariables,
-                      { type: 'customer_first_name', value: 'Cliente' },
-                    ],
-                  })
-                }
-                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Agregar Variable {`{{${templateConfig.bodyVariables.length + 1}}}`}</span>
-              </button>
-            </div>
-
-            {templateConfig.bodyVariables.map((v, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-emerald-400 w-8">
-                  {`{{${idx + 1}}}`}
-                </span>
-                <select
-                  value={v.type}
-                  onChange={(e) => {
-                    const next = [...templateConfig.bodyVariables];
-                    next[idx] = { ...next[idx], type: e.target.value as any };
-                    setTemplateConfig({ ...templateConfig, bodyVariables: next });
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                >
-                  <option value="customer_first_name">Primer Nombre del Cliente</option>
-                  <option value="customer_name">Nombre Completo del Cliente</option>
-                  <option value="fixed">Texto Fijo</option>
-                </select>
-                <input
-                  type="text"
-                  value={v.value}
-                  onChange={(e) => {
-                    const next = [...templateConfig.bodyVariables];
-                    next[idx] = { ...next[idx], value: e.target.value };
-                    setTemplateConfig({ ...templateConfig, bodyVariables: next });
-                  }}
-                  placeholder={v.type === 'fixed' ? 'Valor de la variable' : 'Fallback si está vacío'}
-                  className="flex-1 px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = templateConfig.bodyVariables.filter((_, i) => i !== idx);
-                    setTemplateConfig({ ...templateConfig, bodyVariables: next });
-                  }}
-                  className="p-1.5 text-slate-400 hover:text-red-400 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Componente de Botón Dinámico (Cupón copy_code como FERIA20 en index.js) */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
-                Parámetro de Botón
-              </label>
-              <select
-                value={templateConfig.buttonType}
-                onChange={(e) =>
-                  setTemplateConfig({
-                    ...templateConfig,
-                    buttonType: e.target.value as TemplateConfig['buttonType'],
-                  })
-                }
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-              >
-                <option value="NONE">Sin parámetro dinámico</option>
-                <option value="COPY_CODE">Botón Copiar Cupón (copy_code)</option>
-                <option value="URL_SUFFIX">Botón URL Dinámica</option>
-              </select>
-            </div>
-            {templateConfig.buttonType !== 'NONE' && (
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
-                  {templateConfig.buttonType === 'COPY_CODE' ? 'Código de Cupón' : 'Sufijo URL'}
-                </label>
-                <input
-                  type="text"
-                  value={templateConfig.buttonValue}
+          {templateConfig.sendMode === 'direct_send' ? (
+            /* CAMPOS EXCLUSIVOS DE ENVÍO DIRECTO (DIRECT SEND - category: "utility") */
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-indigo-300 uppercase">
+                    Texto del Mensaje (Direct Send Body)
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTemplateConfig({
+                          ...templateConfig,
+                          directBodyText:
+                            (templateConfig.directBodyText || '') + ' {{primer_nombre}}',
+                        })
+                      }
+                      className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold hover:bg-indigo-500/30 cursor-pointer"
+                    >
+                      + {`{{primer_nombre}}`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTemplateConfig({
+                          ...templateConfig,
+                          directBodyText: (templateConfig.directBodyText || '') + ' {{nombre}}',
+                        })
+                      }
+                      className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold hover:bg-indigo-500/30 cursor-pointer"
+                    >
+                      + {`{{nombre}}`}
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  rows={4}
+                  value={templateConfig.directBodyText || ''}
                   onChange={(e) =>
-                    setTemplateConfig({ ...templateConfig, buttonValue: e.target.value })
+                    setTemplateConfig({ ...templateConfig, directBodyText: e.target.value })
                   }
-                  placeholder={templateConfig.buttonType === 'COPY_CODE' ? 'FERIA20' : 'evento-123'}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono"
+                  placeholder="Hola {{primer_nombre}}, te informamos que las puertas del evento en Arena USC abrirán a las 6:00 PM. Presenta tu código QR al ingreso."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                    Pie de Mensaje (Footer Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={templateConfig.directFooterText || ''}
+                    onChange={(e) =>
+                      setTemplateConfig({ ...templateConfig, directFooterText: e.target.value })
+                    }
+                    placeholder="QRBoletos Oficial"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                    Botón Interactivo (Direct Send)
+                  </label>
+                  <select
+                    value={templateConfig.directButtonType || 'NONE'}
+                    onChange={(e) =>
+                      setTemplateConfig({
+                        ...templateConfig,
+                        directButtonType: e.target.value as any,
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                  >
+                    <option value="NONE">Sin Botón</option>
+                    <option value="CTA_URL">Botón Link Web (CTA URL)</option>
+                    <option value="QUICK_REPLY">Botón Respuesta Rápida</option>
+                  </select>
+                </div>
+              </div>
+
+              {templateConfig.directButtonType && templateConfig.directButtonType !== 'NONE' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                      Texto del Botón (Máx 20 car.)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={20}
+                      value={templateConfig.directButtonText || ''}
+                      onChange={(e) =>
+                        setTemplateConfig({ ...templateConfig, directButtonText: e.target.value })
+                      }
+                      placeholder="Ver Detalles"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                    />
+                  </div>
+                  {templateConfig.directButtonType === 'CTA_URL' && (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                        URL del Botón
+                      </label>
+                      <input
+                        type="url"
+                        value={templateConfig.directButtonUrl || ''}
+                        onChange={(e) =>
+                          setTemplateConfig({ ...templateConfig, directButtonUrl: e.target.value })
+                        }
+                        placeholder="https://qrboletos.com"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Variables del Body ({{1}}, {{2}}, ...) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase">
+                    Variables del Texto Body ({templateConfig.bodyVariables.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTemplateConfig({
+                        ...templateConfig,
+                        bodyVariables: [
+                          ...templateConfig.bodyVariables,
+                          { type: 'customer_first_name', value: 'Cliente' },
+                        ],
+                      })
+                    }
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Agregar Variable {`{{${templateConfig.bodyVariables.length + 1}}}`}</span>
+                  </button>
+                </div>
+
+                {templateConfig.bodyVariables.map((v, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-emerald-400 w-8">
+                      {`{{${idx + 1}}}`}
+                    </span>
+                    <select
+                      value={v.type}
+                      onChange={(e) => {
+                        const next = [...templateConfig.bodyVariables];
+                        next[idx] = { ...next[idx], type: e.target.value as any };
+                        setTemplateConfig({ ...templateConfig, bodyVariables: next });
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                    >
+                      <option value="customer_first_name">Primer Nombre del Cliente</option>
+                      <option value="customer_name">Nombre Completo del Cliente</option>
+                      <option value="fixed">Texto Fijo</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={v.value}
+                      onChange={(e) => {
+                        const next = [...templateConfig.bodyVariables];
+                        next[idx] = { ...next[idx], value: e.target.value };
+                        setTemplateConfig({ ...templateConfig, bodyVariables: next });
+                      }}
+                      placeholder={
+                        v.type === 'fixed' ? 'Valor de la variable' : 'Fallback si está vacío'
+                      }
+                      className="flex-1 px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = templateConfig.bodyVariables.filter((_, i) => i !== idx);
+                        setTemplateConfig({ ...templateConfig, bodyVariables: next });
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-red-400 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Componente de Botón Dinámico (Cupón copy_code como FERIA20 en index.js) */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                    Parámetro de Botón
+                  </label>
+                  <select
+                    value={templateConfig.buttonType}
+                    onChange={(e) =>
+                      setTemplateConfig({
+                        ...templateConfig,
+                        buttonType: e.target.value as TemplateConfig['buttonType'],
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                  >
+                    <option value="NONE">Sin parámetro dinámico</option>
+                    <option value="COPY_CODE">Botón Copiar Cupón (copy_code)</option>
+                    <option value="URL_SUFFIX">Botón URL Dinámica</option>
+                  </select>
+                </div>
+                {templateConfig.buttonType !== 'NONE' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                      {templateConfig.buttonType === 'COPY_CODE' ? 'Código de Cupón' : 'Sufijo URL'}
+                    </label>
+                    <input
+                      type="text"
+                      value={templateConfig.buttonValue}
+                      onChange={(e) =>
+                        setTemplateConfig({ ...templateConfig, buttonValue: e.target.value })
+                      }
+                      placeholder={
+                        templateConfig.buttonType === 'COPY_CODE' ? 'FERIA20' : 'evento-123'
+                      }
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Vista Previa Estilo Burbuja de WhatsApp */}
           <div className="p-3.5 rounded-2xl bg-[#0b141a] border border-slate-800 space-y-2">

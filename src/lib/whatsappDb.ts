@@ -17,16 +17,24 @@ export interface CampaignRecipient {
 }
 
 export interface TemplateConfig {
+  sendMode?: 'template' | 'direct_send'; // 'template' (clásico) o 'direct_send' (Envío Directo Meta sin plantilla previa)
   name: string;
   languageCode: string; // ej. "es_co", "es_CO", "es", "en_US"
-  headerType: 'NONE' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  headerType: 'NONE' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'TEXT';
   headerMediaUrl: string;
+  headerText?: string;
   bodyVariables: Array<{
     type: ' fixed' | 'customer_name' | 'customer_first_name' | 'fixed';
     value: string; // valor fijo o fallback si el cliente no tiene nombre
   }>;
   buttonType: 'NONE' | 'COPY_CODE' | 'URL_SUFFIX';
   buttonValue: string; // ej. "FERIA20" para copy_code
+  // Campos exclusivos para Envío Directo (Direct Send - category: "utility")
+  directBodyText?: string;
+  directFooterText?: string;
+  directButtonType?: 'NONE' | 'CTA_URL' | 'QUICK_REPLY';
+  directButtonText?: string;
+  directButtonUrl?: string;
 }
 
 export interface WhatsAppCampaign {

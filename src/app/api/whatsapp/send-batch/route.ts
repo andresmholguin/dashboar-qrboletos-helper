@@ -336,9 +336,12 @@ export async function POST(request: NextRequest) {
             const err = data.error || {};
             const isTokenError =
               err.code === 190 ||
+              err.code === 132015 ||
+              err.code === 131042 ||
               res.status === 401 ||
               String(err.message || '').toLowerCase().includes('access token') ||
-              String(err.message || '').toLowerCase().includes('session has expired');
+              String(err.message || '').toLowerCase().includes('session has expired') ||
+              String(err.message || '').toLowerCase().includes('paused');
 
             if (isTokenError) {
               tokenExpiredDetected = true;

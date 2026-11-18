@@ -34,8 +34,10 @@ import {
   Clock,
   Smartphone,
   History,
-  FolderOpen
+  FolderOpen,
+  BarChart3
 } from 'lucide-react';
+import WhatsAppAnalyticsView from '@/components/WhatsAppAnalyticsView';
 import { Customer } from '@/lib/qrboletosApi';
 import {
   getCachedCustomersFromDb,
@@ -75,6 +77,9 @@ interface MetaTemplate {
 }
 
 export default function MasivosView() {
+  // Pestaña activa: Envío de Campaña vs Visualización de Resultados Persistentes
+  const [activeTab, setActiveTab] = useState<'sender' | 'analytics'>('sender');
+
   // 1. Credenciales Meta Cloud API (Híbrido .env + IndexedDB)
   const [phoneNumberId, setPhoneNumberId] = useState('684708368066383');
   const [wabaId, setWabaId] = useState('');
@@ -909,6 +914,39 @@ export default function MasivosView() {
       setActiveCampaign({ ...workingCampaign });
     }
 
+    // Persistir snapshot en data/whatsapp-campaigns/campaigns.json vía /api/whatsapp/analytics
+    try {
+      const sentPhones = workingCampaign.recipients
+        .filter((r) => r.status === 'sent')
+        .map((r) => r.num);
+      await fetch('/api/whatsapp/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign: {
+            id: workingCampaign.id,
+            title: workingCampaign.title,
+            templateName: workingCampaign.templateConfig.name,
+            languageCode: workingCampaign.templateConfig.languageCode,
+            createdAt: workingCampaign.createdAt,
+            updatedAt: new Date().toISOString(),
+            source: 'masivos_web',
+            stats: {
+              total: workingCampaign.stats.total,
+              sent: workingCampaign.stats.sent,
+              failed: workingCampaign.stats.failed,
+              delivered: workingCampaign.stats.sent,
+              read: 0,
+              interacted: 0,
+            },
+            sentPhones,
+          },
+        }),
+      });
+    } catch (e) {
+      console.warn('No se pudo persistir snapshot en servidor:', e);
+    }
+
     const updatedList = await getAllCampaignsFromDb();
     setCampaigns(updatedList);
     setIsSending(false);
@@ -1041,7 +1079,37 @@ export default function MasivosView() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end md:self-auto">
+        <div className="flex items-center gap-2 self-end md:self-auto flex-wrap">
+          {/* Selector de Pestaña Principal: Enviar Campaña vs Resultados & Analítica */}
+          <div className="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setActiveTab('sender')}
+              className={
+                'px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ' +
+                (activeTab === 'sender'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white')
+              }
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Enviar Campaña</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('analytics')}
+              className={
+                'px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ' +
+                (activeTab === 'analytics'
+                  ? 'bg-indigo-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white')
+              }
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>📊 Resultados & Analítica</span>
+            </button>
+          </div>
+
           <button
             onClick={() => setShowCredentialsPanel(!showCredentialsPanel)}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-all cursor-pointer"
@@ -1254,8 +1322,20 @@ export default function MasivosView() {
         </div>
       )}
 
-      {/* GRID PRINCIPAL DE 2 COLUMNAS: 1) PLANTILLA Y PRUEBA | 2) SEGMENTACIÓN DE AUDIENCIA */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {activeTab === 'analytics' ? (
+        <WhatsAppAnalyticsView
+          customers={customers}
+          uniqueEvents={uniqueEvents}
+          accessToken={accessToken}
+          wabaId={wabaId}
+          onWabaIdDiscovered={(discoveredId) => {
+            if (discoveredId && !wabaId) setWabaId(discoveredId);
+          }}
+        />
+      ) : (
+        <>
+          {/* GRID PRINCIPAL DE 2 COLUMNAS: 1) PLANTILLA Y PRUEBA | 2) SEGMENTACIÓN DE AUDIENCIA */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* COLUMNA IZQUIERDA (5 cols): Configuración de Plantilla + Vista Previa + Envío de Prueba */}
         <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-5">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -2662,6 +2742,8 @@ export default function MasivosView() {
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

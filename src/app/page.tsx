@@ -40,7 +40,8 @@ import {
   Users,
   Ticket,
   BookOpen,
-  Calendar
+  Calendar,
+  Send
 } from 'lucide-react';
 
 export default function Home() {
@@ -682,6 +683,15 @@ export default function Home() {
               <span>Audiencia & CRM</span>
             </Link>
 
+            <Link
+              href="/masivos"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all flex items-center gap-1.5"
+              title="Envíos Masivos de WhatsApp Cloud API"
+            >
+              <Send className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Masivos WA</span>
+            </Link>
+
             {/* Botón de Cambio de Tema */}
             <button
               onClick={toggleTheme}
@@ -744,6 +754,15 @@ export default function Home() {
             >
               <Users className="w-4 h-4 text-indigo-400" />
               <span>Audiencia & CRM</span>
+            </Link>
+
+            <Link
+              href="/masivos"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-900 transition-all"
+            >
+              <Send className="w-4 h-4 text-emerald-400" />
+              <span>Masivos WA</span>
             </Link>
           </div>
         )}

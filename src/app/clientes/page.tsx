@@ -10,6 +10,7 @@ import {
   Users,
   BookOpen,
   Calendar,
+  Send,
   Sun,
   Moon
 } from 'lucide-react';
@@ -102,6 +103,15 @@ export default function ClientesPage() {
               <Users className="w-3.5 h-3.5 text-indigo-400" />
               <span>Audiencia & CRM</span>
             </div>
+
+            <Link
+              href="/masivos"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all flex items-center gap-1.5"
+              title="Ir a Envíos Masivos de WhatsApp"
+            >
+              <Send className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Masivos WA</span>
+            </Link>
 
             {/* Selector de Tema */}
             <button

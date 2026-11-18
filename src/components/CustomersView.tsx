@@ -22,8 +22,10 @@ import {
   Database,
   Check,
   X,
-  ChevronDown
+  ChevronDown,
+  Send
 } from 'lucide-react';
+import Link from 'next/link';
 import { Customer } from '@/lib/qrboletosApi';
 import {
   getCachedCustomersFromDb,
@@ -362,6 +364,15 @@ export default function CustomersView({ onBack }: CustomersViewProps) {
             <RefreshCw className={'w-3.5 h-3.5 ' + (syncingAll ? 'animate-spin text-emerald-400' : '')} />
             <span>{syncingAll ? 'Sincronizando...' : 'Sincronizar Todo'}</span>
           </button>
+
+          <Link
+            href="/masivos"
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-indigo-950/40 cursor-pointer active:scale-95"
+            title="Abrir módulo de envíos masivos por WhatsApp Cloud API"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Envíos Masivos WA</span>
+          </Link>
 
           <button
             onClick={handleExportCsv}

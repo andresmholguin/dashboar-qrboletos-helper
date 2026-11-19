@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import AppSidebarShell from '@/components/AppSidebarShell';
 import packageJson from '../../../package.json';
 import {
   ArrowLeft,
@@ -416,39 +417,27 @@ export default function DocsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300">
-      {/* Barra de Navegación Superior */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <AppSidebarShell activeNav="docs" lastUpdatedLabel={`Versión v${packageJson.version}`}>
+      {/* Barra de Navegación Interna de Documentación */}
+      <header className="obsidian-card px-5 py-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold shadow-sm cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Volver al Dashboard</span>
-            </Link>
-
-            <div className="h-4 w-px bg-slate-800 hidden sm:block" />
-
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-900/30">
-                <BookOpen className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                  Documentación & Alcances
-                  <span className="text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                    v{packageJson.version}
-                  </span>
-                </h1>
-                <p className="text-[11px] text-slate-400">QRBoletos Dashboard Helper • Manual de Sistema</p>
-              </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                Documentación & Alcances
+                <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  v{packageJson.version}
+                </span>
+              </h1>
+              <p className="text-xs text-slate-400">QRBoletos Dashboard Helper • Manual de Sistema</p>
             </div>
           </div>
 
           {/* Selector de Pestañas Principales */}
-          <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs font-semibold self-start sm:self-auto">
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold self-start sm:self-auto">
             <button
               onClick={() => setActiveTab('scopes')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -484,7 +473,7 @@ export default function DocsPage() {
       </header>
 
       {/* Contenido Principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+      <main className="space-y-8">
         {/* Banner de Bienvenida y Buscador */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/40 border border-slate-800 p-6 sm:p-8 shadow-2xl">
           <div className="relative z-10 max-w-3xl space-y-3">
@@ -837,6 +826,6 @@ export default function DocsPage() {
           </div>
         </footer>
       </main>
-    </div>
+    </AppSidebarShell>
   );
 }

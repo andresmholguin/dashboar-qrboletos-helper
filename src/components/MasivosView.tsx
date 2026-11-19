@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import {
   Send,
   Users,
@@ -76,9 +77,24 @@ interface MetaTemplate {
   }>;
 }
 
-export default function MasivosView() {
+export interface MasivosViewProps {
+  externalTab?: 'sender' | 'analytics';
+  onExternalTabChange?: (tab: 'sender' | 'analytics') => void;
+}
+
+export default function MasivosView({
+  externalTab,
+  onExternalTabChange,
+}: MasivosViewProps = {}) {
   // Pestaña activa: Envío de Campaña vs Visualización de Resultados Persistentes
-  const [activeTab, setActiveTab] = useState<'sender' | 'analytics'>('sender');
+  const [internalTab, setInternalTab] = useState<'sender' | 'analytics'>(
+    externalTab || 'analytics'
+  );
+  const activeTab = externalTab || internalTab;
+  const setActiveTab = (t: 'sender' | 'analytics') => {
+    setInternalTab(t);
+    if (onExternalTabChange) onExternalTabChange(t);
+  };
 
   // 1. Credenciales Meta Cloud API (Híbrido .env + IndexedDB)
   const [phoneNumberId, setPhoneNumberId] = useState('684708368066383');
@@ -115,6 +131,16 @@ export default function MasivosView() {
     buttonUrl: '',
   });
   const [creatingTemplate, setCreatingTemplate] = useState(false);
+
+  // Nombre personalizado e identificador de la campaña y evento vinculado para Informes
+  const [campaignCustomName, setCampaignCustomName] = useState('');
+  const [campaignEventHint, setCampaignEventHint] = useState('');
+  const [reportCreatedBanner, setReportCreatedBanner] = useState<{
+    id: string;
+    title: string;
+    sent: number;
+    total: number;
+  } | null>(null);
 
   // Configuración activa de la plantilla o Envío Directo (Direct Send)
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig>({
@@ -739,6 +765,64 @@ export default function MasivosView() {
     }
   };
 
+  // Guardar/actualizar el informe persistente de la campaña tanto en data/whatsapp-campaigns/campaigns.json como en IndexedDB
+  const persistCampaignReport = async (camp: WhatsAppCampaign) => {
+    const sentPhones = camp.recipients.filter((r) => r.status === 'sent').map((r) => r.num);
+    const persistentEntry = {
+      id: camp.id,
+      title: camp.title,
+      templateName: camp.customName || camp.templateConfig.name,
+      languageCode: camp.templateConfig.languageCode || 'es_co',
+      eventHint: camp.eventHint || campaignEventHint || '',
+      createdAt: camp.createdAt,
+      updatedAt: new Date().toISOString(),
+      source: 'masivos_web' as const,
+      stats: {
+        total: camp.stats.total,
+        sent: camp.stats.sent,
+        failed: camp.stats.failed,
+        delivered: camp.stats.sent,
+        read: 0,
+        interacted: 0,
+      },
+      sentPhones,
+    };
+
+    try {
+      // 1. Guardar en IndexedDB para lectura inmediata en /informes y Analítica
+      const localList = await getWhatsAppSetting<any[]>('persistent_analytics_campaigns', []);
+      const idx = localList.findIndex((x) => x.id === persistentEntry.id);
+      if (idx >= 0) {
+        localList[idx] = {
+          ...localList[idx],
+          ...persistentEntry,
+          stats: {
+            ...localList[idx].stats,
+            ...persistentEntry.stats,
+            read: localList[idx].stats?.read || 0,
+            interacted: localList[idx].stats?.interacted || 0,
+          },
+        };
+      } else {
+        localList.unshift(persistentEntry);
+      }
+      await setWhatsAppSetting('persistent_analytics_campaigns', localList);
+    } catch (e) {
+      console.warn('Error guardando informe en IndexedDB:', e);
+    }
+
+    try {
+      // 2. Guardar snapshot JSON en el servidor (/api/whatsapp/analytics)
+      await fetch('/api/whatsapp/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign: persistentEntry }),
+      });
+    } catch (e) {
+      console.warn('No se pudo persistir snapshot en servidor:', e);
+    }
+  };
+
   // Crear nueva campaña lista para disparar con la audiencia filtrada actual
   const handleCreateCampaignQueue = async () => {
     if (audienceAnalysis.finalRecipients.length === 0) {
@@ -755,19 +839,37 @@ export default function MasivosView() {
       return;
     }
 
-    const labelName = isDirect ? 'direct_send_utility' : templateConfig.name;
+    const customTrimmed = campaignCustomName.trim();
+    const baseIdentifier =
+      customTrimmed ||
+      (isDirect
+        ? `Envío Directo ${campaignEventHint || 'WhatsApp'}`
+        : templateConfig.name.trim());
+
+    const dateShort = new Date().toLocaleDateString('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const resolvedEventHint =
+      campaignEventHint ||
+      (includeEvents.length === 1 ? includeEvents[0] : '') ||
+      (excludeEvents.length === 1 ? excludeEvents[0] : '');
+
     const newCampaign: WhatsAppCampaign = {
       id: 'camp_' + Date.now(),
-      title: `${labelName} (${new Date().toLocaleDateString('es-CO', {
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      })})`,
+      title: customTrimmed ? `${customTrimmed} (${dateShort})` : `${baseIdentifier} (${dateShort})`,
+      customName: baseIdentifier,
+      eventHint: resolvedEventHint,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'draft',
-      templateConfig: { ...templateConfig, name: labelName },
+      templateConfig: {
+        ...templateConfig,
+        name: isDirect ? baseIdentifier : templateConfig.name.trim(),
+      },
       recipients: audienceAnalysis.finalRecipients.map((r) => ({ ...r, status: 'pending' })),
       stats: {
         total: audienceAnalysis.finalRecipients.length,
@@ -778,6 +880,7 @@ export default function MasivosView() {
     };
 
     await saveCampaignToDb(newCampaign);
+    await persistCampaignReport(newCampaign);
     const updatedList = await getAllCampaignsFromDb();
     setCampaigns(updatedList);
     setActiveCampaign(newCampaign);
@@ -914,38 +1017,14 @@ export default function MasivosView() {
       setActiveCampaign({ ...workingCampaign });
     }
 
-    // Persistir snapshot en data/whatsapp-campaigns/campaigns.json vía /api/whatsapp/analytics
-    try {
-      const sentPhones = workingCampaign.recipients
-        .filter((r) => r.status === 'sent')
-        .map((r) => r.num);
-      await fetch('/api/whatsapp/analytics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaign: {
-            id: workingCampaign.id,
-            title: workingCampaign.title,
-            templateName: workingCampaign.templateConfig.name,
-            languageCode: workingCampaign.templateConfig.languageCode,
-            createdAt: workingCampaign.createdAt,
-            updatedAt: new Date().toISOString(),
-            source: 'masivos_web',
-            stats: {
-              total: workingCampaign.stats.total,
-              sent: workingCampaign.stats.sent,
-              failed: workingCampaign.stats.failed,
-              delivered: workingCampaign.stats.sent,
-              read: 0,
-              interacted: 0,
-            },
-            sentPhones,
-          },
-        }),
-      });
-    } catch (e) {
-      console.warn('No se pudo persistir snapshot en servidor:', e);
-    }
+    // Crear y guardar automáticamente el informe persistente de la campaña
+    await persistCampaignReport(workingCampaign);
+    setReportCreatedBanner({
+      id: workingCampaign.id,
+      title: workingCampaign.title,
+      sent: workingCampaign.stats.sent,
+      total: workingCampaign.stats.total,
+    });
 
     const updatedList = await getAllCampaignsFromDb();
     setCampaigns(updatedList);
@@ -1365,6 +1444,40 @@ export default function MasivosView() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* NOMBRE DE LA CAMPAÑA Y EVENTO ASOCIADO (Visible en ambos modos para identificar el Informe) */}
+          <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-emerald-500/30 space-y-3">
+            <div>
+              <label className="block text-[11px] font-extrabold text-emerald-400 uppercase mb-1">
+                🏷️ Nombre para Identificar la Campaña (En Informes)
+              </label>
+              <input
+                type="text"
+                value={campaignCustomName}
+                onChange={(e) => setCampaignCustomName(e.target.value)}
+                placeholder="Ej: Aviso Ingreso Villa Arruga - 19 Nov"
+                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-semibold focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                🎯 Evento Asociado (Opcional — Para cruzar ventas en el Informe)
+              </label>
+              <select
+                value={campaignEventHint}
+                onChange={(e) => setCampaignEventHint(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">General / Sin evento específico</option>
+                {uniqueEvents.map((ev) => (
+                  <option key={ev} value={ev}>
+                    {ev}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Selector de Modo: Plantilla Clásica vs Envío Directo (Direct Send de Meta) */}
@@ -2404,6 +2517,33 @@ export default function MasivosView() {
 
               <button
                 type="button"
+                onClick={async () => {
+                  await persistCampaignReport(activeCampaign);
+                  setReportCreatedBanner({
+                    id: activeCampaign.id,
+                    title: activeCampaign.title,
+                    sent: activeCampaign.stats.sent,
+                    total: activeCampaign.stats.total,
+                  });
+                }}
+                className="px-3.5 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-bold flex items-center gap-1.5 border border-emerald-500/30 cursor-pointer"
+                title="Guardar o actualizar el informe de esta campaña en el Módulo de Informes"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Guardar en Informes</span>
+              </button>
+
+              <Link
+                href="/informes?tab=masivos"
+                className="px-3.5 py-2.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 text-xs font-bold flex items-center gap-1.5 border border-indigo-500/30 cursor-pointer"
+                title="Abrir esta campaña en el Módulo de Informes (/informes)"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Ver en Módulo Informes</span>
+              </Link>
+
+              <button
+                type="button"
                 onClick={() => handleDownloadJsonReport(activeCampaign)}
                 className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 border border-slate-700 cursor-pointer"
                 title="Descargar JSON idéntico a message_report.json de tu script Node.js"
@@ -2422,6 +2562,43 @@ export default function MasivosView() {
               </button>
             </div>
           </div>
+
+          {/* Banner de Informe Creado al finalizar el envío */}
+          {reportCreatedBanner && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-indigo-950/60 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div>
+                  <h4 className="text-xs font-extrabold text-emerald-300 uppercase">
+                    ✅ Informe Creado: {reportCreatedBanner.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-300">
+                    Se registraron{' '}
+                    <strong className="text-white">
+                      {reportCreatedBanner.sent.toLocaleString()} enviados
+                    </strong>{' '}
+                    de {reportCreatedBanner.total.toLocaleString()} en el historial de informes.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('analytics')}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Ver Analítica Aquí</span>
+                </button>
+                <Link
+                  href="/informes?tab=masivos"
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5"
+                >
+                  <span>Ir al Módulo de Informes (/informes) →</span>
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Tarjetas de Estadísticas y Barra de Progreso */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

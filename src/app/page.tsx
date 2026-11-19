@@ -9,6 +9,7 @@ import ArtworksManagerModal from '@/components/ArtworksManagerModal';
 import EventSettingsModal from '@/components/EventSettingsModal';
 import TarifarioUploaderModal from '@/components/TarifarioUploaderModal';
 import ChromeTabSelectorModal, { DetectedTab } from '@/components/ChromeTabSelectorModal';
+import AppSidebarShell from '@/components/AppSidebarShell';
 import Link from 'next/link';
 import packageJson from '../../package.json';
 import { Evento, Localidad, EventAvailabilitySummary } from '@/types';
@@ -587,187 +588,15 @@ export default function Home() {
   const regulares = onSaleEvents.filter((e) => !e.favorito);
 
   return (
-    <main className="min-h-screen bg-background text-foreground font-sans selection:bg-emerald-500/20">
-      {/* Navbar Superior */}
-      <nav className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo y Badge */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setSelectedEvento(null);
-                setIsMobileMenuOpen(false);
-              }}
-              className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 active:scale-[0.98] transition-all text-left bg-transparent border-none p-0 focus:outline-none"
-              title="Ir al inicio"
-            >
-              <div className="bg-emerald-500/10 p-1.5 rounded-xl border border-emerald-500/20 shadow-lg shadow-emerald-500/5 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" className="w-7 h-7">
-                  <rect x="10" y="10" width="80" height="80" rx="18" fill="none" stroke="#047857" strokeWidth="6" />
-                  <rect x="21" y="55" width="11" height="25" rx="3" fill="#10B981" />
-                  <rect x="37" y="45" width="11" height="35" rx="3" fill="#10B981" />
-                  <rect x="53" y="35" width="11" height="45" rx="3" fill="#10B981" />
-                  <rect x="69" y="25" width="11" height="55" rx="3" fill="#10B981" />
-                  <path d="M 18 45 Q 45 40 64 22" fill="none" stroke="#047857" strokeWidth="6" strokeLinecap="round" />
-                  <polygon points="56,18 73,13 68,30" fill="#047857" stroke="#047857" strokeWidth="2" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div>
-                <span className="font-extrabold text-sm tracking-wide text-slate-100 uppercase block">
-                  QRBoletos
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium tracking-wider -mt-1 block">
-                  Dashboard Helper
-                </span>
-              </div>
-            </button>
-
-            {/* Versión con link a Documentación */}
-            <Link
-              href="/docs"
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-mono font-bold transition-all border border-slate-700/60 hover:border-emerald-500/40 shadow-sm"
-              title="Ver documentación, alcances y registro de versiones (v1.2.0)"
-            >
-              <BookOpen className="w-2.5 h-2.5 text-emerald-400" />
-              <span>v{packageJson.version}</span>
-            </Link>
-
-            {/* Estado de Persistencia */}
-            <div className="shrink-0">
-              {isSheetsMode === null ? (
-                <span className="w-2.5 h-2.5 bg-slate-700 animate-pulse rounded-full block"></span>
-              ) : isSheetsMode ? (
-                <div className="bg-emerald-100 dark:bg-emerald-500/5 text-emerald-900 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/20 rounded-full px-3 py-0.5 text-[9px] font-bold flex items-center gap-1 shadow-sm">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-500" />
-                  <span>Google Sheets</span>
-                </div>
-              ) : (
-                <div
-                  className="bg-amber-100 dark:bg-amber-500/5 text-amber-900 dark:text-amber-400 border border-amber-300 dark:border-amber-500/20 rounded-full px-3 py-0.5 text-[9px] font-bold flex items-center gap-1 shadow-sm cursor-help"
-                  title="Google Sheets no configurado. Los datos se guardarán localmente."
-                >
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-700 dark:text-amber-500" />
-                  <span>Local</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Menú de Navegación Superior Unificado (Desktop) */}
-          <div className="hidden md:flex items-center gap-2">
-            <Link
-              href="/"
-              onClick={() => setSelectedEvento(null)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-1.5"
-              title="Catálogo de Eventos"
-            >
-              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Eventos</span>
-            </Link>
-
-            <Link
-              href="/informes"
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all flex items-center gap-1.5"
-              title="Módulo de Informes de Ventas y Cortesías"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Informes</span>
-            </Link>
-
-            <Link
-              href="/clientes"
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all flex items-center gap-1.5"
-              title="Directorio de Audiencia & CRM"
-            >
-              <Users className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Audiencia & CRM</span>
-            </Link>
-
-            <Link
-              href="/masivos"
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all flex items-center gap-1.5"
-              title="Envíos Masivos de WhatsApp Cloud API"
-            >
-              <Send className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Masivos WA</span>
-            </Link>
-
-            {/* Botón de Cambio de Tema */}
-            <button
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              className="p-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer shadow-sm active:scale-95 ml-1"
-              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
-            </button>
-          </div>
-
-          {/* Botón Hamburguesa y Cambio de Tema en Móviles */}
-          <div className="flex md:hidden items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer active:scale-95"
-              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-            >
-              {theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-amber-400" /> : <Moon className="w-4.5 h-4.5 text-indigo-400" />}
-            </button>
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label={isMobileMenuOpen ? 'Cerrar menú de navegación móvil' : 'Abrir menú de navegación móvil'}
-              className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-slate-300 rounded-xl transition-all hover:text-white cursor-pointer"
-            >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Dropdown del Menú Móvil */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-900 bg-slate-950 p-4 space-y-2 shadow-xl animate-fade-in">
-            <Link
-              href="/"
-              onClick={() => {
-                setSelectedEvento(null);
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5"
-            >
-              <Calendar className="w-4 h-4 text-emerald-400" />
-              <span>Eventos</span>
-            </Link>
-
-            <Link
-              href="/informes"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-900 transition-all"
-            >
-              <BarChart3 className="w-4 h-4 text-emerald-400" />
-              <span>Informes</span>
-            </Link>
-
-            <Link
-              href="/clientes"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-900 transition-all"
-            >
-              <Users className="w-4 h-4 text-indigo-400" />
-              <span>Audiencia & CRM</span>
-            </Link>
-
-            <Link
-              href="/masivos"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-300 hover:bg-slate-900 transition-all"
-            >
-              <Send className="w-4 h-4 text-emerald-400" />
-              <span>Masivos WA</span>
-            </Link>
-          </div>
-        )}
-      </nav>
-
+    <AppSidebarShell
+      activeNav="eventos"
+      onRefresh={() => {
+        fetchEventos();
+        fetchCatalogSummary();
+      }}
+      refreshing={isSyncing}
+      lastUpdatedLabel={isSheetsMode ? 'Google Sheets • hace un momento' : 'Local • hace un momento'}
+    >
       {/* Notificación flotante de sincronización */}
       {syncToast && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900/95 backdrop-blur-md border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-medium">
@@ -777,7 +606,7 @@ export default function Home() {
       )}
 
       {/* Contenido Principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="space-y-6">
         {selectedEvento ? (
           // Vista detallada de Localidades (Scraper)
           <LocalitiesView
@@ -790,7 +619,110 @@ export default function Home() {
           />
         ) : (
           // Dashboard principal
-          <div className="space-y-8">
+          <div className="space-y-6">
+            {/* Header en Español con Colores Originales */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">
+                  Resumen de Eventos y Aforo en Tiempo Real
+                </h1>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Monitoreo en tiempo real de eventos publicados, aforo en vivo, configuración de localidades y sincronización Chrome.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/masivos?tab=analytics"
+                  className="obsidian-pill px-3.5 py-2 text-xs font-medium text-emerald-400 hover:text-white border-emerald-500/30 flex items-center gap-1.5 transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Analítica de Campañas</span>
+                </Link>
+                <Link
+                  href="/informes"
+                  className="obsidian-pill px-3.5 py-2 text-xs font-medium text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
+                >
+                  <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Informes de Ventas</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Fila Superior de 5 KPIs con Sparkline Esmeralda */}
+            <div className="grid grid-cols-2 lg:grid-cols-12 gap-3.5">
+              <div className="col-span-2 lg:col-span-3 obsidian-card p-4 flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <span className="text-xs text-slate-400 font-medium block">
+                    Total Eventos Catálogo
+                  </span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-bold text-white tracking-tight">
+                      {eventos.length}
+                    </span>
+                    <span className="text-xs text-slate-500">funciones</span>
+                  </div>
+                  <div className="text-[11px] font-semibold text-emerald-400">
+                    ↑ {onSaleEvents.length} activos en venta
+                  </div>
+                </div>
+                <div className="w-24 h-11 shrink-0">
+                  <svg viewBox="0 0 100 44" className="w-full h-full overflow-visible">
+                    <path
+                      d="M 4 36 L 24 28 L 42 32 L 60 18 L 78 22 L 96 6"
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="col-span-1 lg:col-span-2 obsidian-card p-4 flex flex-col justify-between space-y-1">
+                <span className="text-xs text-slate-400 font-medium">A la Venta</span>
+                <div className="text-3xl font-bold text-white tracking-tight">
+                  {onSaleEvents.length}
+                </div>
+                <div className="text-[11px] font-semibold text-emerald-400">
+                  ↑ {favoritos.length} destacados
+                </div>
+              </div>
+
+              <div className="col-span-1 lg:col-span-2 obsidian-card p-4 flex flex-col justify-between space-y-1">
+                <span className="text-xs text-slate-400 font-medium">En Configuración</span>
+                <div className="text-3xl font-bold text-white tracking-tight">
+                  {inConfigEvents.length}
+                </div>
+                <div className="text-[11px] font-semibold text-amber-400">
+                  Preparación preventa
+                </div>
+              </div>
+
+              <div className="col-span-1 lg:col-span-2 obsidian-card p-4 flex flex-col justify-between space-y-1">
+                <span className="text-xs text-slate-400 font-medium">Archivados</span>
+                <div className="text-3xl font-bold text-white tracking-tight">
+                  {passedEvents.length}
+                </div>
+                <div className="text-[11px] text-slate-500">Historial finalizado</div>
+              </div>
+
+              <div className="col-span-1 lg:col-span-3 obsidian-card p-4 flex flex-col justify-between space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-medium">Aforo en Vivo</span>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
+                    API Catálogo
+                  </span>
+                </div>
+                <div className="text-3xl font-bold text-white tracking-tight">
+                  {onSaleEvents.length}
+                </div>
+                <div className="text-[11px] font-semibold text-emerald-400">
+                  ↑ Sincronizado con QRBoletos
+                </div>
+              </div>
+            </div>
+
             {errorMsg && (
               <div className="bg-amber-500/5 border border-amber-500/20 text-amber-400 p-4 rounded-2xl text-xs flex items-center gap-2">
                 <Info className="w-5 h-5 shrink-0 text-amber-500" />
@@ -1050,9 +982,9 @@ export default function Home() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
-                        {inConfigEvents.map((evento) => (
+                        {inConfigEvents.map((evento, idx) => (
                           <EventCard
-                            key={evento.id}
+                            key={`${evento.rowId || evento.id}_cfg_${idx}`}
                             evento={evento}
                             availability={getEventAvailability(evento)}
                             isAvailabilityLoading={isCatalogLoading}
@@ -1080,9 +1012,9 @@ export default function Home() {
                         Favoritos a la Venta ({favoritos.length})
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {favoritos.map((evento) => (
+                        {favoritos.map((evento, idx) => (
                           <EventCard
-                            key={evento.id}
+                            key={`${evento.rowId || evento.id}_fav_${idx}`}
                             evento={evento}
                             availability={getEventAvailability(evento)}
                             isAvailabilityLoading={isCatalogLoading}
@@ -1113,9 +1045,9 @@ export default function Home() {
                         <p className="text-slate-650 text-xs italic">No hay más eventos próximos</p>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {regulares.map((evento) => (
+                          {regulares.map((evento, idx) => (
                             <EventCard
-                              key={evento.id}
+                              key={`${evento.rowId || evento.id}_reg_${idx}`}
                               evento={evento}
                               availability={getEventAvailability(evento)}
                               isAvailabilityLoading={isCatalogLoading}
@@ -1163,10 +1095,9 @@ export default function Home() {
                       {/* Listado de Archivados */}
                       {(isArchiveExpanded || selectedTab === 'archivados') && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 animate-fade-in">
-                          {passedEvents.map((evento) => (
-                            <div key={evento.id} className="opacity-75 hover:opacity-100 transition-opacity duration-200">
+                          {passedEvents.map((evento, idx) => (
+                            <div key={`${evento.rowId || evento.id}_arc_${idx}`} className="opacity-75 hover:opacity-100 transition-opacity duration-200">
                               <EventCard
-                                key={evento.id}
                                 evento={evento}
                                 availability={getEventAvailability(evento)}
                                 isAvailabilityLoading={isCatalogLoading}
@@ -1257,7 +1188,7 @@ export default function Home() {
           onClose={() => setAvailabilityShow(null)}
         />
       )}
-    </main>
+    </AppSidebarShell>
   );
 }
 

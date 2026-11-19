@@ -1,13 +1,13 @@
 {
-  "id": "snapshot_2026-11-14_0810",
-  "filename": "snapshot_2026-11-14_0810.json",
-  "createdAt": "2026-11-14T13:10:28.054Z",
+  "id": "snapshot_2026-11-14_0854",
+  "filename": "snapshot_2026-11-14_0854.json",
+  "createdAt": "2026-11-14T13:54:20.228Z",
   "cotDate": "2026-11-14",
   "weekKey": "2026-W47",
   "isMonday": false,
-  "label": "Sábado 14 Nov (08:10)",
+  "label": "Sábado 14 Nov (08:54)",
   "totalEvents": 12,
-  "totalBoletos": 7623,
+  "totalBoletos": 7624,
   "salesData": [
     {
       "meta": {
@@ -39,12 +39,12 @@
         },
         {
           "localidad": "PREFERENCIAL 1 DUO",
-          "vendidas": "35",
-          "recaudoEntradas": "COP 2.450.000",
-          "recaudoServicio": "COP 367.500",
+          "vendidas": "36",
+          "recaudoEntradas": "COP 2.520.000",
+          "recaudoServicio": "COP 378.000",
           "cortesias": 0,
-          "boletosPagados": 35,
-          "totalBoletos": 35
+          "boletosPagados": 36,
+          "totalBoletos": 36
         },
         {
           "localidad": "PREFERENCIAL 2",
@@ -708,11 +708,11 @@
           "referencia": "PREFERENCIAL 1 DUO",
           "canal": "Sitio web",
           "cupon": "N/A",
-          "cantidad": "35",
+          "cantidad": "36",
           "valorEntrada": "COP 70.000",
-          "totalEntradas": "COP 2.450.000",
+          "totalEntradas": "COP 2.520.000",
           "valorServicio": "COP 10.500",
-          "totalServicio": "COP 367.500",
+          "totalServicio": "COP 378.000",
           "isCortesia": false
         },
         {
@@ -3180,7 +3180,7 @@
         },
         {
           "metodo": "Openpay (PSE) (48)",
-          "totalStr": "COP 64.494.250"
+          "totalStr": "COP 64.581.750"
         },
         {
           "metodo": "Openpay (Tarjeta de Crédito) (47)",

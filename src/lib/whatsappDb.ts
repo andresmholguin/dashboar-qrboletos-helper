@@ -40,6 +40,8 @@ export interface TemplateConfig {
 export interface WhatsAppCampaign {
   id: string;
   title: string;
+  customName?: string;
+  eventHint?: string;
   createdAt: string;
   updatedAt: string;
   status: 'draft' | 'running' | 'paused' | 'token_expired' | 'completed';

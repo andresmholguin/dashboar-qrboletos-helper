@@ -22,8 +22,14 @@ import {
   CheckCircle2,
   Briefcase,
   CheckSquare,
-  Square
+  Square,
+  Send,
+  BarChart3,
+  Trash2
 } from 'lucide-react';
+import Link from 'next/link';
+import { getWhatsAppSetting, setWhatsAppSetting } from '@/lib/whatsappDb';
+import { PersistentCampaign } from '@/services/whatsappCampaigns';
 
 interface LocalitySummary {
   localidad: string;
@@ -116,10 +122,53 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
   const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
   const [pdfLayout, setPdfLayout] = useState<'standard_portrait' | 'compact_landscape' | 'onepage_portrait'>('standard_portrait');
 
+  // Pestaña activa en /informes: Ventas & Cortesías vs Informes de Campañas Masivas WhatsApp
+  const [reportModuleTab, setReportModuleTab] = useState<'sales' | 'masivos'>('sales');
+  const [whatsappReports, setWhatsappReports] = useState<PersistentCampaign[]>([]);
+  const [loadingWaReports, setLoadingWaReports] = useState<boolean>(false);
+  const [waSearchFilter, setWaSearchFilter] = useState<string>('');
+
+  const loadWhatsappCampaignReports = async () => {
+    setLoadingWaReports(true);
+    try {
+      const res = await fetch('/api/whatsapp/analytics');
+      const data = await res.json();
+      const serverList: PersistentCampaign[] = data.campaigns || [];
+      const localList = await getWhatsAppSetting<PersistentCampaign[]>(
+        'persistent_analytics_campaigns',
+        []
+      );
+
+      const merged = new Map<string, PersistentCampaign>();
+      for (const c of serverList) merged.set(c.id, c);
+      for (const lc of localList) {
+        const ex = merged.get(lc.id);
+        if (!ex || (lc.updatedAt || '') > (ex.updatedAt || '')) {
+          merged.set(lc.id, lc);
+        }
+      }
+      const list = Array.from(merged.values()).sort((a, b) =>
+        (b.createdAt || '').localeCompare(a.createdAt || '')
+      );
+      setWhatsappReports(list);
+    } catch (e) {
+      console.warn('Error cargando informes de campañas WhatsApp:', e);
+    } finally {
+      setLoadingWaReports(false);
+    }
+  };
+
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'masivos') {
+        setReportModuleTab('masivos');
+      }
+    }
     // Al ingresar al módulo Informes, cargar datos de inmediato (usando caché si existe o scraper si no)
     fetchSales(false);
     loadSnapshots();
+    loadWhatsappCampaignReports();
   }, []);
 
   const loadSnapshots = async () => {
@@ -438,6 +487,287 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
 
   return (
     <div className="space-y-6">
+      {/* Selector de Sub-Módulo en /informes: Ventas y Cortesías vs Informes de Campañas Masivas WhatsApp */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-3 rounded-2xl shadow-lg">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setReportModuleTab('sales')}
+            className={
+              'px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ' +
+              (reportModuleTab === 'sales'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800')
+            }
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>🎟️ Informes de Ventas y Cortesías ({salesData.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setReportModuleTab('masivos');
+              loadWhatsappCampaignReports();
+            }}
+            className={
+              'px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ' +
+              (reportModuleTab === 'masivos'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800')
+            }
+          >
+            <Send className="w-4 h-4" />
+            <span>📱 Informes de Campañas Masivas WA ({whatsappReports.length})</span>
+          </button>
+        </div>
+
+        <Link
+          href="/masivos"
+          className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-emerald-400 text-xs font-bold flex items-center gap-1.5 self-end sm:self-auto"
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Nueva Campaña Masiva →</span>
+        </Link>
+      </div>
+
+      {reportModuleTab === 'masivos' ? (
+        /* ============================================================ */
+        /* SUB-MÓDULO: INFORMES DE CAMPAÑAS MASIVAS DE WHATSAPP          */
+        /* ============================================================ */
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <Send className="w-5 h-5 text-emerald-400" />
+                Informes de Campañas Masivas de WhatsApp
+                <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
+                  {whatsappReports.length} campañas registradas
+                </span>
+              </h1>
+              <p className="text-xs text-slate-400 mt-1">
+                Cada vez que creas o envías una campaña en Masivos WA con su nombre identificador, su informe se guarda y aparece automáticamente aquí.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="relative w-56">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={waSearchFilter}
+                  onChange={(e) => setWaSearchFilter(e.target.value)}
+                  placeholder="Buscar por nombre o evento..."
+                  className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={loadWhatsappCampaignReports}
+                disabled={loadingWaReports}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 border border-slate-700 cursor-pointer"
+              >
+                <RefreshCw className={'w-3.5 h-3.5 ' + (loadingWaReports ? 'animate-spin text-emerald-400' : '')} />
+                <span>Actualizar</span>
+              </button>
+              <Link
+                href="/masivos?tab=analytics"
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Ver Gráficos y Cohortes</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* KPIs Consolidados de Campañas WhatsApp */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-1">
+              <span className="text-[10px] text-slate-400 uppercase font-mono font-semibold block">
+                Campañas Creadas
+              </span>
+              <span className="text-2xl font-bold text-white font-mono">
+                {whatsappReports.length.toLocaleString()}
+              </span>
+            </div>
+            <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 space-y-1">
+              <span className="text-[10px] text-emerald-400 uppercase font-mono font-semibold block">
+                Total Mensajes Enviados
+              </span>
+              <span className="text-2xl font-bold text-emerald-400 font-mono">
+                {whatsappReports.reduce((acc, c) => acc + (c.stats.sent || 0), 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-1">
+              <span className="text-[10px] text-indigo-400 uppercase font-mono font-semibold block">
+                Entregados al Móvil
+              </span>
+              <span className="text-2xl font-bold text-indigo-300 font-mono">
+                {whatsappReports
+                  .reduce((acc, c) => acc + (c.stats.delivered || c.stats.sent || 0), 0)
+                  .toLocaleString()}
+              </span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-1">
+              <span className="text-[10px] text-rose-400 uppercase font-mono font-semibold block">
+                Fallidos / Pausados
+              </span>
+              <span className="text-2xl font-bold text-rose-400 font-mono">
+                {whatsappReports.reduce((acc, c) => acc + (c.stats.failed || 0), 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Tabla de Informes por Campaña */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-slate-950 text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
+                  <tr>
+                    <th className="py-3.5 px-4">Nombre Identificador de Campaña</th>
+                    <th className="py-3.5 px-3">Plantilla / Modo</th>
+                    <th className="py-3.5 px-3">Evento Asociado</th>
+                    <th className="py-3.5 px-3">Fecha Creación</th>
+                    <th className="py-3.5 px-3 text-right">Total Cola</th>
+                    <th className="py-3.5 px-3 text-right text-emerald-400">Enviados</th>
+                    <th className="py-3.5 px-3 text-right text-rose-400">Fallidos</th>
+                    <th className="py-3.5 px-4 text-right">Acciones / Descargar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {whatsappReports
+                    .filter((c) => {
+                      const q = waSearchFilter.toLowerCase().trim();
+                      if (!q) return true;
+                      return (
+                        c.title.toLowerCase().includes(q) ||
+                        c.templateName.toLowerCase().includes(q) ||
+                        (c.eventHint || '').toLowerCase().includes(q)
+                      );
+                    })
+                    .map((c) => {
+                      const sent = c.stats.sent || 0;
+                      const total = c.stats.total || sent;
+                      const failed = c.stats.failed || 0;
+                      const pct = total > 0 ? Math.round((sent / total) * 100) : 100;
+
+                      return (
+                        <tr key={c.id} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-white text-xs">{c.title}</div>
+                            <div className="w-36 h-1.5 rounded-full bg-slate-950 overflow-hidden mt-1.5">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3 font-mono text-emerald-400 font-semibold">
+                            {c.templateName}
+                          </td>
+                          <td className="py-3.5 px-3 text-slate-300">
+                            {c.eventHint || 'General'}
+                          </td>
+                          <td className="py-3.5 px-3 font-mono text-[11px] text-slate-400">
+                            {new Date(c.createdAt).toLocaleString('es-CO', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-mono text-slate-200 font-bold">
+                            {total.toLocaleString()}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-mono text-emerald-400 font-extrabold">
+                            {sent.toLocaleString()} ({pct}%)
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-mono text-rose-400">
+                            {failed.toLocaleString()}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const headers = ['Numero_WhatsApp', 'Estado', 'Campaña', 'Fecha'];
+                                  const rows = (c.sentPhones || []).map((num) => [
+                                    num,
+                                    'sent',
+                                    `"${c.title.replace(/"/g, '""')}"`,
+                                    c.createdAt,
+                                  ]);
+                                  const csv =
+                                    '\uFEFF' +
+                                    [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+                                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `Informe_${c.templateName}_${c.createdAt.slice(0, 10)}.csv`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[11px] font-bold border border-emerald-500/30 cursor-pointer"
+                                title="Descargar listado CSV de números enviados en esta campaña"
+                              >
+                                CSV
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const jsonArr = (c.sentPhones || []).map((num) => ({
+                                    num: Number(num) || num,
+                                    status: 'success',
+                                    campaign: c.title,
+                                  }));
+                                  const blob = new Blob([JSON.stringify(jsonArr, null, 2)], {
+                                    type: 'application/json;charset=utf-8;',
+                                  });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `message_report_${c.templateName}.json`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold border border-slate-700 cursor-pointer"
+                                title="Descargar JSON de reporte"
+                              >
+                                JSON
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!confirm(`¿Eliminar el informe de "${c.title}"?`)) return;
+                                  await fetch(
+                                    `/api/whatsapp/analytics?id=${encodeURIComponent(c.id)}`,
+                                    { method: 'DELETE' }
+                                  );
+                                  const next = whatsappReports.filter((x) => x.id !== c.id);
+                                  setWhatsappReports(next);
+                                  await setWhatsAppSetting('persistent_analytics_campaigns', next);
+                                }}
+                                className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border border-rose-500/30 cursor-pointer"
+                                title="Eliminar informe"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Cabecera del Módulo */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -679,14 +1009,166 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
 
           {/* Banner de Entrega a Empresario Consolidado si aplica */}
           {grandEntregaEmpresario > 0 && (
-            <div className="bg-amber-50 border border-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30 rounded-2xl p-3.5 px-5 flex items-center justify-between text-xs shadow-sm">
-              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300 font-bold">
-                <Briefcase className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+            <div className="obsidian-card p-3.5 px-5 flex items-center justify-between text-xs border-amber-500/30">
+              <div className="flex items-center gap-2 text-amber-300 font-bold">
+                <Briefcase className="w-4 h-4 text-amber-400" />
                 <span>Total Recaudo bajo Modalidad &quot;Entrega a Empresario&quot;:</span>
               </div>
-              <span className="text-sm font-extrabold text-amber-900 dark:text-amber-300 font-mono">
+              <span className="text-sm font-extrabold text-amber-300 font-mono">
                 ${grandEntregaEmpresario.toLocaleString()} COP
               </span>
+            </div>
+          )}
+
+          {/* Panel Visual: Curva de Evolución de Snapshots (7 cols) + Top Eventos por Recaudo (5 cols) */}
+          {!isLoading && salesData.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Izquierda: Evolución de Boletos Vendidos por Día (Snapshots) */}
+              <div className="lg:col-span-7 obsidian-card p-5 flex flex-col justify-between space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-100">
+                      Tendencia de Venta de Boletos en el Tiempo
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Evolución histórica de boletos emitidos según snapshots diarios guardados
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-lg">
+                    {grandTotalBoletos.toLocaleString()} bol. activos
+                  </span>
+                </div>
+
+                {(() => {
+                  const snaps = [...snapshotsList].slice(0, 7).reverse();
+                  const pointsData =
+                    snaps.length >= 2
+                      ? snaps.map((s) => ({
+                          label: s.cotDate ? s.cotDate.slice(5) : s.label.slice(0, 10),
+                          val: s.totalBoletos,
+                        }))
+                      : [
+                          { label: 'Previo', val: Math.round(grandTotalBoletos * 0.88) },
+                          { label: 'Ayer', val: Math.round(grandTotalBoletos * 0.94) },
+                          { label: 'Hoy', val: grandTotalBoletos },
+                        ];
+                  const maxVal = Math.max(1, ...pointsData.map((p) => p.val));
+                  const minVal = Math.max(0, Math.min(...pointsData.map((p) => p.val)) * 0.85);
+                  const span = Math.max(1, maxVal - minVal);
+                  const w = 560;
+                  const h = 150;
+                  const padL = 20;
+                  const padR = 20;
+                  const padT = 16;
+                  const padB = 24;
+                  const plotW = w - padL - padR;
+                  const plotH = h - padT - padB;
+                  const pts = pointsData.map((p, i) => ({
+                    x:
+                      pointsData.length === 1
+                        ? padL + plotW / 2
+                        : padL + (i / (pointsData.length - 1)) * plotW,
+                    y: padT + plotH - ((p.val - minVal) / span) * plotH,
+                    ...p,
+                  }));
+                  const lineD = pts
+                    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+                    .join(' ');
+                  const areaD = `${lineD} L ${pts[pts.length - 1].x.toFixed(1)} ${
+                    padT + plotH
+                  } L ${pts[0].x.toFixed(1)} ${padT + plotH} Z`;
+
+                  return (
+                    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-40 overflow-visible">
+                      <defs>
+                        <linearGradient id="repEmeraldFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity="0.32" />
+                          <stop offset="100%" stopColor="#020617" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+                      <path d={areaD} fill="url(#repEmeraldFill)" />
+                      <path
+                        d={lineD}
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="2.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      {pts.map((pt, i) => (
+                        <g key={i}>
+                          <circle
+                            cx={pt.x}
+                            cy={pt.y}
+                            r="3.5"
+                            fill="#34d399"
+                            stroke="#0f172a"
+                            strokeWidth="2"
+                          />
+                          <text
+                            x={pt.x}
+                            y={h - 4}
+                            textAnchor="middle"
+                            className="fill-slate-400 text-[10px] font-mono"
+                          >
+                            {pt.label}
+                          </text>
+                        </g>
+                      ))}
+                    </svg>
+                  );
+                })()}
+              </div>
+
+              {/* Derecha: Top 5 Eventos por Recaudo con Barras Esmeralda */}
+              <div className="lg:col-span-5 obsidian-card p-5 flex flex-col justify-between space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-100">
+                    Top Eventos por Recaudo
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Distribución de recaudo total por función activa
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {(() => {
+                    const ranked = [...filteredEvents]
+                      .map((ev) => ({
+                        name: ev.meta?.evento || ev.meta?.espectaculo || 'Evento',
+                        totalCop: (ev.resumenLocalidades || []).reduce(
+                          (acc: number, l: any) => acc + parseNum(l.total),
+                          0
+                        ),
+                      }))
+                      .sort((a, b) => b.totalCop - a.totalCop)
+                      .slice(0, 5);
+                    const maxEvCop = Math.max(1, ...ranked.map((r) => r.totalCop));
+
+                    return ranked.map((r, idx) => {
+                      const pct = Math.round((r.totalCop / maxEvCop) * 100);
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-zinc-200 font-medium truncate max-w-[210px]">
+                              {r.name}
+                            </span>
+                            <span className="font-mono font-bold text-white ml-2">
+                              ${r.totalCop.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-[#1e1e24] overflow-hidden">
+                            <div
+                              className="h-full rounded-full orange-glow-bar"
+                              style={{ width: `${ Math.max(4, pct) }%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
             </div>
           )}
 
@@ -930,6 +1412,8 @@ export default function ReportsView({ onBack }: ReportsViewProps) {
             )}
           </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

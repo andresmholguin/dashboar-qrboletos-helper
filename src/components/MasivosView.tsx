@@ -606,14 +606,39 @@ export default function MasivosView({
       }
     }
 
-    // 2. Procesar desde Lista Externa (CSV / nums.js / texto pegado)
+    // 2. Procesar desde Lista Externa (CSV / nums.js / texto pegado con o sin nombre)
     if ((audienceSource === 'external' || audienceSource === 'both') && externalRawText.trim()) {
-      const tokens = externalRawText.split(/[\r\n,;|\t]+/);
-      for (const line of tokens) {
-        const cleanedLine = line.trim();
+      // Mapa rápido para rescatar el nombre de la base local de Clientes API si solo pegan el número
+      const crmNameByPhone = new Map<string, string>();
+      for (const c of customers) {
+        if (!c.telefono || !c.nombre) continue;
+        const n = normalizeWhatsAppNumber(c.telefono, allowInternational);
+        if (n.valid && !crmNameByPhone.has(n.normalized)) {
+          crmNameByPhone.set(n.normalized, c.nombre.trim());
+        }
+      }
+
+      const lines = externalRawText.split(/\r?\n/);
+      for (const rawLine of lines) {
+        const cleanedLine = rawLine.trim();
         if (!cleanedLine) continue;
-        // Extraer secuencias numéricas de 10 a 15 dígitos
+        // Extraer secuencias numéricas de 10 a 15 dígitos en la línea
         const numMatches = cleanedLine.match(/\+?\d{10,15}/g) || [];
+        if (numMatches.length === 0) continue;
+
+        // Si hay exactamente 1 número en la línea, todo el texto restante (quitando separadores , ; | - tab) es el nombre manual
+        let explicitLineName = '';
+        if (numMatches.length === 1) {
+          explicitLineName = cleanedLine
+            .replace(numMatches[0], '')
+            .replace(/^[\s,;|:\-\t"']+|[\s,;|:\-\t"']+$/g, '')
+            .trim();
+          // Ignorar encabezados típicos de CSV o fragmentos de código JS
+          if (/^(nombre|name|telefono|celular|phone|whatsapp|const|let|var|export|\[|\])$/i.test(explicitLineName)) {
+            explicitLineName = '';
+          }
+        }
+
         for (const rawNum of numMatches) {
           const norm = normalizeWhatsAppNumber(rawNum, allowInternational);
           if (!norm.valid) {
@@ -633,9 +658,10 @@ export default function MasivosView({
             continue;
           }
           seenPhones.add(norm.normalized);
+          const resolvedName = explicitLineName || crmNameByPhone.get(norm.normalized) || '';
           recipients.push({
             num: norm.normalized,
-            name: '',
+            name: resolvedName,
             status: 'pending',
           });
         }
@@ -2274,10 +2300,10 @@ export default function MasivosView({
                 </label>
               </div>
               <textarea
-                rows={3}
+                rows={4}
                 value={externalRawText}
                 onChange={(e) => setExternalRawText(e.target.value)}
-                placeholder="Pega números separados por salto de línea o coma (ej. 3163197319, 573158862020)..."
+                placeholder={`Un contacto por línea con Número y Nombre (o solo el número):\n3163197319, Andrés Holguín\n573158862020, Laura Gómez\n3104005060`}
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono"
               />
             </div>

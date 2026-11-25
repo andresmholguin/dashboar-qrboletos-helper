@@ -1,17 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+import { DEFAULT_BLOCKED_NUMBERS } from '@/lib/whatsappDb';
 
 const DEFAULT_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '684708368066383';
 const DEFAULT_WABA_ID = process.env.WHATSAPP_WABA_ID || '';
 const DEFAULT_TOKEN = process.env.WHATSAPP_TOKEN || '';
 
+const BLOCKED_FILE_PATH = path.join(process.cwd(), 'data', 'whatsapp-campaigns', 'blocked-numbers.json');
+
+function readPersistedBlockedNumbers(): string[] {
+  try {
+    if (fs.existsSync(BLOCKED_FILE_PATH)) {
+      const raw = fs.readFileSync(BLOCKED_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return Array.from(new Set([...DEFAULT_BLOCKED_NUMBERS, ...parsed.map(String).filter(Boolean)]));
+      }
+    }
+  } catch (e) {
+    console.warn('No se pudo leer blocked-numbers.json:', e);
+  }
+  return DEFAULT_BLOCKED_NUMBERS;
+}
+
+function writePersistedBlockedNumbers(nums: string[]): string[] {
+  const cleaned = Array.from(
+    new Set(
+      nums
+        .map((n) => String(n).replace(/[^0-9]/g, '').trim())
+        .filter((n) => n.length >= 7)
+    )
+  );
+  try {
+    const dir = path.dirname(BLOCKED_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(BLOCKED_FILE_PATH, JSON.stringify(cleaned, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('No se pudo escribir blocked-numbers.json en disco:', e);
+  }
+  return cleaned;
+}
+
 export async function GET() {
+  const blockedNumbers = readPersistedBlockedNumbers();
   return NextResponse.json({
     success: true,
     phoneNumberId: DEFAULT_PHONE_NUMBER_ID,
     wabaId: DEFAULT_WABA_ID,
     token: DEFAULT_TOKEN,
     hasEnvToken: Boolean(DEFAULT_TOKEN),
+    blockedNumbers,
   });
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const rawList: string[] = Array.isArray(body.blockedNumbers)
+      ? body.blockedNumbers
+      : String(body.blockedNumbersText || '')
+          .split(/[\r\n,;|\t\s]+/)
+          .filter(Boolean);
+    const saved = writePersistedBlockedNumbers(rawList);
+    return NextResponse.json({
+      success: true,
+      blockedNumbers: saved,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Error guardando lista negra numsBlock.' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {

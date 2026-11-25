@@ -188,6 +188,8 @@ export default function MasivosView({
   const [externalRawText, setExternalRawText] = useState('');
   // Lista negra (numsBlock) y excluidos de reportes JSON previos
   const [blockedNumbersText, setBlockedNumbersText] = useState(DEFAULT_BLOCKED_NUMBERS.join('\n'));
+  const [newBlockedInput, setNewBlockedInput] = useState('');
+  const [savingBlockedStatus, setSavingBlockedStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previouslySentNumbers, setPreviouslySentNumbers] = useState<Set<string>>(new Set());
   const [importedReportName, setImportedReportName] = useState<string | null>(null);
 
@@ -206,6 +208,7 @@ export default function MasivosView({
   const [logFilter, setLogFilter] = useState<'all' | 'sent' | 'failed' | 'pending'>('all');
 
   const stopRequestedRef = useRef(false);
+  const settingsHydratedRef = useRef(false);
   const includeRef = useRef<HTMLDivElement>(null);
   const excludeRef = useRef<HTMLDivElement>(null);
 
@@ -227,27 +230,44 @@ export default function MasivosView({
   useEffect(() => {
     async function init() {
       try {
-        // 1. Cargar ajustes guardados en IndexedDB
+        // 1. Cargar ajustes guardados en IndexedDB y localStorage
         const savedPhoneId = await getWhatsAppSetting('phoneNumberId', '');
         const savedWabaId = await getWhatsAppSetting('wabaId', '');
         const savedToken = await getWhatsAppSetting('accessToken', '');
         const savedTestPhone = await getWhatsAppSetting('testPhone', '573163197319');
-        const savedBlocked = await getWhatsAppSetting(
-          'blockedNumbersText',
-          DEFAULT_BLOCKED_NUMBERS.join('\n')
-        );
+        const savedBlockedIdb = await getWhatsAppSetting('blockedNumbersText', '');
+        const savedBlockedLs =
+          typeof window !== 'undefined'
+            ? window.localStorage.getItem('qrboletos_whatsapp_numsblock') || ''
+            : '';
         const savedTplConfig = await getWhatsAppSetting<TemplateConfig | null>(
           'lastTemplateConfig',
           null
         );
 
         if (savedTestPhone) setTestPhone(savedTestPhone);
-        if (savedBlocked) setBlockedNumbersText(savedBlocked);
         if (savedTplConfig) setTemplateConfig(savedTplConfig);
 
-        // 2. Consultar valores por defecto de .env en el servidor
+        // 2. Consultar valores por defecto de .env y blocked-numbers.json en el servidor
         const envRes = await fetch('/api/whatsapp/config');
         const envJson = await envRes.json();
+
+        // Combinar números bloqueados de: DEFAULT + Servidor + localStorage + IndexedDB sin perder ninguno
+        const serverBlocked: string[] = Array.isArray(envJson.blockedNumbers)
+          ? envJson.blockedNumbers
+          : [];
+        const combinedBlockedSet = new Set<string>([
+          ...DEFAULT_BLOCKED_NUMBERS,
+          ...serverBlocked,
+          ...(savedBlockedLs.match(/\d{7,15}/g) || []),
+          ...(savedBlockedIdb.match(/\d{7,15}/g) || []),
+        ]);
+        const mergedBlockedText = Array.from(combinedBlockedSet).join('\n');
+        setBlockedNumbersText(mergedBlockedText);
+        await setWhatsAppSetting('blockedNumbersText', mergedBlockedText);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('qrboletos_whatsapp_numsblock', mergedBlockedText);
+        }
 
         const finalPhoneId = savedPhoneId || envJson.phoneNumberId || '684708368066383';
         const finalWabaId = savedWabaId || envJson.wabaId || '';
@@ -272,35 +292,98 @@ export default function MasivosView({
       } catch (e) {
         console.warn('Error inicializando módulo /masivos:', e);
       } finally {
+        settingsHydratedRef.current = true;
         setLoadingCustomers(false);
       }
     }
     init();
   }, []);
 
-  // Guardar cambios de configuración en IndexedDB automáticamente
+  // Función para persistir numsBlock en localStorage, IndexedDB y Servidor (data/whatsapp-campaigns/blocked-numbers.json)
+  const persistBlockedNumbers = async (rawText: string, showBadge = false) => {
+    setWhatsAppSetting('blockedNumbersText', rawText);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('qrboletos_whatsapp_numsblock', rawText);
+    }
+    if (showBadge) setSavingBlockedStatus('saving');
+    try {
+      await fetch('/api/whatsapp/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedNumbersText: rawText }),
+      });
+      if (showBadge) {
+        setSavingBlockedStatus('saved');
+        setTimeout(() => setSavingBlockedStatus('idle'), 2500);
+      }
+    } catch (e) {
+      console.warn('No se pudo sincronizar numsBlock en servidor:', e);
+      if (showBadge) setSavingBlockedStatus('idle');
+    }
+  };
+
+  const handleAddSingleBlockedNumber = () => {
+    const rawMatches = newBlockedInput.match(/\+?\d{7,15}/g) || [];
+    if (rawMatches.length === 0) return;
+
+    const currentLines = blockedNumbersText
+      .split(/[\r\n,;|\t\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const set = new Set<string>(currentLines);
+
+    for (const raw of rawMatches) {
+      const norm = normalizeWhatsAppNumber(raw, true);
+      set.add(norm.valid ? norm.normalized : raw.replace(/[^0-9]/g, ''));
+    }
+
+    const updatedText = Array.from(set).join('\n');
+    setBlockedNumbersText(updatedText);
+    setNewBlockedInput('');
+    persistBlockedNumbers(updatedText, true);
+  };
+
+  // Guardar cambios de configuración en IndexedDB automáticamente (solo tras hidratar)
   useEffect(() => {
-    if (phoneNumberId) setWhatsAppSetting('phoneNumberId', phoneNumberId);
+    if (settingsHydratedRef.current && phoneNumberId) {
+      setWhatsAppSetting('phoneNumberId', phoneNumberId);
+    }
   }, [phoneNumberId]);
 
   useEffect(() => {
-    if (wabaId) setWhatsAppSetting('wabaId', wabaId);
+    if (settingsHydratedRef.current && wabaId) {
+      setWhatsAppSetting('wabaId', wabaId);
+    }
   }, [wabaId]);
 
   useEffect(() => {
-    if (accessToken) setWhatsAppSetting('accessToken', accessToken);
+    if (settingsHydratedRef.current && accessToken) {
+      setWhatsAppSetting('accessToken', accessToken);
+    }
   }, [accessToken]);
 
   useEffect(() => {
-    if (testPhone) setWhatsAppSetting('testPhone', testPhone);
+    if (settingsHydratedRef.current && testPhone) {
+      setWhatsAppSetting('testPhone', testPhone);
+    }
   }, [testPhone]);
 
   useEffect(() => {
+    if (!settingsHydratedRef.current) return;
     setWhatsAppSetting('blockedNumbersText', blockedNumbersText);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('qrboletos_whatsapp_numsblock', blockedNumbersText);
+    }
+    const timer = setTimeout(() => {
+      persistBlockedNumbers(blockedNumbersText, false);
+    }, 600);
+    return () => clearTimeout(timer);
   }, [blockedNumbersText]);
 
   useEffect(() => {
-    setWhatsAppSetting('lastTemplateConfig', templateConfig);
+    if (settingsHydratedRef.current) {
+      setWhatsAppSetting('lastTemplateConfig', templateConfig);
+    }
   }, [templateConfig]);
 
   // Verificar Access Token y auto-descubrir WABA ID
@@ -2311,12 +2394,50 @@ export default function MasivosView({
 
           {/* Bloqueados (numsBlock) + Importar message_report.json anterior para excluir ya enviados */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2 border-t border-slate-800">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
-                🚫 Lista Negra Permanente (numsBlock)
-              </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-[11px] font-bold text-slate-400 uppercase">
+                  🚫 Lista Negra Permanente (numsBlock)
+                </label>
+                <div className="flex items-center gap-1.5">
+                  {savingBlockedStatus === 'saved' && (
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                      ✓ Guardado permanente
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => persistBlockedNumbers(blockedNumbersText, true)}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 cursor-pointer"
+                  >
+                    💾 Guardar Lista
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={newBlockedInput}
+                  onChange={(e) => setNewBlockedInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddSingleBlockedNumber();
+                    }
+                  }}
+                  placeholder="Ej. 3158862020 o 573158862020..."
+                  className="flex-1 px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddSingleBlockedNumber}
+                  className="px-2.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer whitespace-nowrap"
+                >
+                  + Bloquear
+                </button>
+              </div>
               <textarea
-                rows={2}
+                rows={3}
                 value={blockedNumbersText}
                 onChange={(e) => setBlockedNumbersText(e.target.value)}
                 placeholder="573172346545..."

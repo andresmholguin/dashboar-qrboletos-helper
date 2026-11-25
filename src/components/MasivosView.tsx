@@ -391,7 +391,7 @@ export default function MasivosView({
   // Al seleccionar una plantilla de la lista de Meta, auto-configurar sus componentes
   const handleSelectMetaTemplate = (tpl: MetaTemplate) => {
     let headerType: TemplateConfig['headerType'] = 'NONE';
-    let bodyVarsCount = 0;
+    let extractedVars: string[] = [];
     let buttonType: TemplateConfig['buttonType'] = 'NONE';
 
     for (const comp of tpl.components || []) {
@@ -400,12 +400,15 @@ export default function MasivosView({
         else if (comp.format === 'VIDEO') headerType = 'VIDEO';
         else if (comp.format === 'DOCUMENT') headerType = 'DOCUMENT';
       } else if (comp.type === 'BODY' && comp.text) {
-        const matches = comp.text.match(/\{\{\d+\}\}/g);
-        if (matches) bodyVarsCount = matches.length;
+        const regex = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+        let m: RegExpExecArray | null;
+        while ((m = regex.exec(comp.text)) !== null) {
+          extractedVars.push(m[1]);
+        }
       } else if (comp.type === 'BUTTONS' && Array.isArray(comp.buttons)) {
         for (const btn of comp.buttons) {
           if (btn.type === 'COPY_CODE') buttonType = 'COPY_CODE';
-          else if (btn.type === 'URL' && btn.url?.includes('{{1}}')) buttonType = 'URL_SUFFIX';
+          else if (btn.type === 'URL' && btn.url?.includes('{{')) buttonType = 'URL_SUFFIX';
         }
       }
     }
@@ -415,9 +418,10 @@ export default function MasivosView({
       name: tpl.name,
       languageCode: tpl.language || 'es_co',
       headerType,
-      bodyVariables: Array.from({ length: bodyVarsCount }, (_, i) => ({
-        type: i === 0 ? 'customer_first_name' : 'fixed',
-        value: i === 0 ? 'Cliente' : '',
+      bodyVariables: extractedVars.map((varToken, i) => ({
+        type: i === 0 || /nombre|name/i.test(varToken) ? 'customer_first_name' : 'fixed',
+        value: i === 0 || /nombre|name/i.test(varToken) ? 'Cliente' : '',
+        paramName: /^\d+$/.test(varToken) ? '' : varToken,
       })),
       buttonType,
     }));
@@ -752,10 +756,12 @@ export default function MasivosView({
           msg: `¡Enviado con éxito a ${norm.normalized}! ID: ${first.wamid || 'accepted'}`,
         });
       } else {
-        const errMsg =
+        const baseErr =
           first?.error?.error_user_msg ||
           first?.error?.message ||
           JSON.stringify(first?.error || 'Error desconocido');
+        const details = first?.error?.error_data?.details;
+        const errMsg = details ? `${baseErr} — Detalle: ${details}` : baseErr;
         setTestResult({ ok: false, msg: `Meta rechazó el envío: ${errMsg}` });
       }
     } catch (err: any) {
@@ -1826,9 +1832,22 @@ export default function MasivosView({
 
                 {templateConfig.bodyVariables.map((v, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-emerald-400 w-8">
-                      {`{{${idx + 1}}}`}
-                    </span>
+                    <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2 py-1">
+                      <span className="text-[11px] font-mono font-bold text-emerald-400">{"{{"}</span>
+                      <input
+                        type="text"
+                        value={v.paramName ?? ''}
+                        onChange={(e) => {
+                          const next = [...templateConfig.bodyVariables];
+                          next[idx] = { ...next[idx], paramName: e.target.value.replace(/[\{\}\s]/g, '') };
+                          setTemplateConfig({ ...templateConfig, bodyVariables: next });
+                        }}
+                        placeholder={`${idx + 1}`}
+                        title="Deja vacío para variable numérica ({{1}}) o escribe el nombre (ej. nombre para {{nombre}})"
+                        className="w-16 bg-transparent text-xs font-mono font-bold text-emerald-400 text-center focus:outline-none"
+                      />
+                      <span className="text-[11px] font-mono font-bold text-emerald-400">{"}}"}</span>
+                    </div>
                     <select
                       value={v.type}
                       onChange={(e) => {
@@ -1885,9 +1904,9 @@ export default function MasivosView({
                     }
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
                   >
-                    <option value="NONE">Sin parámetro dinámico</option>
+                    <option value="NONE">Sin parámetro dinámico (o Botón URL Estática)</option>
                     <option value="COPY_CODE">Botón Copiar Cupón (copy_code)</option>
-                    <option value="URL_SUFFIX">Botón URL Dinámica</option>
+                    <option value="URL_SUFFIX">Botón URL Dinámica (solo si la URL en Meta tiene variable)</option>
                   </select>
                 </div>
                 {templateConfig.buttonType !== 'NONE' && (

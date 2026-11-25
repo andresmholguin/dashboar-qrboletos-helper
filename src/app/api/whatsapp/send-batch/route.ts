@@ -191,7 +191,7 @@ function buildTemplatePayload(recipient: BatchRecipientInput, config: TemplateCo
     });
   }
 
-  // 2. Body variables ({{1}}, {{2}}, ...)
+  // 2. Body variables ({{1}}, {{2}}, ... o variables con nombre como {{nombre}})
   if (Array.isArray(config.bodyVariables) && config.bodyVariables.length > 0) {
     const bodyParams = config.bodyVariables.map((v) => {
       let textVal = (v.value || '').trim();
@@ -201,10 +201,15 @@ function buildTemplatePayload(recipient: BatchRecipientInput, config: TemplateCo
         const first = (recipient.name || '').trim().split(/\s+/)[0];
         textVal = first || textVal || 'Cliente';
       }
-      return {
+      const paramObj: any = {
         type: 'text',
         text: textVal || ' ',
       };
+      const cleanParamName = (v.paramName || '').replace(/[\{\}\s]/g, '').trim();
+      if (cleanParamName && !/^\d+$/.test(cleanParamName)) {
+        paramObj.parameter_name = cleanParamName;
+      }
+      return paramObj;
     });
 
     components.push({
@@ -321,7 +326,7 @@ export async function POST(request: NextRequest) {
       recipients.map(async (recipient) => {
         const payload = buildTemplatePayload(recipient, templateConfig);
         try {
-          const res = await fetch(endpoint, {
+          let res = await fetch(endpoint, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
@@ -330,7 +335,62 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(payload),
           });
 
-          const data = await res.json();
+          let data = await res.json();
+
+          // Auto-recuperación inteligente ante errores de parámetros de plantilla (#132018 o #132000):
+          // Caso A: El usuario seleccionó "Botón URL Dinámica" en el dashboard pero en Meta la URL del botón es "Estática".
+          // Caso B: La plantilla en Meta usa variable con nombre ({{nombre}}) pero paramName llegó vacío, o viceversa.
+          if ((!res.ok || data.error) && !isDirectSend && (data.error?.code === 132018 || data.error?.code === 132000 || data.error?.code === 100)) {
+            const fallbackConfigs: TemplateConfig[] = [];
+
+            // 1. Si tenía botón configurado, probar sin parámetro de botón (URL Estática en Meta)
+            if (templateConfig.buttonType && templateConfig.buttonType !== 'NONE') {
+              fallbackConfigs.push({
+                ...templateConfig,
+                buttonType: 'NONE',
+                buttonValue: '',
+              });
+            }
+
+            // 2. Si la primera variable no tenía paramName, probar con paramName: "nombre" (y sin botón si había botón)
+            if (templateConfig.bodyVariables?.length > 0) {
+              const hasParamName = Boolean(templateConfig.bodyVariables[0].paramName?.trim());
+              const toggledVars = templateConfig.bodyVariables.map((v, idx) => ({
+                ...v,
+                paramName: hasParamName ? '' : idx === 0 ? 'nombre' : v.paramName,
+              }));
+              fallbackConfigs.push({
+                ...templateConfig,
+                bodyVariables: toggledVars,
+              });
+              if (templateConfig.buttonType && templateConfig.buttonType !== 'NONE') {
+                fallbackConfigs.push({
+                  ...templateConfig,
+                  buttonType: 'NONE',
+                  buttonValue: '',
+                  bodyVariables: toggledVars,
+                });
+              }
+            }
+
+            for (const fbConfig of fallbackConfigs) {
+              const fbPayload = buildTemplatePayload(recipient, fbConfig);
+              const fbRes = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(fbPayload),
+              });
+              const fbData = await fbRes.json();
+              if (fbRes.ok && !fbData.error) {
+                res = fbRes;
+                data = fbData;
+                break;
+              }
+            }
+          }
 
           if (!res.ok || data.error) {
             const err = data.error || {};

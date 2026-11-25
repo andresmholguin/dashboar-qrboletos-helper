@@ -26,6 +26,7 @@ export interface TemplateConfig {
   bodyVariables: Array<{
     type: ' fixed' | 'customer_name' | 'customer_first_name' | 'fixed';
     value: string; // valor fijo o fallback si el cliente no tiene nombre
+    paramName?: string; // ej. "nombre" cuando la plantilla en Meta usa Tipo de variable: Nombre ({{nombre}})
   }>;
   buttonType: 'NONE' | 'COPY_CODE' | 'URL_SUFFIX';
   buttonValue: string; // ej. "FERIA20" para copy_code

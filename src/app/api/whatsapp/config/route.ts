@@ -8,6 +8,31 @@ const DEFAULT_WABA_ID = process.env.WHATSAPP_WABA_ID || '';
 const DEFAULT_TOKEN = process.env.WHATSAPP_TOKEN || '';
 
 const BLOCKED_FILE_PATH = path.join(process.cwd(), 'data', 'whatsapp-campaigns', 'blocked-numbers.json');
+const LAST_SEND_STATE_PATH = path.join(process.cwd(), 'data', 'whatsapp-campaigns', 'last-send-state.json');
+
+function readPersistedLastSendState(): any | null {
+  try {
+    if (fs.existsSync(LAST_SEND_STATE_PATH)) {
+      const raw = fs.readFileSync(LAST_SEND_STATE_PATH, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.warn('No se pudo leer last-send-state.json:', e);
+  }
+  return null;
+}
+
+function writePersistedLastSendState(stateObj: any): void {
+  try {
+    const dir = path.dirname(LAST_SEND_STATE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(LAST_SEND_STATE_PATH, JSON.stringify(stateObj, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('No se pudo escribir last-send-state.json:', e);
+  }
+}
 
 function readPersistedBlockedNumbers(): string[] {
   try {
@@ -46,6 +71,7 @@ function writePersistedBlockedNumbers(nums: string[]): string[] {
 
 export async function GET() {
   const blockedNumbers = readPersistedBlockedNumbers();
+  const lastSendState = readPersistedLastSendState();
   return NextResponse.json({
     success: true,
     phoneNumberId: DEFAULT_PHONE_NUMBER_ID,
@@ -53,25 +79,41 @@ export async function GET() {
     token: DEFAULT_TOKEN,
     hasEnvToken: Boolean(DEFAULT_TOKEN),
     blockedNumbers,
+    lastSendState,
   });
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const rawList: string[] = Array.isArray(body.blockedNumbers)
-      ? body.blockedNumbers
-      : String(body.blockedNumbersText || '')
-          .split(/[\r\n,;|\t\s]+/)
-          .filter(Boolean);
-    const saved = writePersistedBlockedNumbers(rawList);
+
+    let savedBlocked: string[] | undefined = undefined;
+    if (body.blockedNumbers !== undefined || body.blockedNumbersText !== undefined) {
+      const rawList: string[] = Array.isArray(body.blockedNumbers)
+        ? body.blockedNumbers
+        : String(body.blockedNumbersText || '')
+            .split(/[\r\n,;|\t\s]+/)
+            .filter(Boolean);
+      savedBlocked = writePersistedBlockedNumbers(rawList);
+    }
+
+    if (body.lastSendState && typeof body.lastSendState === 'object') {
+      const existing = readPersistedLastSendState() || {};
+      const merged = {
+        ...existing,
+        ...body.lastSendState,
+        updatedAt: new Date().toISOString(),
+      };
+      writePersistedLastSendState(merged);
+    }
+
     return NextResponse.json({
       success: true,
-      blockedNumbers: saved,
+      blockedNumbers: savedBlocked,
     });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Error guardando lista negra numsBlock.' },
+      { success: false, error: error.message || 'Error guardando configuración persistente de WhatsApp.' },
       { status: 500 }
     );
   }

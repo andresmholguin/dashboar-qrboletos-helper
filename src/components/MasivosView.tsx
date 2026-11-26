@@ -244,13 +244,80 @@ export default function MasivosView({
           'lastTemplateConfig',
           null
         );
+        const savedLastSendIdb = await getWhatsAppSetting<any | null>('lastSendState', null);
+        let savedLastSendLs: any | null = null;
+        if (typeof window !== 'undefined') {
+          try {
+            const rawLs = window.localStorage.getItem('qrboletos_whatsapp_last_send_state');
+            if (rawLs) savedLastSendLs = JSON.parse(rawLs);
+          } catch {
+            // ignore
+          }
+        }
 
         if (savedTestPhone) setTestPhone(savedTestPhone);
         if (savedTplConfig) setTemplateConfig(savedTplConfig);
 
-        // 2. Consultar valores por defecto de .env y blocked-numbers.json en el servidor
+        // 2. Consultar valores por defecto de .env, blocked-numbers.json y last-send-state.json en el servidor
         const envRes = await fetch('/api/whatsapp/config');
         const envJson = await envRes.json();
+
+        // Restaurar todos los datos del último envío (priorizando el más reciente entre IndexedDB, localStorage y Servidor)
+        const candidates = [savedLastSendIdb, savedLastSendLs, envJson.lastSendState].filter(
+          (c) => c && typeof c === 'object'
+        );
+        candidates.sort((a, b) =>
+          String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''))
+        );
+        const bestLastSend = candidates[0] || null;
+
+        if (bestLastSend) {
+          if (bestLastSend.campaignCustomName !== undefined) {
+            setCampaignCustomName(bestLastSend.campaignCustomName);
+          }
+          if (bestLastSend.campaignEventHint !== undefined) {
+            setCampaignEventHint(bestLastSend.campaignEventHint);
+          }
+          if (bestLastSend.templateConfig) {
+            setTemplateConfig(bestLastSend.templateConfig);
+          }
+          if (bestLastSend.audienceSource) {
+            setAudienceSource(bestLastSend.audienceSource);
+          }
+          if (Array.isArray(bestLastSend.includeEvents)) {
+            setIncludeEvents(bestLastSend.includeEvents);
+          }
+          if (Array.isArray(bestLastSend.excludeEvents)) {
+            setExcludeEvents(bestLastSend.excludeEvents);
+          }
+          if (bestLastSend.minEventsCount !== undefined) {
+            setMinEventsCount(bestLastSend.minEventsCount);
+          }
+          if (bestLastSend.minLtvCop !== undefined) {
+            setMinLtvCop(Number(bestLastSend.minLtvCop) || 0);
+          }
+          if (bestLastSend.allowInternational !== undefined) {
+            setAllowInternational(Boolean(bestLastSend.allowInternational));
+          }
+          if (bestLastSend.externalRawText !== undefined) {
+            setExternalRawText(bestLastSend.externalRawText);
+          }
+          if (bestLastSend.useCustomRange !== undefined) {
+            setUseCustomRange(Boolean(bestLastSend.useCustomRange));
+          }
+          if (bestLastSend.rangeStart !== undefined) {
+            setRangeStart(Number(bestLastSend.rangeStart) || 0);
+          }
+          if (bestLastSend.rangeEnd !== undefined) {
+            setRangeEnd(Number(bestLastSend.rangeEnd) || 0);
+          }
+          if (bestLastSend.concurrency !== undefined) {
+            setConcurrency(Number(bestLastSend.concurrency) || 50);
+          }
+          if (bestLastSend.reportCreatedBanner) {
+            setReportCreatedBanner(bestLastSend.reportCreatedBanner);
+          }
+        }
 
         // Combinar números bloqueados de: DEFAULT + Servidor + localStorage + IndexedDB sin perder ninguno
         const serverBlocked: string[] = Array.isArray(envJson.blockedNumbers)
@@ -277,11 +344,26 @@ export default function MasivosView({
         setWabaId(finalWabaId);
         setAccessToken(finalToken);
 
-        // 3. Cargar campañas guardadas en IndexedDB
-        const savedCampaigns = await getAllCampaignsFromDb();
+        // 3. Cargar campañas guardadas en IndexedDB y restaurar la última campaña del servidor si no estaba en IndexedDB
+        let savedCampaigns = await getAllCampaignsFromDb();
+        if (bestLastSend?.lastActiveCampaign && bestLastSend.lastActiveCampaign.id) {
+          const serverCamp: WhatsAppCampaign = bestLastSend.lastActiveCampaign;
+          const localMatch = savedCampaigns.find((c) => c.id === serverCamp.id);
+          if (!localMatch || (serverCamp.stats?.sent || 0) > (localMatch.stats?.sent || 0)) {
+            await saveCampaignToDb(serverCamp);
+            savedCampaigns = await getAllCampaignsFromDb();
+          }
+        }
         setCampaigns(savedCampaigns);
         if (savedCampaigns.length > 0) {
           setActiveCampaign(savedCampaigns[0]);
+          // Si los campos de nombre o plantilla estaban por defecto, hidratarlos desde la última campaña enviada
+          if (!bestLastSend) {
+            const latest = savedCampaigns[0];
+            if (latest.customName) setCampaignCustomName(latest.customName);
+            if (latest.eventHint) setCampaignEventHint(latest.eventHint);
+            if (latest.templateConfig) setTemplateConfig(latest.templateConfig);
+          }
         }
 
         // 4. Cargar clientes desde IndexedDB
@@ -385,6 +467,78 @@ export default function MasivosView({
       setWhatsAppSetting('lastTemplateConfig', templateConfig);
     }
   }, [templateConfig]);
+
+  // Persistir automáticamente todos los datos del último envío (formulario, filtros, lista externa y campaña activa)
+  const persistLastSendSnapshot = async (overrideCampaign?: WhatsAppCampaign | null) => {
+    const campToSave = overrideCampaign !== undefined ? overrideCampaign : activeCampaign;
+    const snapshot = {
+      updatedAt: new Date().toISOString(),
+      campaignCustomName,
+      campaignEventHint,
+      templateConfig,
+      audienceSource,
+      includeEvents,
+      excludeEvents,
+      minEventsCount,
+      minLtvCop,
+      allowInternational,
+      externalRawText,
+      useCustomRange,
+      rangeStart,
+      rangeEnd,
+      concurrency,
+      reportCreatedBanner,
+      lastActiveCampaign: campToSave || null,
+    };
+
+    try {
+      await setWhatsAppSetting('lastSendState', snapshot);
+    } catch {
+      // ignore
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('qrboletos_whatsapp_last_send_state', JSON.stringify(snapshot));
+      } catch {
+        // ignore quota error
+      }
+    }
+
+    try {
+      await fetch('/api/whatsapp/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lastSendState: snapshot }),
+      });
+    } catch {
+      // ignore offline
+    }
+  };
+
+  useEffect(() => {
+    if (!settingsHydratedRef.current) return;
+    const timer = setTimeout(() => {
+      persistLastSendSnapshot();
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [
+    campaignCustomName,
+    campaignEventHint,
+    templateConfig,
+    audienceSource,
+    includeEvents,
+    excludeEvents,
+    minEventsCount,
+    minLtvCop,
+    allowInternational,
+    externalRawText,
+    useCustomRange,
+    rangeStart,
+    rangeEnd,
+    concurrency,
+    reportCreatedBanner,
+  ]);
 
   // Verificar Access Token y auto-descubrir WABA ID
   const handleVerifyToken = async (customToken?: string) => {
@@ -996,6 +1150,7 @@ export default function MasivosView({
 
     await saveCampaignToDb(newCampaign);
     await persistCampaignReport(newCampaign);
+    await persistLastSendSnapshot(newCampaign);
     const updatedList = await getAllCampaignsFromDb();
     setCampaigns(updatedList);
     setActiveCampaign(newCampaign);
@@ -1100,6 +1255,8 @@ export default function MasivosView({
         if (data.tokenExpired || res.status === 401) {
           workingCampaign.status = 'token_expired';
           await saveCampaignToDb(workingCampaign);
+          await persistCampaignReport(workingCampaign);
+          await persistLastSendSnapshot(workingCampaign);
           setActiveCampaign({ ...workingCampaign });
           const updatedList = await getAllCampaignsFromDb();
           setCampaigns(updatedList);
@@ -1118,6 +1275,8 @@ export default function MasivosView({
         // Error de red local: pausar para no perder la cola
         workingCampaign.status = 'paused';
         await saveCampaignToDb(workingCampaign);
+        await persistCampaignReport(workingCampaign);
+        await persistLastSendSnapshot(workingCampaign);
         setActiveCampaign({ ...workingCampaign });
         alert('Pausa automática por corte de red: ' + err.message);
         setIsSending(false);
@@ -1132,8 +1291,9 @@ export default function MasivosView({
       setActiveCampaign({ ...workingCampaign });
     }
 
-    // Crear y guardar automáticamente el informe persistente de la campaña
+    // Crear y guardar automáticamente el informe persistente de la campaña y el estado del último envío
     await persistCampaignReport(workingCampaign);
+    await persistLastSendSnapshot(workingCampaign);
     setReportCreatedBanner({
       id: workingCampaign.id,
       title: workingCampaign.title,
